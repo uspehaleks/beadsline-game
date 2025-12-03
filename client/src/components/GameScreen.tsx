@@ -6,7 +6,7 @@ import { NextBallPreview } from './NextBallPreview';
 import { GameOverScreen } from './GameOverScreen';
 import { useGameState } from '@/hooks/useGameState';
 import { Button } from '@/components/ui/button';
-import { Pause, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 
 interface GameScreenProps {
   onGameEnd: (state: GameState) => void;
@@ -49,11 +49,16 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     onGameEnd,
   });
 
+  const hasStartedRef = useRef(false);
+  const startGameRef = useRef(startGame);
+  startGameRef.current = startGame;
+  
   useEffect(() => {
-    if (dimensions.width > 0 && dimensions.height > 0 && !gameState.isPlaying && !gameState.isGameOver) {
-      startGame();
+    if (dimensions.width > 0 && dimensions.height > 0 && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      startGameRef.current();
     }
-  }, [dimensions, startGame, gameState.isPlaying, gameState.isGameOver]);
+  }, [dimensions.width, dimensions.height]);
 
   const handlePlayAgain = useCallback(() => {
     startGame();

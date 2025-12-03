@@ -40,10 +40,18 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const [projectile, setProjectile] = useState<Projectile | null>(null);
   const [shooterAngle, setShooterAngle] = useState(-Math.PI / 2);
   
-  const gameLoopRef = useRef<number>();
-  const timerRef = useRef<number>();
+  const gameLoopRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const addBallsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTimeRef = useRef<number>(0);
-  const addBallsTimerRef = useRef<number>();
+  const pathRef = useRef<PathPoint[]>([]);
+  const onGameEndRef = useRef(onGameEnd);
+  const gameEndedRef = useRef(false);
+  const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
+  
+  onGameEndRef.current = onGameEnd;
+  pathRef.current = path;
+  dimensionsRef.current = { width: canvasWidth, height: canvasHeight };
   
   const shooterPosition = {
     x: canvasWidth / 2,
@@ -54,23 +62,40 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     if (canvasWidth > 0 && canvasHeight > 0) {
       const newPath = generatePath(canvasWidth, canvasHeight);
       setPath(newPath);
+      pathRef.current = newPath;
     }
   }, [canvasWidth, canvasHeight]);
 
-  useEffect(() => {
-    if (path.length > 0 && gameState.balls.length > 0) {
-      setGameState(prev => ({
-        ...prev,
-        balls: updateBallPositions(prev.balls, path),
-      }));
+  const stopAllTimers = useCallback(() => {
+    if (gameLoopRef.current !== null) {
+      cancelAnimationFrame(gameLoopRef.current);
+      gameLoopRef.current = null;
     }
-  }, [path]);
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (addBallsTimerRef.current !== null) {
+      clearInterval(addBallsTimerRef.current);
+      addBallsTimerRef.current = null;
+    }
+  }, []);
 
   const startGame = useCallback(() => {
-    const initialState = createInitialGameState();
-    const newPath = generatePath(canvasWidth, canvasHeight);
-    setPath(newPath);
+    if (timerRef.current !== null) {
+      console.warn('Game already running, ignoring startGame call');
+      return;
+    }
     
+    stopAllTimers();
+    gameEndedRef.current = false;
+    
+    const dims = dimensionsRef.current;
+    const newPath = generatePath(dims.width, dims.height);
+    setPath(newPath);
+    pathRef.current = newPath;
+    
+    const initialState = createInitialGameState();
     const ballsWithPositions = updateBallPositions(initialState.balls, newPath);
     
     setGameState({
@@ -81,28 +106,184 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     });
     setProjectile(null);
     setShooterAngle(-Math.PI / 2);
+    lastTimeRef.current = 0;
+    
+    const runLoop = (timestamp: number) => {
+      if (gameEndedRef.current) return;
+      
+      const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
+      lastTimeRef.current = timestamp;
+      const currentPath = pathRef.current;
+      
+      setGameState(prev => {
+        if (!prev.isPlaying || gameEndedRef.current) return prev;
+        
+        let newBalls = moveBallsForward(prev.balls, deltaTime);
+        newBalls = updateBallPositions(newBalls, currentPath);
+        
+        if (checkGameOver(newBalls) && prev.timeLeft < GAME_DURATION - 3) {
+          gameEndedRef.current = true;
+          stopAllTimers();
+          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: false };
+          setTimeout(() => {
+            onGameEndRef.current?.(finalState);
+            hapticFeedback('error');
+          }, 0);
+          return finalState;
+        }
+        
+        return { ...prev, balls: newBalls };
+      });
+      
+      setProjectile(prev => {
+        if (!prev || gameEndedRef.current) return prev;
+        
+        const dims = dimensionsRef.current;
+        const newX = prev.x + prev.vx;
+        const newY = prev.y + prev.vy;
+        
+        if (newX < 0 || newX > dims.width || newY < 0 || newY > dims.height) {
+          return null;
+        }
+        
+        return { ...prev, x: newX, y: newY };
+      });
+      
+      gameLoopRef.current = requestAnimationFrame(runLoop);
+    };
+    
+    gameLoopRef.current = requestAnimationFrame(runLoop);
+    
+    const timerStartTime = Date.now();
+    
+    timerRef.current = setInterval(() => {
+      if (gameEndedRef.current) return;
+      
+      const elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
+      const newTimeLeft = Math.max(0, GAME_DURATION - elapsedSeconds);
+      
+      setGameState(prev => {
+        if (!prev.isPlaying || gameEndedRef.current) return prev;
+        
+        if (newTimeLeft <= 0) {
+          gameEndedRef.current = true;
+          stopAllTimers();
+          const won = prev.score >= 5000;
+          const finalState = { ...prev, timeLeft: 0, isPlaying: false, isGameOver: true, won };
+          setTimeout(() => {
+            onGameEndRef.current?.(finalState);
+            hapticFeedback(won ? 'success' : 'error');
+          }, 0);
+          return finalState;
+        }
+        
+        if (prev.timeLeft === newTimeLeft) return prev;
+        return { ...prev, timeLeft: newTimeLeft };
+      });
+    }, 100);
+    
+    addBallsTimerRef.current = setInterval(() => {
+      if (gameEndedRef.current) return;
+      
+      setGameState(prev => {
+        if (!prev.isPlaying || gameEndedRef.current) return prev;
+        const newBalls = addNewBallsToChain(prev.balls, 2);
+        return { ...prev, balls: updateBallPositions(newBalls, pathRef.current) };
+      });
+    }, 5000);
     
     hapticFeedback('medium');
-  }, [canvasWidth, canvasHeight]);
+  }, [stopAllTimers]);
 
-  const endGame = useCallback((won: boolean) => {
+  useEffect(() => {
+    return () => {
+      stopAllTimers();
+    };
+  }, [stopAllTimers]);
+
+  useEffect(() => {
+    if (!projectile || gameEndedRef.current) return;
+    
     setGameState(prev => {
-      const finalState = {
-        ...prev,
-        isPlaying: false,
-        isGameOver: true,
-        won,
-      };
-      onGameEnd?.(finalState);
-      return finalState;
+      if (!prev.isPlaying || gameEndedRef.current) return prev;
+      
+      const collision = checkCollision(projectile.x, projectile.y, prev.balls);
+      
+      if (collision) {
+        const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
+        
+        let newBalls = insertBallInChain(prev.balls, projectile.ball, insertIndex);
+        newBalls = updateBallPositions(newBalls, pathRef.current);
+        
+        const matches = findMatchingBalls(newBalls, insertIndex, projectile.ball.color);
+        
+        if (matches.length >= 3) {
+          const matchedBalls = matches.map(i => newBalls[i]);
+          const { points, cryptoCollected } = calculatePoints(matchedBalls, prev.combo + 1);
+          
+          newBalls = removeBalls(newBalls, matches);
+          
+          hapticFeedback('medium');
+          
+          const newCombo = prev.combo + 1;
+          const newScore = prev.score + points;
+          
+          if (checkWin(newScore)) {
+            gameEndedRef.current = true;
+            stopAllTimers();
+            const finalState = {
+              ...prev,
+              balls: newBalls,
+              score: newScore,
+              combo: newCombo,
+              maxCombo: Math.max(prev.maxCombo, newCombo),
+              cryptoCollected: {
+                btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+                eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+                usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+              },
+              shotsHit: prev.shotsHit + 1,
+              isPlaying: false,
+              isGameOver: true,
+              won: true,
+            };
+            setTimeout(() => {
+              onGameEndRef.current?.(finalState);
+              hapticFeedback('success');
+            }, 100);
+            return finalState;
+          }
+          
+          setProjectile(null);
+          
+          return {
+            ...prev,
+            balls: newBalls,
+            score: newScore,
+            combo: newCombo,
+            maxCombo: Math.max(prev.maxCombo, newCombo),
+            cryptoCollected: {
+              btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+              eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+              usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+            },
+            shotsHit: prev.shotsHit + 1,
+          };
+        } else {
+          setProjectile(null);
+          
+          return {
+            ...prev,
+            balls: newBalls,
+            combo: 0,
+            shotsHit: prev.shotsHit + 1,
+          };
+        }
+      }
+      
+      return prev;
     });
-    
-    if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (addBallsTimerRef.current) clearInterval(addBallsTimerRef.current);
-    
-    hapticFeedback(won ? 'success' : 'error');
-  }, [onGameEnd]);
+  }, [projectile, stopAllTimers]);
 
   const shoot = useCallback((targetX: number, targetY: number) => {
     if (!gameState.isPlaying || projectile || !gameState.shooterBall) return;
@@ -144,127 +325,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     const clampedAngle = Math.max(-Math.PI, Math.min(0, angle));
     setShooterAngle(clampedAngle);
   }, [gameState.isPlaying, shooterPosition]);
-
-  const gameLoop = useCallback((timestamp: number) => {
-    if (!gameState.isPlaying) return;
-    
-    const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
-    lastTimeRef.current = timestamp;
-    
-    setGameState(prev => {
-      if (!prev.isPlaying) return prev;
-      
-      let newBalls = moveBallsForward(prev.balls, deltaTime);
-      newBalls = updateBallPositions(newBalls, path);
-      
-      if (checkGameOver(newBalls)) {
-        setTimeout(() => endGame(false), 0);
-        return { ...prev, balls: newBalls };
-      }
-      
-      return { ...prev, balls: newBalls };
-    });
-    
-    if (projectile) {
-      setProjectile(prev => {
-        if (!prev) return null;
-        
-        const newX = prev.x + prev.vx;
-        const newY = prev.y + prev.vy;
-        
-        if (newX < 0 || newX > canvasWidth || newY < 0 || newY > canvasHeight) {
-          return null;
-        }
-        
-        const collision = checkCollision(newX, newY, gameState.balls);
-        
-        if (collision) {
-          const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
-          
-          setGameState(prevState => {
-            let newBalls = insertBallInChain(prevState.balls, prev.ball, insertIndex);
-            newBalls = updateBallPositions(newBalls, path);
-            
-            const matches = findMatchingBalls(newBalls, insertIndex, prev.ball.color);
-            
-            if (matches.length >= 3) {
-              const matchedBalls = matches.map(i => newBalls[i]);
-              const { points, cryptoCollected } = calculatePoints(matchedBalls, prevState.combo + 1);
-              
-              newBalls = removeBalls(newBalls, matches);
-              
-              hapticFeedback('medium');
-              
-              const newCombo = prevState.combo + 1;
-              const newScore = prevState.score + points;
-              
-              if (checkWin(newScore)) {
-                setTimeout(() => endGame(true), 100);
-              }
-              
-              return {
-                ...prevState,
-                balls: newBalls,
-                score: newScore,
-                combo: newCombo,
-                maxCombo: Math.max(prevState.maxCombo, newCombo),
-                cryptoCollected: {
-                  btc: prevState.cryptoCollected.btc + cryptoCollected.btc,
-                  eth: prevState.cryptoCollected.eth + cryptoCollected.eth,
-                  usdt: prevState.cryptoCollected.usdt + cryptoCollected.usdt,
-                },
-                shotsHit: prevState.shotsHit + 1,
-              };
-            } else {
-              return {
-                ...prevState,
-                balls: newBalls,
-                combo: 0,
-                shotsHit: prevState.shotsHit + 1,
-              };
-            }
-          });
-          
-          return null;
-        }
-        
-        return { ...prev, x: newX, y: newY };
-      });
-    }
-    
-    gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [gameState.isPlaying, gameState.balls, projectile, path, canvasWidth, canvasHeight, endGame]);
-
-  useEffect(() => {
-    if (gameState.isPlaying) {
-      lastTimeRef.current = 0;
-      gameLoopRef.current = requestAnimationFrame(gameLoop);
-      
-      timerRef.current = window.setInterval(() => {
-        setGameState(prev => {
-          if (prev.timeLeft <= 1) {
-            setTimeout(() => endGame(prev.score >= 5000), 0);
-            return { ...prev, timeLeft: 0 };
-          }
-          return { ...prev, timeLeft: prev.timeLeft - 1 };
-        });
-      }, 1000);
-      
-      addBallsTimerRef.current = window.setInterval(() => {
-        setGameState(prev => {
-          if (!prev.isPlaying) return prev;
-          const newBalls = addNewBallsToChain(prev.balls, 2);
-          return { ...prev, balls: updateBallPositions(newBalls, path) };
-        });
-      }, 5000);
-      
-      return () => {
-        if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (addBallsTimerRef.current) clearInterval(addBallsTimerRef.current);
-      };
-    }
-  }, [gameState.isPlaying, gameLoop, endGame, path]);
 
   return {
     gameState,

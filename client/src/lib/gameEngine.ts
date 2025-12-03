@@ -1,7 +1,7 @@
 import type { Ball, BallColor, CryptoType, GameState } from "@shared/schema";
 
 const BALL_RADIUS = 18;
-const BALL_SPEED = 0.3;
+const BALL_SPEED = 0.02;
 const SHOOTER_BALL_SPEED = 12;
 const GAME_DURATION = 45;
 const WIN_CONDITION = 5000;
