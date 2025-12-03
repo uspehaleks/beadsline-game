@@ -25,7 +25,9 @@ import {
   Save,
   Shield,
   Gamepad2,
-  TrendingUp
+  TrendingUp,
+  KeyRound,
+  Loader2
 } from "lucide-react";
 import {
   Dialog,
@@ -80,17 +82,149 @@ export default function Admin() {
     queryKey: ["/api/admin/scores"],
   });
 
+  const [loginUsername, setLoginUsername] = useState("alex851466");
+  const [loginCode, setLoginCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+
+  const requestCodeMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const res = await apiRequest("POST", "/api/auth/admin/request-code", { username });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Ошибка запроса кода");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setCodeSent(true);
+      toast({
+        title: "Запрос отправлен",
+        description: "Если аккаунт существует, код будет доступен",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyCodeMutation = useMutation({
+    mutationFn: async ({ username, code }: { username: string; code: string }) => {
+      const res = await apiRequest("POST", "/api/auth/admin/verify-code", { username, code });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Ошибка проверки кода");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Успешный вход",
+        description: "Добро пожаловать в админ-панель",
+      });
+      window.location.reload();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user?.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Доступ запрещён</h2>
-            <p className="text-muted-foreground mb-4">
-              Для доступа к этой странице нужны права администратора.
-            </p>
-            <Button onClick={() => setLocation("/")} data-testid="button-back-home">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2">
+              <Shield className="w-12 h-12 text-primary" />
+            </div>
+            <CardTitle>Вход в админ-панель</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Имя пользователя</Label>
+              <Input
+                id="username"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                placeholder="Введите имя пользователя"
+                disabled={codeSent}
+                data-testid="input-admin-username"
+              />
+            </div>
+
+            {!codeSent ? (
+              <Button
+                className="w-full"
+                onClick={() => requestCodeMutation.mutate(loginUsername)}
+                disabled={!loginUsername || requestCodeMutation.isPending}
+                data-testid="button-request-code"
+              >
+                {requestCodeMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <KeyRound className="w-4 h-4 mr-2" />
+                )}
+                Получить код
+              </Button>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="code">Код подтверждения</Label>
+                  <Input
+                    id="code"
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value)}
+                    placeholder="Введите 6-значный код"
+                    maxLength={6}
+                    data-testid="input-admin-code"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Код действителен 5 минут. Проверьте консоль сервера.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setCodeSent(false);
+                      setLoginCode("");
+                    }}
+                    data-testid="button-back-to-username"
+                  >
+                    Назад
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => verifyCodeMutation.mutate({ username: loginUsername, code: loginCode })}
+                    disabled={loginCode.length !== 6 || verifyCodeMutation.isPending}
+                    data-testid="button-verify-code"
+                  >
+                    {verifyCodeMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    Войти
+                  </Button>
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => setLocation("/")}
+              data-testid="button-back-home"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               На главную
             </Button>

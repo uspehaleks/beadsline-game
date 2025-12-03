@@ -4,6 +4,72 @@ import { storage } from "./storage";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
 
+interface AdminCode {
+  code: string;
+  expiresAt: number;
+  attempts: number;
+  lastRequestedAt: number;
+}
+
+interface IpRateLimit {
+  count: number;
+  firstAttempt: number;
+}
+
+const adminCodes = new Map<string, AdminCode>();
+const ipRateLimits = new Map<string, IpRateLimit>();
+
+const IP_RATE_LIMIT_WINDOW = 15 * 60 * 1000;
+const IP_RATE_LIMIT_MAX = 10;
+
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function cleanupExpiredCodes() {
+  const now = Date.now();
+  Array.from(adminCodes.entries()).forEach(([username, data]) => {
+    if (data.expiresAt < now) {
+      adminCodes.delete(username);
+    }
+  });
+  Array.from(ipRateLimits.entries()).forEach(([ip, data]) => {
+    if (now - data.firstAttempt > IP_RATE_LIMIT_WINDOW) {
+      ipRateLimits.delete(ip);
+    }
+  });
+}
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+function checkIpRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const limit = ipRateLimits.get(ip);
+  
+  if (!limit) {
+    ipRateLimits.set(ip, { count: 1, firstAttempt: now });
+    return true;
+  }
+  
+  if (now - limit.firstAttempt > IP_RATE_LIMIT_WINDOW) {
+    ipRateLimits.set(ip, { count: 1, firstAttempt: now });
+    return true;
+  }
+  
+  if (limit.count >= IP_RATE_LIMIT_MAX) {
+    return false;
+  }
+  
+  limit.count++;
+  return true;
+}
+
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
@@ -105,6 +171,113 @@ export async function registerRoutes(
       }
       res.json({ success: true });
     });
+  });
+
+  app.post("/api/auth/admin/request-code", async (req, res) => {
+    try {
+      cleanupExpiredCodes();
+      
+      const clientIp = getClientIp(req);
+      
+      if (!checkIpRateLimit(clientIp)) {
+        return res.status(429).json({ error: "Слишком много попыток. Попробуйте позже" });
+      }
+      
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ error: "Имя пользователя обязательно" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      const now = Date.now();
+      
+      if (!user || !user.isAdmin) {
+        console.log(`Admin code request failed for unknown/non-admin user: ${username} from IP: ${clientIp}`);
+        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+        return res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
+      }
+      
+      const existing = adminCodes.get(username);
+      
+      if (existing && now - existing.lastRequestedAt < 60000) {
+        return res.status(429).json({ error: "Подождите минуту перед повторным запросом кода" });
+      }
+      
+      const code = generateCode();
+      const expiresAt = now + 5 * 60 * 1000;
+      
+      adminCodes.set(username, {
+        code,
+        expiresAt,
+        attempts: 0,
+        lastRequestedAt: now,
+      });
+      
+      console.log(`\n========================================`);
+      console.log(`ADMIN LOGIN CODE for ${username}: ${code}`);
+      console.log(`Expires in 5 minutes`);
+      console.log(`========================================\n`);
+      
+      res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
+    } catch (error) {
+      console.error("Request admin code error:", error);
+      res.status(500).json({ error: "Ошибка при запросе кода" });
+    }
+  });
+
+  app.post("/api/auth/admin/verify-code", async (req, res) => {
+    try {
+      cleanupExpiredCodes();
+      
+      const clientIp = getClientIp(req);
+      
+      if (!checkIpRateLimit(clientIp)) {
+        return res.status(429).json({ error: "Слишком много попыток. Попробуйте позже" });
+      }
+      
+      const { username, code } = req.body;
+      
+      if (!username || !code) {
+        return res.status(400).json({ error: "Имя пользователя и код обязательны" });
+      }
+      
+      const stored = adminCodes.get(username);
+      
+      if (!stored) {
+        return res.status(400).json({ error: "Код не найден или истёк. Запросите новый код" });
+      }
+      
+      if (stored.attempts >= 5) {
+        adminCodes.delete(username);
+        return res.status(429).json({ error: "Слишком много попыток. Запросите новый код" });
+      }
+      
+      if (Date.now() > stored.expiresAt) {
+        adminCodes.delete(username);
+        return res.status(400).json({ error: "Код истёк. Запросите новый код" });
+      }
+      
+      if (stored.code !== code) {
+        stored.attempts++;
+        return res.status(400).json({ error: `Неверный код. Осталось попыток: ${5 - stored.attempts}` });
+      }
+      
+      adminCodes.delete(username);
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+      
+      req.session.userId = user.id;
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Verify admin code error:", error);
+      res.status(500).json({ error: "Ошибка при проверке кода" });
+    }
   });
 
   app.get("/api/users/:id", async (req, res) => {
