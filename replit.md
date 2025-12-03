@@ -55,10 +55,38 @@ The application is a fully functional MVP with:
 ## Game Mechanics
 - **Objective**: Match 3+ same-colored balls before time runs out
 - **Controls**: Touch/click to aim, release to shoot
-- **Scoring**: 100 points per ball, combo multipliers (1.5x per consecutive match)
-- **Crypto Balls**: Special balls with bonus points (spawn at 8% rate)
-- **Win Condition**: Score 5000+ points in 45 seconds
+- **Scoring**: 100 Beads per ball, combo multipliers (1.5x per consecutive match)
+- **Crypto Balls**: Special balls with bonus Beads (spawn at 8% rate)
+- **Win Condition**: Score 5000+ Beads in 60 seconds
 - **Ball Colors**: Red, Blue, Green, Yellow, Purple
+- **Dynamic Speed**: Balls start slow and accelerate as they approach finish
+
+## Game Configuration (client/src/lib/gameConfig.ts)
+All game parameters are centralized for easy tuning:
+```typescript
+path: {
+  segments: 350,        // Path length (more = longer path)
+  amplitude: 0.35,      // Snake width
+  frequency: 3.5,       // Number of curves
+  startY: 0.1,          // Start position
+  endY: 0.9,            // End position (finish line)
+}
+balls: {
+  radius: 18,           // Ball size
+  spacing: 0.028,       // Gap between balls
+  initialCount: 25,     // Starting balls in chain
+  shooterSpeed: 12,     // Projectile speed
+}
+speed: {
+  base: 0.008,          // Starting speed (slow)
+  max: 0.035,           // Maximum speed (at finish)
+  accelerationCurve: 2.0, // Quadratic curve (1=linear, 2=smooth, 3=aggressive)
+}
+gameplay: {
+  duration: 60,         // Game time in seconds
+  winCondition: 5000,   // Points to win
+}
+```
 
 ## API Endpoints
 | Endpoint | Method | Description |

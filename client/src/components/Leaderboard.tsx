@@ -196,7 +196,7 @@ function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps
           <div className="font-display font-bold text-primary tabular-nums">
             {entry.totalPoints.toLocaleString()}
           </div>
-          <div className="text-xs text-muted-foreground">очков</div>
+          <div className="text-xs text-muted-foreground">Beads</div>
         </div>
       </Card>
     </motion.div>

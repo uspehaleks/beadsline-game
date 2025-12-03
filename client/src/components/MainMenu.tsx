@@ -62,7 +62,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                 <div className="flex items-center gap-1 text-primary">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="font-semibold tabular-nums" data-testid="text-total-points">
-                    {user.totalPoints.toLocaleString()} очков
+                    {user.totalPoints.toLocaleString()} Beads
                   </span>
                 </div>
               </div>
@@ -164,7 +164,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         transition={{ delay: 0.6 }}
         className="mt-4 text-xs text-muted-foreground text-center"
       >
-        Собирай крипто-шарики для бонусных очков!
+        Собирай крипто-шарики для бонусных Beads!
       </motion.p>
     </div>
   );

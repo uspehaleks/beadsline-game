@@ -1,23 +1,19 @@
 import type { Ball, BallColor, CryptoType, GameState } from "@shared/schema";
+import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
-const BALL_RADIUS = 18;
-const BALL_SPEED = 0.02;
-const SHOOTER_BALL_SPEED = 12;
-const GAME_DURATION = 45;
-const WIN_CONDITION = 5000;
+const BALL_RADIUS = GAME_CONFIG.balls.radius;
+const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
+const GAME_DURATION = GAME_CONFIG.gameplay.duration;
+const WIN_CONDITION = GAME_CONFIG.gameplay.winCondition;
 
 const BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
 
-const CRYPTO_DROP_RATE = 0.08;
-const CRYPTO_POINTS: Record<CryptoType, number> = {
-  btc: 500,
-  eth: 300,
-  usdt: 200,
-};
+const CRYPTO_DROP_RATE = GAME_CONFIG.crypto.dropRate;
+const CRYPTO_POINTS = GAME_CONFIG.crypto.points;
 
-const BASE_POINTS = 100;
-const COMBO_MULTIPLIER = 1.5;
+const BASE_POINTS = GAME_CONFIG.scoring.basePoints;
+const COMBO_MULTIPLIER = GAME_CONFIG.scoring.comboMultiplier;
 
 export interface PathPoint {
   x: number;
@@ -26,17 +22,16 @@ export interface PathPoint {
 
 export function generatePath(width: number, height: number): PathPoint[] {
   const points: PathPoint[] = [];
-  const segments = 200;
-  const amplitude = width * 0.35;
+  const { segments, amplitude, frequency, startY, endY } = GAME_CONFIG.path;
+  const amp = width * amplitude;
   const centerX = width / 2;
-  const startY = height * 0.15;
-  const endY = height * 0.85;
+  const yStart = height * startY;
+  const yEnd = height * endY;
   
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
-    const y = startY + (endY - startY) * t;
-    const frequency = 2.5;
-    const x = centerX + amplitude * Math.sin(t * Math.PI * frequency);
+    const y = yStart + (yEnd - yStart) * t;
+    const x = centerX + amp * Math.sin(t * Math.PI * frequency);
     points.push({ x, y });
   }
   
@@ -81,7 +76,7 @@ export function createRandomBall(id: string, pathProgress: number = 0): Ball {
 
 export function createInitialBalls(count: number): Ball[] {
   const balls: Ball[] = [];
-  const spacing = 0.035;
+  const spacing = GAME_CONFIG.balls.spacing;
   
   for (let i = 0; i < count; i++) {
     const ball = createRandomBall(`ball-${i}`, i * spacing);
@@ -93,7 +88,7 @@ export function createInitialBalls(count: number): Ball[] {
 
 export function createInitialGameState(): GameState {
   return {
-    balls: createInitialBalls(12),
+    balls: createInitialBalls(GAME_CONFIG.balls.initialCount),
     shooterBall: createRandomBall('shooter'),
     nextBall: createRandomBall('next'),
     score: 0,
@@ -117,11 +112,14 @@ export function updateBallPositions(balls: Ball[], path: PathPoint[]): Ball[] {
 }
 
 export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
-  const moveAmount = BALL_SPEED * deltaTime * 0.001;
-  return balls.map(ball => ({
-    ...ball,
-    pathProgress: ball.pathProgress + moveAmount,
-  }));
+  return balls.map(ball => {
+    const dynamicSpeed = calculateDynamicSpeed(ball.pathProgress);
+    const moveAmount = dynamicSpeed * deltaTime * 0.001;
+    return {
+      ...ball,
+      pathProgress: ball.pathProgress + moveAmount,
+    };
+  });
 }
 
 export function findMatchingBalls(balls: Ball[], insertIndex: number, color: BallColor): number[] {
@@ -158,7 +156,7 @@ export function calculatePoints(matchedBalls: Ball[], combo: number): {
     }
   }
   
-  const comboMultiplier = Math.pow(COMBO_MULTIPLIER, Math.min(combo, 10));
+  const comboMultiplier = Math.pow(COMBO_MULTIPLIER, Math.min(combo, GAME_CONFIG.scoring.maxComboStack));
   points = Math.round(points * comboMultiplier);
   
   return { points, cryptoCollected };
@@ -170,7 +168,7 @@ export function insertBallInChain(
   insertIndex: number
 ): Ball[] {
   const newBalls = [...balls];
-  const spacing = 0.035;
+  const spacing = GAME_CONFIG.balls.spacing;
   
   const insertProgress = insertIndex < balls.length 
     ? balls[insertIndex].pathProgress 
@@ -237,7 +235,7 @@ export function checkCollision(
 
 export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
   const newBalls = [...balls];
-  const spacing = 0.035;
+  const spacing = GAME_CONFIG.balls.spacing;
   
   for (let i = 0; i < count; i++) {
     const lastProgress = newBalls.length > 0 

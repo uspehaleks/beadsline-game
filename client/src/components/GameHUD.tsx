@@ -24,7 +24,7 @@ export function GameHUD({ gameState }: GameHUDProps) {
         </div>
 
         <div className="flex flex-col items-center">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide">Очки</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">Beads</span>
           <span className="font-display font-bold text-2xl text-primary tabular-nums" data-testid="text-score">
             {score.toLocaleString()}
           </span>
