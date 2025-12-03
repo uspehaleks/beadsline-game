@@ -1,4 +1,4 @@
-# Crypto Zuma - Telegram Mini App Arcade Game
+# Beads Line - Telegram Mini App Arcade Game
 
 ## Overview
 A Zuma-style arcade game designed as a Telegram Mini App where players match colored balls to earn points. Special crypto-themed balls (BTC, ETH, USDT) provide bonus points. The game features a leaderboard, user profiles, and session-based gameplay.

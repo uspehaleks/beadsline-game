@@ -62,24 +62,31 @@ export default function Admin() {
   const { user } = useUser();
   const { toast } = useToast();
 
+  const isAdmin = user?.isAdmin === true;
+
   const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
+    enabled: isAdmin,
   });
 
   const { data: usersData } = useQuery<UsersResponse>({
     queryKey: ["/api/admin/users"],
+    enabled: isAdmin,
   });
 
   const { data: configs } = useQuery<GameConfig[]>({
     queryKey: ["/api/admin/configs"],
+    enabled: isAdmin,
   });
 
   const { data: prizePools } = useQuery<PrizePool[]>({
     queryKey: ["/api/admin/prize-pools"],
+    enabled: isAdmin,
   });
 
   const { data: scoresData } = useQuery<ScoresResponse>({
     queryKey: ["/api/admin/scores"],
+    enabled: isAdmin,
   });
 
   const [loginUsername, setLoginUsername] = useState("alex851466");

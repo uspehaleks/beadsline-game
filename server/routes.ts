@@ -245,7 +245,7 @@ export async function registerRoutes(
       });
       
       if (user.telegramId) {
-        const message = `🔐 <b>Код для входа в админ-панель Crypto Zuma:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
+        const message = `🔐 <b>Код для входа в админ-панель Beads Line:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
         const sent = await sendTelegramMessage(user.telegramId, message);
         if (sent) {
           console.log(`Admin code sent to Telegram for user: ${username}`);

@@ -33,7 +33,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           className="font-display text-5xl font-bold bg-gradient-to-r from-primary via-purple-400 to-primary bg-clip-text text-transparent"
           data-testid="text-title"
         >
-          Crypto Zuma
+          Beads Line
         </h1>
         <p className="text-muted-foreground mt-2">
           Собирай шарики, лови крипту, покоряй рейтинг!
