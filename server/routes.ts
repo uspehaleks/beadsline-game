@@ -313,7 +313,14 @@ export async function registerRoutes(
       
       req.session.userId = user.id;
       
-      res.json(user);
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ error: "Ошибка сохранения сессии" });
+        }
+        console.log(`Admin login successful for ${username}, session userId: ${req.session.userId}`);
+        res.json(user);
+      });
     } catch (error) {
       console.error("Verify admin code error:", error);
       res.status(500).json({ error: "Ошибка при проверке кода" });
