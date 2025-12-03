@@ -31,6 +31,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
         initTelegramApp();
       }
 
+      // First check if there's an existing session (e.g., admin login)
+      try {
+        const meResponse = await fetch('/api/auth/me', { credentials: 'include' });
+        if (meResponse.ok) {
+          const existingUser = await meResponse.json();
+          setUser(existingUser);
+          return;
+        }
+      } catch {
+        // No existing session, continue with normal auth
+      }
+
       const telegramUser = getTelegramUser();
       
       if (telegramUser) {
