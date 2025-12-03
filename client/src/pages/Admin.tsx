@@ -27,7 +27,12 @@ import {
   Gamepad2,
   TrendingUp,
   KeyRound,
-  Loader2
+  Loader2,
+  Bot,
+  RefreshCw,
+  Link,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -320,7 +325,7 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsList className="grid grid-cols-5 w-full max-w-lg">
             <TabsTrigger value="users" data-testid="tab-users">
               <Users className="w-4 h-4 mr-2" />
               Игроки
@@ -336,6 +341,10 @@ export default function Admin() {
             <TabsTrigger value="scores" data-testid="tab-scores">
               <Trophy className="w-4 h-4 mr-2" />
               Очки
+            </TabsTrigger>
+            <TabsTrigger value="telegram" data-testid="tab-telegram">
+              <Bot className="w-4 h-4 mr-2" />
+              Бот
             </TabsTrigger>
           </TabsList>
 
@@ -353,6 +362,10 @@ export default function Admin() {
 
           <TabsContent value="scores">
             <ScoresTab scores={scoresData?.scores || []} total={scoresData?.total || 0} />
+          </TabsContent>
+
+          <TabsContent value="telegram">
+            <TelegramTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -779,6 +792,240 @@ function ScoresTab({ scores, total }: { scores: GameScore[]; total: number }) {
             )}
           </div>
         </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface TelegramBotInfo {
+  bot: {
+    id: number;
+    is_bot: boolean;
+    first_name: string;
+    username: string;
+    can_join_groups: boolean;
+    can_read_all_group_messages: boolean;
+    supports_inline_queries: boolean;
+  };
+  webhook: {
+    url: string;
+    has_custom_certificate: boolean;
+    pending_update_count: number;
+    last_error_date?: number;
+    last_error_message?: string;
+    max_connections?: number;
+    allowed_updates?: string[];
+  };
+  appUrl: string;
+}
+
+function TelegramTab() {
+  const { toast } = useToast();
+
+  const { data: botInfo, isLoading: infoLoading, refetch: refetchInfo } = useQuery<TelegramBotInfo>({
+    queryKey: ["/api/telegram/info"],
+  });
+
+  const setupWebhookMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/telegram/setup-webhook", {});
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Ошибка настройки webhook");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      refetchInfo();
+      if (data.success) {
+        toast({
+          title: "Webhook настроен",
+          description: "Бот готов к работе!",
+        });
+      } else {
+        toast({
+          title: "Частичная настройка",
+          description: "Некоторые настройки не применились",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isWebhookConfigured = botInfo?.webhook?.url && botInfo.webhook.url.includes("/api/telegram/webhook");
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="flex items-center gap-2">
+          <Bot className="w-5 h-5" />
+          Telegram бот
+        </CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetchInfo()}
+          disabled={infoLoading}
+          data-testid="button-refresh-bot-info"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${infoLoading ? 'animate-spin' : ''}`} />
+          Обновить
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {infoLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : botInfo ? (
+          <>
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border">
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <Bot className="w-4 h-4" />
+                  Информация о боте
+                </h3>
+                <div className="grid gap-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Имя:</span>
+                    <span className="font-medium">{botInfo.bot?.first_name || "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Username:</span>
+                    <span className="font-medium">
+                      {botInfo.bot?.username ? (
+                        <a 
+                          href={`https://t.me/${botInfo.bot.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          @{botInfo.bot.username}
+                        </a>
+                      ) : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ID:</span>
+                    <span className="font-mono">{botInfo.bot?.id || "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border">
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  Webhook
+                </h3>
+                <div className="grid gap-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Статус:</span>
+                    <span className="flex items-center gap-1">
+                      {isWebhookConfigured ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="text-green-500">Настроен</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-4 h-4 text-destructive" />
+                          <span className="text-destructive">Не настроен</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  {botInfo.webhook?.url && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">URL:</span>
+                      <span className="font-mono text-xs truncate max-w-[200px]">
+                        {botInfo.webhook.url}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ожидающие:</span>
+                    <span>{botInfo.webhook?.pending_update_count || 0}</span>
+                  </div>
+                  {botInfo.webhook?.last_error_message && (
+                    <div className="p-2 bg-destructive/10 rounded text-destructive text-xs">
+                      Ошибка: {botInfo.webhook.last_error_message}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border bg-muted/50">
+                <h3 className="font-medium mb-2">URL приложения</h3>
+                <p className="text-sm font-mono break-all">{botInfo.appUrl}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => setupWebhookMutation.mutate()}
+                disabled={setupWebhookMutation.isPending}
+                data-testid="button-setup-webhook"
+              >
+                {setupWebhookMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                {isWebhookConfigured ? "Переустановить Webhook" : "Настроить Webhook"}
+              </Button>
+
+              {botInfo.bot?.username && (
+                <Button
+                  variant="outline"
+                  asChild
+                  data-testid="button-open-bot"
+                >
+                  <a
+                    href={`https://t.me/${botInfo.bot.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Bot className="w-4 h-4 mr-2" />
+                    Открыть бота
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <h3 className="font-medium">Инструкция по настройке</h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                <li>Нажмите кнопку "Настроить Webhook" выше</li>
+                <li>Откройте бота в Telegram и отправьте /start</li>
+                <li>Бот будет отправлять кнопку для запуска Mini App</li>
+                <li>
+                  Для настройки Mini App в BotFather:
+                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                    <li>Отправьте /mybots в @BotFather</li>
+                    <li>Выберите вашего бота</li>
+                    <li>Bot Settings → Menu Button</li>
+                    <li>Настройте URL: <code className="text-xs bg-muted px-1 py-0.5 rounded">{botInfo.appUrl}</code></li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <XCircle className="w-12 h-12 mx-auto mb-3 text-destructive" />
+            <p>Не удалось получить информацию о боте</p>
+            <p className="text-sm">Проверьте настройки TELEGRAM_BOT_TOKEN</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

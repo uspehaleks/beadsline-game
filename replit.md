@@ -70,6 +70,26 @@ The application is a fully functional MVP with:
 | `/api/leaderboard` | GET | Get top players |
 | `/api/users/:id` | GET | Get user profile |
 | `/api/config/:key` | GET | Get game config |
+| `/api/telegram/webhook` | POST | Telegram bot webhook (public) |
+| `/api/telegram/info` | GET | Bot info (admin only) |
+| `/api/telegram/setup-webhook` | POST | Setup webhook (admin only) |
+
+## Telegram Bot Integration
+The game includes a Telegram bot that:
+- Responds to commands: /start, /play, /leaderboard, /help
+- Sends Mini App buttons to launch the game
+- All messages are in Russian
+
+**Bot Commands:**
+- `/start` - Welcome message with "Play" button
+- `/play` - Quick launch button
+- `/leaderboard` - Shows top 10 players
+- `/help` - Game instructions
+
+**Admin Setup (via Admin Panel → Bot tab):**
+1. Click "Настроить Webhook" to register bot with Telegram
+2. Test by sending /start to your bot
+3. Configure Menu Button in BotFather for Mini App launch
 
 ## Database Schema
 - **users**: Player profiles (id, telegramId, username, totalPoints, gamesPlayed, bestScore)

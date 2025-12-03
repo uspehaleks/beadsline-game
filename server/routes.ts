@@ -4,6 +4,47 @@ import { storage } from "./storage";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
 
+// Telegram Bot Types
+interface TelegramUser {
+  id: number;
+  is_bot: boolean;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+}
+
+interface TelegramMessage {
+  message_id: number;
+  from?: TelegramUser;
+  chat: {
+    id: number;
+    type: string;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+  };
+  date: number;
+  text?: string;
+  entities?: Array<{
+    type: string;
+    offset: number;
+    length: number;
+  }>;
+}
+
+interface TelegramUpdate {
+  update_id: number;
+  message?: TelegramMessage;
+}
+
+// App URL for Mini App
+function getAppUrl(): string {
+  return process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DEPLOYMENT_URL || 'https://beadsline--uspehaleks.replit.app';
+}
+
 async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
@@ -30,6 +71,190 @@ async function sendTelegramMessage(chatId: string, text: string): Promise<boolea
     return true;
   } catch (error) {
     console.error("Failed to send Telegram message:", error);
+    return false;
+  }
+}
+
+async function sendTelegramMessageWithButton(
+  chatId: number, 
+  text: string, 
+  buttonText: string, 
+  webAppUrl: string
+): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.log("TELEGRAM_BOT_TOKEN not configured");
+    return false;
+  }
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: buttonText,
+              web_app: { url: webAppUrl }
+            }
+          ]]
+        }
+      })
+    });
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error("Telegram API error:", result);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Failed to send Telegram message:", error);
+    return false;
+  }
+}
+
+async function handleTelegramCommand(message: TelegramMessage): Promise<void> {
+  const chatId = message.chat.id;
+  const text = message.text || '';
+  const command = text.split(' ')[0].toLowerCase();
+  const appUrl = getAppUrl();
+  
+  switch (command) {
+    case '/start':
+      await sendTelegramMessageWithButton(
+        chatId,
+        `<b>Добро пожаловать в Beads Line!</b>\n\n` +
+        `Это аркадная игра в стиле Зума, где нужно стрелять шариками и собирать комбо!\n\n` +
+        `<b>Особенности:</b>\n` +
+        `- Собирайте 3+ шарика одного цвета\n` +
+        `- Ловите крипто-шарики (BTC, ETH, USDT) для бонусов\n` +
+        `- Соревнуйтесь за место в таблице лидеров\n\n` +
+        `Нажмите кнопку ниже, чтобы начать игру!`,
+        '🎮 Играть',
+        appUrl
+      );
+      break;
+      
+    case '/play':
+    case '/game':
+      await sendTelegramMessageWithButton(
+        chatId,
+        `<b>Готовы к игре?</b>\n\n` +
+        `Нажмите кнопку, чтобы запустить Beads Line!`,
+        '🎮 Играть сейчас',
+        appUrl
+      );
+      break;
+      
+    case '/leaderboard':
+    case '/top':
+      const leaderboard = await storage.getLeaderboard(10);
+      if (leaderboard.length === 0) {
+        await sendTelegramMessage(
+          chatId.toString(),
+          `<b>Таблица лидеров пуста</b>\n\nБудьте первым, кто сыграет!`
+        );
+      } else {
+        let leaderboardText = `<b>🏆 Топ-10 игроков:</b>\n\n`;
+        leaderboard.forEach((player, index) => {
+          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+          const name = player.username || 'Игрок';
+          leaderboardText += `${medal} <b>${name}</b> — ${player.bestScore} очков\n`;
+        });
+        await sendTelegramMessageWithButton(
+          chatId,
+          leaderboardText,
+          '🎮 Играть',
+          appUrl
+        );
+      }
+      break;
+      
+    case '/help':
+      await sendTelegramMessage(
+        chatId.toString(),
+        `<b>Помощь по Beads Line:</b>\n\n` +
+        `<b>Команды:</b>\n` +
+        `/start - Начать игру\n` +
+        `/play - Запустить игру\n` +
+        `/leaderboard - Таблица лидеров\n` +
+        `/help - Эта справка\n\n` +
+        `<b>Как играть:</b>\n` +
+        `- Целься и стреляй шариками\n` +
+        `- Собирай 3+ шарика одного цвета\n` +
+        `- Крипто-шарики дают бонусы:\n` +
+        `  BTC = +500 очков\n` +
+        `  ETH = +300 очков\n` +
+        `  USDT = +200 очков\n` +
+        `- Набери 5000+ очков за 45 секунд!`
+      );
+      break;
+      
+    default:
+      if (text.startsWith('/')) {
+        await sendTelegramMessage(
+          chatId.toString(),
+          `Неизвестная команда. Используйте /help для списка команд.`
+        );
+      }
+      break;
+  }
+}
+
+async function setTelegramWebhook(webhookUrl: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.log("TELEGRAM_BOT_TOKEN not configured");
+    return false;
+  }
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: webhookUrl,
+        allowed_updates: ['message']
+      })
+    });
+    
+    const result = await response.json();
+    console.log("Set webhook result:", result);
+    return result.ok;
+  } catch (error) {
+    console.error("Failed to set webhook:", error);
+    return false;
+  }
+}
+
+async function setTelegramBotCommands(): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) return false;
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commands: [
+          { command: 'start', description: 'Начать игру' },
+          { command: 'play', description: 'Играть сейчас' },
+          { command: 'leaderboard', description: 'Таблица лидеров' },
+          { command: 'help', description: 'Помощь' }
+        ]
+      })
+    });
+    
+    const result = await response.json();
+    console.log("Set commands result:", result);
+    return result.ok;
+  } catch (error) {
+    console.error("Failed to set commands:", error);
     return false;
   }
 }
@@ -630,6 +855,74 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get admin scores error:", error);
       res.status(500).json({ error: "Failed to get scores" });
+    }
+  });
+
+  // Telegram Bot Webhook
+  app.post("/api/telegram/webhook", async (req, res) => {
+    try {
+      const update: TelegramUpdate = req.body;
+      
+      if (update.message) {
+        await handleTelegramCommand(update.message);
+      }
+      
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Telegram webhook error:", error);
+      res.json({ ok: true });
+    }
+  });
+
+  // Setup Telegram webhook (admin only)
+  app.post("/api/telegram/setup-webhook", requireAdmin, async (req, res) => {
+    try {
+      const appUrl = getAppUrl();
+      const webhookUrl = `${appUrl}/api/telegram/webhook`;
+      
+      const [webhookSuccess, commandsSuccess] = await Promise.all([
+        setTelegramWebhook(webhookUrl),
+        setTelegramBotCommands()
+      ]);
+      
+      res.json({
+        success: webhookSuccess && commandsSuccess,
+        webhookUrl,
+        webhookSet: webhookSuccess,
+        commandsSet: commandsSuccess
+      });
+    } catch (error) {
+      console.error("Setup webhook error:", error);
+      res.status(500).json({ error: "Failed to setup webhook" });
+    }
+  });
+
+  // Get Telegram bot info (admin only)
+  app.get("/api/telegram/info", requireAdmin, async (req, res) => {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(400).json({ error: "Bot token not configured" });
+      }
+      
+      const [meResponse, webhookResponse] = await Promise.all([
+        fetch(`https://api.telegram.org/bot${botToken}/getMe`),
+        fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`)
+      ]);
+      
+      const [meResult, webhookResult] = await Promise.all([
+        meResponse.json(),
+        webhookResponse.json()
+      ]);
+      
+      res.json({
+        bot: meResult.result,
+        webhook: webhookResult.result,
+        appUrl: getAppUrl()
+      });
+    } catch (error) {
+      console.error("Get bot info error:", error);
+      res.status(500).json({ error: "Failed to get bot info" });
     }
   });
 
