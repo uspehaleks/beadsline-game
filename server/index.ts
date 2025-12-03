@@ -7,6 +7,8 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
+app.set('trust proxy', 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -19,14 +21,18 @@ declare module "express-session" {
   }
 }
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.REPL_SLUG;
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'crypto-zuma-secret-key',
     resave: false,
     saveUninitialized: false,
+    proxy: isProduction ? true : undefined,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction ? true : false,
       httpOnly: true,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   })
