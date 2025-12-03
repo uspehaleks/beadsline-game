@@ -57,7 +57,7 @@ export function GameOverScreen({
             className="font-display text-3xl font-bold mb-2"
             data-testid="text-game-result"
           >
-            {won ? 'Victory!' : 'Game Over'}
+            {won ? 'Победа!' : 'Игра окончена'}
           </motion.h2>
 
           <motion.p
@@ -66,7 +66,7 @@ export function GameOverScreen({
             transition={{ delay: 0.35 }}
             className="text-muted-foreground mb-6"
           >
-            {won ? 'Amazing performance!' : 'Better luck next time!'}
+            {won ? 'Отличный результат!' : 'Повезёт в следующий раз!'}
           </motion.p>
 
           <motion.div
@@ -85,8 +85,8 @@ export function GameOverScreen({
             transition={{ delay: 0.5 }}
             className="grid grid-cols-2 gap-4 mb-8"
           >
-            <StatCard icon={<Zap className="w-4 h-4" />} label="Max Combo" value={`x${maxCombo}`} />
-            <StatCard icon={<Target className="w-4 h-4" />} label="Accuracy" value={`${accuracy}%`} />
+            <StatCard icon={<Zap className="w-4 h-4" />} label="Макс. комбо" value={`x${maxCombo}`} />
+            <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
             <div className="col-span-2">
               <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-muted/50">
                 <CryptoStat type="btc" count={cryptoCollected.btc} />
@@ -109,7 +109,7 @@ export function GameOverScreen({
               data-testid="button-play-again"
             >
               <RefreshCw className="w-5 h-5 mr-2" />
-              Play Again
+              Играть снова
             </Button>
             <Button
               variant="secondary"
@@ -119,14 +119,14 @@ export function GameOverScreen({
               data-testid="button-view-leaderboard"
             >
               <Trophy className="w-5 h-5 mr-2" />
-              Leaderboard
+              Рейтинг
             </Button>
             <Button
               variant="ghost"
               onClick={onMainMenu}
               data-testid="button-main-menu"
             >
-              Main Menu
+              Главное меню
             </Button>
           </motion.div>
         </Card>

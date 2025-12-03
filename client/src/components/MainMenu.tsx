@@ -36,7 +36,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           Crypto Zuma
         </h1>
         <p className="text-muted-foreground mt-2">
-          Match balls, collect crypto, climb the ranks!
+          Собирай шарики, лови крипту, покоряй рейтинг!
         </p>
       </motion.div>
 
@@ -62,7 +62,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                 <div className="flex items-center gap-1 text-primary">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="font-semibold tabular-nums" data-testid="text-total-points">
-                    {user.totalPoints.toLocaleString()} pts
+                    {user.totalPoints.toLocaleString()} очков
                   </span>
                 </div>
               </div>
@@ -81,19 +81,19 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           <Card className="p-4">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Games</div>
+                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Игры</div>
                 <div className="font-display font-bold text-xl tabular-nums" data-testid="text-games-played">
                   {user.gamesPlayed}
                 </div>
               </div>
               <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Best</div>
+                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Лучший</div>
                 <div className="font-display font-bold text-xl text-primary tabular-nums" data-testid="text-best-score">
                   {user.bestScore.toLocaleString()}
                 </div>
               </div>
               <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Rank</div>
+                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Ранг</div>
                 <div className="font-display font-bold text-xl text-amber-400 tabular-nums flex items-center justify-center gap-1">
                   <TrendingUp className="w-4 h-4" />
                   --
@@ -118,7 +118,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           data-testid="button-play"
         >
           <Play className="w-6 h-6 mr-2 fill-current" />
-          Play Now
+          Играть
         </Button>
 
         <Button
@@ -129,7 +129,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           data-testid="button-leaderboard"
         >
           <Trophy className="w-5 h-5 mr-2" />
-          Leaderboard
+          Рейтинг
         </Button>
 
         {user?.isAdmin && (
@@ -141,7 +141,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               data-testid="button-admin"
             >
               <Settings className="w-5 h-5 mr-2" />
-              Admin Panel
+              Админ-панель
             </Button>
           </Link>
         )}
@@ -164,7 +164,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         transition={{ delay: 0.6 }}
         className="mt-4 text-xs text-muted-foreground text-center"
       >
-        Collect crypto balls for bonus points!
+        Собирай крипто-шарики для бонусных очков!
       </motion.p>
     </div>
   );

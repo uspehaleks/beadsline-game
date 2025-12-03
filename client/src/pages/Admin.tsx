@@ -86,13 +86,13 @@ export default function Admin() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+            <h2 className="text-xl font-bold mb-2">Доступ запрещён</h2>
             <p className="text-muted-foreground mb-4">
-              You need admin privileges to access this page.
+              Для доступа к этой странице нужны права администратора.
             </p>
             <Button onClick={() => setLocation("/")} data-testid="button-back-home">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              На главную
             </Button>
           </CardContent>
         </Card>
@@ -113,8 +113,8 @@ export default function Admin() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your game</p>
+            <h1 className="text-2xl font-bold">Админ-панель</h1>
+            <p className="text-muted-foreground">Управление игрой</p>
           </div>
         </header>
 
@@ -137,7 +137,7 @@ export default function Admin() {
                     <Users className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-sm text-muted-foreground">Всего игроков</p>
                     <p className="text-2xl font-bold" data-testid="text-total-users">
                       {stats?.totalUsers || 0}
                     </p>
@@ -152,7 +152,7 @@ export default function Admin() {
                     <Gamepad2 className="w-6 h-6 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Games</p>
+                    <p className="text-sm text-muted-foreground">Всего игр</p>
                     <p className="text-2xl font-bold" data-testid="text-total-games">
                       {stats?.totalGames || 0}
                     </p>
@@ -167,9 +167,9 @@ export default function Admin() {
                     <Gift className="w-6 h-6 text-amber-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Active Prize Pool</p>
+                    <p className="text-sm text-muted-foreground">Активный призовой фонд</p>
                     <p className="text-2xl font-bold" data-testid="text-active-pool">
-                      {stats?.activePrizePool?.name || "None"}
+                      {stats?.activePrizePool?.name || "Нет"}
                     </p>
                   </div>
                 </div>
@@ -182,19 +182,19 @@ export default function Admin() {
           <TabsList className="grid grid-cols-4 w-full max-w-md">
             <TabsTrigger value="users" data-testid="tab-users">
               <Users className="w-4 h-4 mr-2" />
-              Users
+              Игроки
             </TabsTrigger>
             <TabsTrigger value="pools" data-testid="tab-pools">
               <Gift className="w-4 h-4 mr-2" />
-              Pools
+              Призы
             </TabsTrigger>
             <TabsTrigger value="config" data-testid="tab-config">
               <Settings className="w-4 h-4 mr-2" />
-              Config
+              Настройки
             </TabsTrigger>
             <TabsTrigger value="scores" data-testid="tab-scores">
               <Trophy className="w-4 h-4 mr-2" />
-              Scores
+              Очки
             </TabsTrigger>
           </TabsList>
 
@@ -228,10 +228,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({ title: "User updated", description: "Admin status changed successfully" });
+      toast({ title: "Обновлено", description: "Статус администратора изменён" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update user", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось обновить пользователя", variant: "destructive" });
     },
   });
 
@@ -240,7 +240,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />
-          Users ({total})
+          Игроки ({total})
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -261,14 +261,14 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                   <div>
                     <p className="font-medium">{user.username}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{user.totalPoints} pts</span>
+                      <span>{user.totalPoints} очков</span>
                       <span>•</span>
-                      <span>{user.gamesPlayed} games</span>
+                      <span>{user.gamesPlayed} игр</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {user.isAdmin && <Badge variant="secondary">Admin</Badge>}
+                  {user.isAdmin && <Badge variant="secondary">Админ</Badge>}
                   <Switch
                     checked={user.isAdmin}
                     onCheckedChange={(isAdmin) =>
@@ -299,12 +299,12 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prize-pools"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Pool created", description: "Prize pool created successfully" });
+      toast({ title: "Создано", description: "Призовой фонд успешно создан" });
       setDialogOpen(false);
       setNewPool({ name: "", totalAmount: 0, isActive: false });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to create pool", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось создать фонд", variant: "destructive" });
     },
   });
 
@@ -315,10 +315,10 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prize-pools"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Pool updated", description: "Prize pool updated successfully" });
+      toast({ title: "Обновлено", description: "Призовой фонд успешно обновлён" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update pool", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось обновить фонд", variant: "destructive" });
     },
   });
 
@@ -329,10 +329,10 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prize-pools"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Pool deleted", description: "Prize pool deleted successfully" });
+      toast({ title: "Удалено", description: "Призовой фонд успешно удалён" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to delete pool", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось удалить фонд", variant: "destructive" });
     },
   });
 
@@ -341,32 +341,32 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2">
           <Gift className="w-5 h-5" />
-          Prize Pools ({pools.length})
+          Призовые фонды ({pools.length})
         </CardTitle>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" data-testid="button-add-pool">
               <Plus className="w-4 h-4 mr-2" />
-              Add Pool
+              Добавить
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Prize Pool</DialogTitle>
+              <DialogTitle>Создать призовой фонд</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label htmlFor="pool-name">Name</Label>
+                <Label htmlFor="pool-name">Название</Label>
                 <Input
                   id="pool-name"
                   value={newPool.name}
                   onChange={(e) => setNewPool({ ...newPool, name: e.target.value })}
-                  placeholder="Weekly Prize Pool"
+                  placeholder="Недельный призовой фонд"
                   data-testid="input-pool-name"
                 />
               </div>
               <div>
-                <Label htmlFor="pool-amount">Total Amount</Label>
+                <Label htmlFor="pool-amount">Сумма</Label>
                 <Input
                   id="pool-amount"
                   type="number"
@@ -377,7 +377,7 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label htmlFor="pool-active">Active</Label>
+                <Label htmlFor="pool-active">Активен</Label>
                 <Switch
                   id="pool-active"
                   checked={newPool.isActive}
@@ -392,7 +392,7 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
                 data-testid="button-create-pool"
               >
                 <Save className="w-4 h-4 mr-2" />
-                Create Pool
+                Создать
               </Button>
             </div>
           </DialogContent>
@@ -402,7 +402,7 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
         <ScrollArea className="h-[400px]">
           <div className="space-y-3">
             {pools.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No prize pools yet</p>
+              <p className="text-center text-muted-foreground py-8">Пока нет призовых фондов</p>
             ) : (
               pools.map((pool) => (
                 <div
@@ -413,10 +413,10 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{pool.name}</p>
-                      {pool.isActive && <Badge className="bg-green-500">Active</Badge>}
+                      {pool.isActive && <Badge className="bg-green-500">Активен</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Amount: {pool.totalAmount.toLocaleString()}
+                      Сумма: {pool.totalAmount.toLocaleString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -465,12 +465,12 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/configs"] });
-      toast({ title: "Config saved", description: "Configuration saved successfully" });
+      toast({ title: "Сохранено", description: "Настройка успешно сохранена" });
       setDialogOpen(false);
       setNewConfig({ key: "", value: "", description: "" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to save config", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось сохранить настройку", variant: "destructive" });
     },
   });
 
@@ -480,10 +480,10 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/configs"] });
-      toast({ title: "Config deleted", description: "Configuration deleted successfully" });
+      toast({ title: "Удалено", description: "Настройка успешно удалена" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to delete config", variant: "destructive" });
+      toast({ title: "Ошибка", description: "Не удалось удалить настройку", variant: "destructive" });
     },
   });
 
@@ -492,22 +492,22 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2">
           <Settings className="w-5 h-5" />
-          Game Configuration ({configs.length})
+          Настройки игры ({configs.length})
         </CardTitle>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" data-testid="button-add-config">
               <Plus className="w-4 h-4 mr-2" />
-              Add Config
+              Добавить
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Configuration</DialogTitle>
+              <DialogTitle>Добавить настройку</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label htmlFor="config-key">Key</Label>
+                <Label htmlFor="config-key">Ключ</Label>
                 <Input
                   id="config-key"
                   value={newConfig.key}
@@ -517,22 +517,22 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
                 />
               </div>
               <div>
-                <Label htmlFor="config-value">Value (JSON or string)</Label>
+                <Label htmlFor="config-value">Значение (JSON или строка)</Label>
                 <Input
                   id="config-value"
                   value={newConfig.value}
                   onChange={(e) => setNewConfig({ ...newConfig, value: e.target.value })}
-                  placeholder='0.08 or {"rate": 0.08}'
+                  placeholder='0.08 или {"rate": 0.08}'
                   data-testid="input-config-value"
                 />
               </div>
               <div>
-                <Label htmlFor="config-desc">Description</Label>
+                <Label htmlFor="config-desc">Описание</Label>
                 <Input
                   id="config-desc"
                   value={newConfig.description}
                   onChange={(e) => setNewConfig({ ...newConfig, description: e.target.value })}
-                  placeholder="Spawn rate for crypto balls"
+                  placeholder="Частота появления крипто-шариков"
                   data-testid="input-config-desc"
                 />
               </div>
@@ -543,7 +543,7 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
                 data-testid="button-create-config"
               >
                 <Save className="w-4 h-4 mr-2" />
-                Save Config
+                Сохранить
               </Button>
             </div>
           </DialogContent>
@@ -553,7 +553,7 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
         <ScrollArea className="h-[400px]">
           <div className="space-y-3">
             {configs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No configurations yet</p>
+              <p className="text-center text-muted-foreground py-8">Пока нет настроек</p>
             ) : (
               configs.map((config) => (
                 <div
@@ -595,14 +595,14 @@ function ScoresTab({ scores, total }: { scores: GameScore[]; total: number }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="w-5 h-5" />
-          Recent Scores ({total})
+          Последние результаты ({total})
         </CardTitle>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px]">
           <div className="space-y-3">
             {scores.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No scores yet</p>
+              <p className="text-center text-muted-foreground py-8">Пока нет результатов</p>
             ) : (
               scores.map((score) => (
                 <div
@@ -613,11 +613,11 @@ function ScoresTab({ scores, total }: { scores: GameScore[]; total: number }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-lg">{score.score}</span>
-                      {score.won && <Badge className="bg-green-500">Won</Badge>}
+                      {score.won && <Badge className="bg-green-500">Победа</Badge>}
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>Combo: x{score.maxCombo}</span>
-                      <span>Duration: {score.duration}s</span>
+                      <span>Комбо: x{score.maxCombo}</span>
+                      <span>Время: {score.duration}с</span>
                     </div>
                   </div>
                   <div className="text-right">

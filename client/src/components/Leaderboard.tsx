@@ -31,7 +31,7 @@ export function Leaderboard({ entries, currentUserId, isLoading, onBack }: Leade
           </Button>
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-primary" />
-            <h1 className="font-display text-xl font-bold">Leaderboard</h1>
+            <h1 className="font-display text-xl font-bold">Рейтинг</h1>
           </div>
         </div>
       </div>
@@ -188,7 +188,7 @@ function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm truncate">{entry.username}</h3>
           <p className="text-xs text-muted-foreground">
-            {entry.gamesPlayed} games played
+            {entry.gamesPlayed} игр
           </p>
         </div>
 
@@ -196,7 +196,7 @@ function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps
           <div className="font-display font-bold text-primary tabular-nums">
             {entry.totalPoints.toLocaleString()}
           </div>
-          <div className="text-xs text-muted-foreground">points</div>
+          <div className="text-xs text-muted-foreground">очков</div>
         </div>
       </Card>
     </motion.div>
@@ -224,9 +224,9 @@ function EmptyLeaderboard() {
   return (
     <div className="text-center py-16">
       <Trophy className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-      <h3 className="font-display text-xl font-semibold mb-2">No players yet</h3>
+      <h3 className="font-display text-xl font-semibold mb-2">Пока нет игроков</h3>
       <p className="text-muted-foreground">
-        Be the first to play and claim the top spot!
+        Стань первым и займи топ!
       </p>
     </div>
   );
