@@ -10,7 +10,25 @@ export default {
         md: ".375rem", /* 6px */
         sm: ".1875rem", /* 3px */
       },
+      fontFamily: {
+        display: ["Fredoka", "sans-serif"],
+        sans: ["Inter", "var(--font-sans)", "sans-serif"],
+        serif: ["var(--font-serif)", "serif"],
+        mono: ["var(--font-mono)", "monospace"],
+      },
       colors: {
+        game: {
+          red: "#ef4444",
+          blue: "#3b82f6",
+          green: "#22c55e",
+          yellow: "#eab308",
+          purple: "#a855f7",
+        },
+        crypto: {
+          btc: "#f7931a",
+          eth: "#627eea",
+          usdt: "#26a17b",
+        },
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
@@ -81,11 +99,6 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
-      },
-      fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
       },
       keyframes: {
         "accordion-down": {
