@@ -11,6 +11,19 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user?.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  
+  next();
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -221,6 +234,182 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Create prize pool error:", error);
       res.status(500).json({ error: "Failed to create prize pool" });
+    }
+  });
+
+  // Admin Routes
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+    try {
+      const [userCount, scoreCount, activePrizePool] = await Promise.all([
+        storage.getUserCount(),
+        storage.getScoreCount(),
+        storage.getActivePrizePool(),
+      ]);
+      
+      res.json({
+        totalUsers: userCount,
+        totalGames: scoreCount,
+        activePrizePool,
+      });
+    } catch (error) {
+      console.error("Get admin stats error:", error);
+      res.status(500).json({ error: "Failed to get stats" });
+    }
+  });
+
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const [users, total] = await Promise.all([
+        storage.getAllUsers(limit, offset),
+        storage.getUserCount(),
+      ]);
+      res.json({ users, total, limit, offset });
+    } catch (error) {
+      console.error("Get admin users error:", error);
+      res.status(500).json({ error: "Failed to get users" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/admin", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isAdmin } = req.body;
+      
+      if (typeof isAdmin !== "boolean") {
+        return res.status(400).json({ error: "isAdmin must be a boolean" });
+      }
+      
+      const user = await storage.setUserAdmin(id, isAdmin);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Update user admin error:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.get("/api/admin/configs", requireAdmin, async (req, res) => {
+    try {
+      const configs = await storage.getAllGameConfigs();
+      res.json(configs);
+    } catch (error) {
+      console.error("Get admin configs error:", error);
+      res.status(500).json({ error: "Failed to get configs" });
+    }
+  });
+
+  app.post("/api/admin/configs", requireAdmin, async (req, res) => {
+    try {
+      const { key, value, description } = req.body;
+      
+      if (!key || value === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const config = await storage.setGameConfig({ key, value, description });
+      res.json(config);
+    } catch (error) {
+      console.error("Set admin config error:", error);
+      res.status(500).json({ error: "Failed to set config" });
+    }
+  });
+
+  app.delete("/api/admin/configs/:key", requireAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      await storage.deleteGameConfig(key);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete admin config error:", error);
+      res.status(500).json({ error: "Failed to delete config" });
+    }
+  });
+
+  app.get("/api/admin/prize-pools", requireAdmin, async (req, res) => {
+    try {
+      const pools = await storage.getAllPrizePools();
+      res.json(pools);
+    } catch (error) {
+      console.error("Get admin prize pools error:", error);
+      res.status(500).json({ error: "Failed to get prize pools" });
+    }
+  });
+
+  app.post("/api/admin/prize-pools", requireAdmin, async (req, res) => {
+    try {
+      const { name, totalAmount, isActive, startDate, endDate } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      
+      const pool = await storage.createPrizePool({
+        name,
+        totalAmount: totalAmount || 0,
+        isActive: isActive || false,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      });
+      
+      res.json(pool);
+    } catch (error) {
+      console.error("Create admin prize pool error:", error);
+      res.status(500).json({ error: "Failed to create prize pool" });
+    }
+  });
+
+  app.patch("/api/admin/prize-pools/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, totalAmount, isActive, startDate, endDate } = req.body;
+      
+      const pool = await storage.updatePrizePool(id, {
+        name,
+        totalAmount,
+        isActive,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      });
+      
+      if (!pool) {
+        return res.status(404).json({ error: "Prize pool not found" });
+      }
+      
+      res.json(pool);
+    } catch (error) {
+      console.error("Update admin prize pool error:", error);
+      res.status(500).json({ error: "Failed to update prize pool" });
+    }
+  });
+
+  app.delete("/api/admin/prize-pools/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePrizePool(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete admin prize pool error:", error);
+      res.status(500).json({ error: "Failed to delete prize pool" });
+    }
+  });
+
+  app.get("/api/admin/scores", requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const [scores, total] = await Promise.all([
+        storage.getAllScores(limit, offset),
+        storage.getScoreCount(),
+      ]);
+      res.json({ scores, total, limit, offset });
+    } catch (error) {
+      console.error("Get admin scores error:", error);
+      res.status(500).json({ error: "Failed to get scores" });
     }
   });
 

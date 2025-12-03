@@ -2,8 +2,9 @@ import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Trophy, Gamepad2, Star, TrendingUp } from 'lucide-react';
+import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'wouter';
 
 interface MainMenuProps {
   user: User | null;
@@ -130,6 +131,20 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           <Trophy className="w-5 h-5 mr-2" />
           Leaderboard
         </Button>
+
+        {user?.isAdmin && (
+          <Link href="/admin">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full font-display"
+              data-testid="button-admin"
+            >
+              <Settings className="w-5 h-5 mr-2" />
+              Admin Panel
+            </Button>
+          </Link>
+        )}
       </motion.div>
 
       <motion.div

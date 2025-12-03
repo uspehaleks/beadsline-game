@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   totalPoints: integer("total_points").default(0).notNull(),
   gamesPlayed: integer("games_played").default(0).notNull(),
   bestScore: integer("best_score").default(0).notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -65,6 +66,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   totalPoints: true,
   gamesPlayed: true,
   bestScore: true,
+  isAdmin: true,
   createdAt: true,
 });
 

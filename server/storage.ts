@@ -22,18 +22,28 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStats(userId: string, score: number): Promise<User | undefined>;
+  setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
+  getAllUsers(limit?: number, offset?: number): Promise<User[]>;
+  getUserCount(): Promise<number>;
   
   createGameScore(score: InsertGameScore): Promise<GameScore>;
   getUserScores(userId: string, limit?: number): Promise<GameScore[]>;
+  getAllScores(limit?: number, offset?: number): Promise<GameScore[]>;
+  getScoreCount(): Promise<number>;
   
   getLeaderboard(limit?: number): Promise<LeaderboardEntry[]>;
   
   getGameConfig(key: string): Promise<GameConfig | undefined>;
+  getAllGameConfigs(): Promise<GameConfig[]>;
   setGameConfig(config: InsertGameConfig): Promise<GameConfig>;
+  deleteGameConfig(key: string): Promise<void>;
   
   getPrizePool(id: string): Promise<PrizePool | undefined>;
   getActivePrizePool(): Promise<PrizePool | undefined>;
+  getAllPrizePools(): Promise<PrizePool[]>;
   createPrizePool(pool: InsertPrizePool): Promise<PrizePool>;
+  updatePrizePool(id: string, pool: Partial<InsertPrizePool>): Promise<PrizePool | undefined>;
+  deletePrizePool(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -77,6 +87,29 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ isAdmin })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async getAllUsers(limit: number = 50, offset: number = 0): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getUserCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+    return Number(result[0]?.count || 0);
+  }
+
   async createGameScore(insertScore: InsertGameScore): Promise<GameScore> {
     const [score] = await db
       .insert(gameScores)
@@ -92,6 +125,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameScores.odUserId, userId))
       .orderBy(desc(gameScores.createdAt))
       .limit(limit);
+  }
+
+  async getAllScores(limit: number = 50, offset: number = 0): Promise<GameScore[]> {
+    return db
+      .select()
+      .from(gameScores)
+      .orderBy(desc(gameScores.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getScoreCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(gameScores);
+    return Number(result[0]?.count || 0);
   }
 
   async getLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
@@ -127,6 +174,10 @@ export class DatabaseStorage implements IStorage {
     return config || undefined;
   }
 
+  async getAllGameConfigs(): Promise<GameConfig[]> {
+    return db.select().from(gameConfig).orderBy(gameConfig.key);
+  }
+
   async setGameConfig(insertConfig: InsertGameConfig): Promise<GameConfig> {
     const existing = await this.getGameConfig(insertConfig.key);
     
@@ -150,6 +201,10 @@ export class DatabaseStorage implements IStorage {
     return config;
   }
 
+  async deleteGameConfig(key: string): Promise<void> {
+    await db.delete(gameConfig).where(eq(gameConfig.key, key));
+  }
+
   async getPrizePool(id: string): Promise<PrizePool | undefined> {
     const [pool] = await db
       .select()
@@ -166,12 +221,29 @@ export class DatabaseStorage implements IStorage {
     return pool || undefined;
   }
 
+  async getAllPrizePools(): Promise<PrizePool[]> {
+    return db.select().from(prizePool).orderBy(desc(prizePool.createdAt));
+  }
+
   async createPrizePool(insertPool: InsertPrizePool): Promise<PrizePool> {
     const [pool] = await db
       .insert(prizePool)
       .values(insertPool)
       .returning();
     return pool;
+  }
+
+  async updatePrizePool(id: string, updates: Partial<InsertPrizePool>): Promise<PrizePool | undefined> {
+    const [pool] = await db
+      .update(prizePool)
+      .set(updates)
+      .where(eq(prizePool.id, id))
+      .returning();
+    return pool || undefined;
+  }
+
+  async deletePrizePool(id: string): Promise<void> {
+    await db.delete(prizePool).where(eq(prizePool.id, id));
   }
 }
 
