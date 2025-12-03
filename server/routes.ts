@@ -4,6 +4,36 @@ import { storage } from "./storage";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
 
+async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.log("TELEGRAM_BOT_TOKEN not configured, falling back to console");
+    return false;
+  }
+  
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML'
+      })
+    });
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error("Telegram API error:", result);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Failed to send Telegram message:", error);
+    return false;
+  }
+}
+
 interface AdminCode {
   code: string;
   expiresAt: number;
@@ -214,10 +244,20 @@ export async function registerRoutes(
         lastRequestedAt: now,
       });
       
-      console.log(`\n========================================`);
-      console.log(`ADMIN LOGIN CODE for ${username}: ${code}`);
-      console.log(`Expires in 5 minutes`);
-      console.log(`========================================\n`);
+      if (user.telegramId) {
+        const message = `🔐 <b>Код для входа в админ-панель Crypto Zuma:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
+        const sent = await sendTelegramMessage(user.telegramId, message);
+        if (sent) {
+          console.log(`Admin code sent to Telegram for user: ${username}`);
+        } else {
+          console.log(`Failed to send Telegram, code for ${username}: ${code}`);
+        }
+      } else {
+        console.log(`\n========================================`);
+        console.log(`ADMIN LOGIN CODE for ${username}: ${code}`);
+        console.log(`Expires in 5 minutes`);
+        console.log(`========================================\n`);
+      }
       
       res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
     } catch (error) {
