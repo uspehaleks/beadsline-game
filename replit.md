@@ -136,6 +136,7 @@ GameEconomyConfig: {
 | `/api/referral/rewards` | GET | Get user's referral rewards history (requires auth) |
 | `/api/referral/config` | GET | Get referral system config (public) |
 | `/api/admin/referral/config` | PUT | Update referral config (admin only) |
+| `/api/admin/referral/stats` | GET | Get all users' referral stats (admin only) |
 
 ## Referral System (2-Level)
 A 2-level referral system via Telegram bot with Beads-only rewards.
@@ -149,9 +150,11 @@ A 2-level referral system via Telegram bot with Beads-only rewards.
 **Configuration (stored in game_config table as 'referral_config'):**
 ```typescript
 ReferralConfig: {
-  maxDirectReferralsPerUser: 100,  // Max direct referrals per user
-  level1RewardPercent: 10,         // % of Beads from direct referrals
-  level2RewardPercent: 5           // % of Beads from 2nd level referrals
+  maxDirectReferralsPerUser: 1000,       // Max direct referrals per user
+  level1RewardPercent: 10,               // % of Beads from direct referrals
+  level2RewardPercent: 3,                // % of Beads from 2nd level referrals
+  maxReferralBeadsPerRefPerDay: 1000000, // Daily cap from one referral
+  maxReferralBeadsPerUserPerDay: 10000000 // Daily cap from all referrals
 }
 ```
 
