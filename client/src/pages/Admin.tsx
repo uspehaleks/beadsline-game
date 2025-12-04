@@ -36,7 +36,8 @@ import {
   Pencil,
   RotateCcw,
   Wallet,
-  Bitcoin
+  Bitcoin,
+  Activity
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -108,6 +109,12 @@ export default function Admin() {
   const { data: cryptoBalances } = useQuery<AdminCryptoBalances>({
     queryKey: ["/api/admin/balances"],
     enabled: isAdmin,
+  });
+
+  const { data: activePlayers } = useQuery<{ count: number }>({
+    queryKey: ["/api/active-players"],
+    enabled: isAdmin,
+    refetchInterval: 5000,
   });
 
   const [loginUsername, setLoginUsername] = useState("alex851466");
@@ -281,8 +288,8 @@ export default function Admin() {
         </header>
 
         {statsLoading ? (
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
-            {[1, 2, 3].map((i) => (
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            {[1, 2, 3, 4].map((i) => (
               <Card key={i}>
                 <CardContent className="pt-6">
                   <div className="h-20 animate-pulse bg-muted rounded" />
@@ -291,7 +298,22 @@ export default function Admin() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-emerald-500/10">
+                    <Activity className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Сейчас играют</p>
+                    <p className="text-2xl font-bold" data-testid="text-active-players">
+                      {activePlayers?.count ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
