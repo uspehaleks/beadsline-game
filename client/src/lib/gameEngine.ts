@@ -3,7 +3,6 @@ import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
 const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
-const WIN_CONDITION = GAME_CONFIG.gameplay.winCondition;
 const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
 
 const BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
@@ -365,8 +364,8 @@ export function checkGameOver(balls: Ball[]): boolean {
   return balls.some(ball => ball.pathProgress >= 1);
 }
 
-export function checkWin(score: number): boolean {
-  return score >= WIN_CONDITION;
+export function checkWin(balls: Ball[]): boolean {
+  return balls.length === 0;
 }
 
 export const BALL_COLOR_MAP: Record<BallColor, string> = {
@@ -389,4 +388,4 @@ export const CRYPTO_SYMBOL_MAP: Record<CryptoType, string> = {
   usdt: '\u20AE',
 };
 
-export { BALL_RADIUS, SHOOTER_BALL_SPEED, WIN_CONDITION };
+export { BALL_RADIUS, SHOOTER_BALL_SPEED };

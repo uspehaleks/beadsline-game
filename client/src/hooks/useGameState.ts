@@ -54,6 +54,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   const gameStartTimeRef = useRef<number>(0);
   const spawnAccumRef = useRef<number>(0);
+  const totalSpawnedRef = useRef<number>(0);
+  const spawnFinishedRef = useRef<boolean>(false);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -109,6 +111,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setShooterAngle(-Math.PI / 2);
     lastTimeRef.current = 0;
     spawnAccumRef.current = 0;
+    totalSpawnedRef.current = GAME_CONFIG.balls.initialCount;
+    spawnFinishedRef.current = false;
     
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
@@ -126,26 +130,47 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         const { period, buffer } = GAME_CONFIG.spawn;
         const { targetCount } = GAME_CONFIG.balls;
+        const { maxTotalBalls } = GAME_CONFIG.gameplay;
         
         spawnAccumRef.current += deltaTime;
         
-        if (spawnAccumRef.current >= period && newBalls.length < targetCount) {
+        const canSpawn = !spawnFinishedRef.current && 
+                         newBalls.length < targetCount && 
+                         totalSpawnedRef.current < maxTotalBalls;
+        
+        if (spawnAccumRef.current >= period && canSpawn) {
           spawnAccumRef.current = 0;
           const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -buffer);
           newBalls = [newBall, ...newBalls];
+          totalSpawnedRef.current++;
+          
+          if (totalSpawnedRef.current >= maxTotalBalls) {
+            spawnFinishedRef.current = true;
+          }
         }
         
         newBalls = updateBallPositions(newBalls, currentPath);
+        
+        if (spawnFinishedRef.current && checkWin(newBalls)) {
+          gameEndedRef.current = true;
+          stopAllTimers();
+          const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: true, timeLeft: duration };
+          setTimeout(() => {
+            onGameEndRef.current?.(finalState);
+            hapticFeedback('success');
+          }, 0);
+          return finalState;
+        }
         
         if (checkGameOver(newBalls)) {
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-          const won = prev.score >= GAME_CONFIG.gameplay.winCondition;
-          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won, timeLeft: duration };
+          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
           setTimeout(() => {
             onGameEndRef.current?.(finalState);
-            hapticFeedback(won ? 'success' : 'error');
+            hapticFeedback('error');
           }, 0);
           return finalState;
         }
@@ -217,7 +242,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           const newCombo = prev.combo + 1;
           const newScore = prev.score + points;
           
-          if (checkWin(newScore)) {
+          setProjectile(null);
+          
+          if (checkWin(newBalls)) {
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -244,8 +271,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             }, 100);
             return finalState;
           }
-          
-          setProjectile(null);
           
           return {
             ...prev,

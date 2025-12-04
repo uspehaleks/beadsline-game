@@ -29,7 +29,7 @@ export const GAME_CONFIG = {
   },
   
   gameplay: {
-    winCondition: 5000,
+    maxTotalBalls: 60,
     addBallsInterval: 4000,
     addBallsCount: 3,
   },
