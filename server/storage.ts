@@ -3,6 +3,8 @@ import {
   gameScores, 
   gameConfig,
   prizePool,
+  usdtFundSettings,
+  realRewards,
   type User, 
   type InsertUser,
   type GameScore,
@@ -14,9 +16,15 @@ import {
   type LeaderboardEntry,
   type AdminCryptoBalances,
   type UserUpdate,
+  type UsdtFundSettings,
+  type InsertUsdtFundSettings,
+  type RealReward,
+  type InsertRealReward,
+  type UsdtFundStats,
+  type RewardResult,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, isNull, and } from "drizzle-orm";
+import { eq, desc, sql, isNull, and, gte } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -53,6 +61,17 @@ export interface IStorage {
   createPrizePool(pool: InsertPrizePool): Promise<PrizePool>;
   updatePrizePool(id: string, pool: Partial<InsertPrizePool>): Promise<PrizePool | undefined>;
   deletePrizePool(id: string): Promise<void>;
+  
+  getUsdtFundSettings(): Promise<UsdtFundSettings>;
+  updateUsdtFundSettings(updates: Partial<InsertUsdtFundSettings>): Promise<UsdtFundSettings>;
+  getUsdtFundStats(): Promise<UsdtFundStats>;
+  
+  createRealReward(reward: InsertRealReward): Promise<RealReward>;
+  getUserRewardsToday(userId: string): Promise<number>;
+  getTotalDistributed(): Promise<number>;
+  getDistributedToday(): Promise<number>;
+  processUsdtReward(userId: string, usdtBallsCollected: number, gameScoreId: string): Promise<RewardResult>;
+  isUsdtFundAvailable(): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -328,6 +347,168 @@ export class DatabaseStorage implements IStorage {
 
   async deletePrizePool(id: string): Promise<void> {
     await db.delete(prizePool).where(eq(prizePool.id, id));
+  }
+
+  async getUsdtFundSettings(): Promise<UsdtFundSettings> {
+    const [settings] = await db.select().from(usdtFundSettings).limit(1);
+    
+    if (!settings) {
+      const [newSettings] = await db
+        .insert(usdtFundSettings)
+        .values({
+          usdtTotalFund: 50,
+          usdtAvailable: 50,
+          usdtDailyLimit: 1.0,
+          usdtPerDrop: 0.02,
+          usdtMaxPerUserPerDay: 0.1,
+          usdtDistributedToday: 0,
+          lastResetDate: new Date(),
+        })
+        .returning();
+      return newSettings;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastReset = new Date(settings.lastResetDate);
+    lastReset.setHours(0, 0, 0, 0);
+    
+    if (lastReset.getTime() < today.getTime()) {
+      const [updatedSettings] = await db
+        .update(usdtFundSettings)
+        .set({ 
+          usdtDistributedToday: 0,
+          lastResetDate: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(usdtFundSettings.id, settings.id))
+        .returning();
+      return updatedSettings;
+    }
+    
+    return settings;
+  }
+
+  async updateUsdtFundSettings(updates: Partial<InsertUsdtFundSettings>): Promise<UsdtFundSettings> {
+    const current = await this.getUsdtFundSettings();
+    
+    const [settings] = await db
+      .update(usdtFundSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(usdtFundSettings.id, current.id))
+      .returning();
+    
+    return settings;
+  }
+
+  async getUsdtFundStats(): Promise<UsdtFundStats> {
+    const settings = await this.getUsdtFundSettings();
+    const totalDistributed = await this.getTotalDistributed();
+    
+    return {
+      settings,
+      totalDistributed,
+      distributedToday: settings.usdtDistributedToday,
+    };
+  }
+
+  async createRealReward(reward: InsertRealReward): Promise<RealReward> {
+    const [newReward] = await db
+      .insert(realRewards)
+      .values(reward)
+      .returning();
+    return newReward;
+  }
+
+  async getUserRewardsToday(userId: string): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const result = await db
+      .select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
+      .from(realRewards)
+      .where(
+        and(
+          eq(realRewards.userId, userId),
+          gte(realRewards.createdAt, today)
+        )
+      );
+    
+    return Number(result[0]?.total || 0);
+  }
+
+  async getTotalDistributed(): Promise<number> {
+    const result = await db
+      .select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
+      .from(realRewards);
+    
+    return Number(result[0]?.total || 0);
+  }
+
+  async getDistributedToday(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const result = await db
+      .select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
+      .from(realRewards)
+      .where(gte(realRewards.createdAt, today));
+    
+    return Number(result[0]?.total || 0);
+  }
+
+  async isUsdtFundAvailable(): Promise<boolean> {
+    const settings = await this.getUsdtFundSettings();
+    return settings.usdtAvailable > 0 && settings.usdtDistributedToday < settings.usdtDailyLimit;
+  }
+
+  async processUsdtReward(userId: string, usdtBallsCollected: number, gameScoreId: string): Promise<RewardResult> {
+    if (usdtBallsCollected <= 0) {
+      return { usdtAwarded: 0 };
+    }
+    
+    const settings = await this.getUsdtFundSettings();
+    const userTodayTotal = await this.getUserRewardsToday(userId);
+    
+    const potentialReward = usdtBallsCollected * settings.usdtPerDrop;
+    
+    const remainingDailyLimit = settings.usdtDailyLimit - settings.usdtDistributedToday;
+    const remainingUserLimit = settings.usdtMaxPerUserPerDay - userTodayTotal;
+    const remainingFund = settings.usdtAvailable;
+    
+    const actualReward = Math.min(
+      potentialReward,
+      remainingDailyLimit,
+      remainingUserLimit,
+      remainingFund
+    );
+    
+    if (actualReward <= 0) {
+      return { usdtAwarded: 0 };
+    }
+    
+    const roundedReward = Math.round(actualReward * 100) / 100;
+    
+    const reward = await this.createRealReward({
+      userId,
+      cryptoType: 'usdt',
+      amount: roundedReward,
+      gameScoreId,
+    });
+    
+    await this.updateUsdtFundSettings({
+      usdtAvailable: settings.usdtAvailable - roundedReward,
+      usdtDistributedToday: settings.usdtDistributedToday + roundedReward,
+    });
+    
+    const user = await this.getUser(userId);
+    if (user) {
+      await this.updateUser(userId, {
+        usdtBalance: (user.usdtBalance || 0) + roundedReward,
+      });
+    }
+    
+    return { usdtAwarded: roundedReward, rewardId: reward.id };
   }
 }
 
