@@ -583,11 +583,12 @@ export async function registerRoutes(
       
       await storage.updateUserStats(userId, validatedData.score);
       
-      let rewardResult = { usdtAwarded: 0 };
-      if (validatedData.cryptoUsdt > 0) {
+      let rewardResult: { usdtAwarded: number; rewardId?: string } = { usdtAwarded: 0 };
+      const usdtCollected = validatedData.cryptoUsdt ?? 0;
+      if (usdtCollected > 0) {
         rewardResult = await storage.processUsdtReward(
           userId, 
-          validatedData.cryptoUsdt, 
+          usdtCollected, 
           score.id
         );
       }

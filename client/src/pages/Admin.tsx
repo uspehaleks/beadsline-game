@@ -503,7 +503,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     username: "", 
     totalPoints: 0, 
     gamesPlayed: 0, 
-    bestScore: 0 
+    bestScore: 0,
+    btcBalance: 0,
+    ethBalance: 0,
+    usdtBalance: 0,
   });
 
   const toggleAdminMutation = useMutation({
@@ -569,6 +572,9 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
       totalPoints: user.totalPoints,
       gamesPlayed: user.gamesPlayed,
       bestScore: user.bestScore,
+      btcBalance: (user as User & { btcBalance?: number }).btcBalance || 0,
+      ethBalance: (user as User & { ethBalance?: number }).ethBalance || 0,
+      usdtBalance: (user as User & { usdtBalance?: number }).usdtBalance || 0,
     });
   };
 
@@ -703,6 +709,52 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                 onChange={(e) => setEditForm({ ...editForm, bestScore: parseInt(e.target.value) || 0 })}
                 data-testid="input-edit-best"
               />
+            </div>
+            <Separator />
+            <p className="text-sm font-medium text-muted-foreground">Крипто-балансы игрока</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label htmlFor="edit-btc" className="flex items-center gap-1 text-xs">
+                  <Bitcoin className="w-3 h-3 text-amber-500" />
+                  BTC
+                </Label>
+                <Input
+                  id="edit-btc"
+                  type="number"
+                  step="0.0001"
+                  value={editForm.btcBalance}
+                  onChange={(e) => setEditForm({ ...editForm, btcBalance: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-btc"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-eth" className="flex items-center gap-1 text-xs">
+                  <SiEthereum className="w-3 h-3 text-blue-500" />
+                  ETH
+                </Label>
+                <Input
+                  id="edit-eth"
+                  type="number"
+                  step="0.001"
+                  value={editForm.ethBalance}
+                  onChange={(e) => setEditForm({ ...editForm, ethBalance: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-eth"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-usdt" className="flex items-center gap-1 text-xs">
+                  <SiTether className="w-3 h-3 text-green-500" />
+                  USDT
+                </Label>
+                <Input
+                  id="edit-usdt"
+                  type="number"
+                  step="0.01"
+                  value={editForm.usdtBalance}
+                  onChange={(e) => setEditForm({ ...editForm, usdtBalance: parseFloat(e.target.value) || 0 })}
+                  data-testid="input-edit-usdt"
+                />
+              </div>
             </div>
             <Button
               className="w-full"
