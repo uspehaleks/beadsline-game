@@ -20,7 +20,7 @@ interface ReferralInfo {
   referralCode: string;
   referralLink: string;
   directReferralsCount: number;
-  totalReferralRewards: number;
+  totalEarnedBeads: number;
 }
 
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
@@ -274,7 +274,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                   <div className="bg-muted/30 rounded-lg p-2">
                     <div className="text-xs text-muted-foreground">Заработано</div>
                     <div className="font-display font-bold text-lg text-primary" data-testid="text-referral-rewards">
-                      {referralInfo.totalReferralRewards.toLocaleString()}
+                      {referralInfo.totalEarnedBeads.toLocaleString()}
                     </div>
                   </div>
                 </div>
