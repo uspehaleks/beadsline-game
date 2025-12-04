@@ -583,7 +583,20 @@ export async function registerRoutes(
       
       await storage.updateUserStats(userId, validatedData.score);
       
-      res.json(score);
+      let rewardResult = { usdtAwarded: 0 };
+      if (validatedData.cryptoUsdt > 0) {
+        rewardResult = await storage.processUsdtReward(
+          userId, 
+          validatedData.cryptoUsdt, 
+          score.id
+        );
+      }
+      
+      res.json({ 
+        ...score, 
+        usdtAwarded: rewardResult.usdtAwarded,
+        rewardId: rewardResult.rewardId,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid score data", details: error.errors });
@@ -833,6 +846,63 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get crypto balances error:", error);
       res.status(500).json({ error: "Failed to get balances" });
+    }
+  });
+
+  app.get("/api/admin/usdt-fund", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getUsdtFundStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get USDT fund error:", error);
+      res.status(500).json({ error: "Failed to get USDT fund" });
+    }
+  });
+
+  app.put("/api/admin/usdt-fund", requireAdmin, async (req, res) => {
+    try {
+      const { 
+        usdtTotalFund, 
+        usdtAvailable, 
+        usdtDailyLimit, 
+        usdtPerDrop, 
+        usdtMaxPerUserPerDay 
+      } = req.body;
+      
+      const updates: Record<string, number> = {};
+      
+      if (usdtTotalFund !== undefined) {
+        updates.usdtTotalFund = Math.max(0, Number(usdtTotalFund) || 0);
+      }
+      if (usdtAvailable !== undefined) {
+        updates.usdtAvailable = Math.max(0, Number(usdtAvailable) || 0);
+      }
+      if (usdtDailyLimit !== undefined) {
+        updates.usdtDailyLimit = Math.max(0, Number(usdtDailyLimit) || 0);
+      }
+      if (usdtPerDrop !== undefined) {
+        updates.usdtPerDrop = Math.max(0, Number(usdtPerDrop) || 0);
+      }
+      if (usdtMaxPerUserPerDay !== undefined) {
+        updates.usdtMaxPerUserPerDay = Math.max(0, Number(usdtMaxPerUserPerDay) || 0);
+      }
+      
+      const settings = await storage.updateUsdtFundSettings(updates);
+      const stats = await storage.getUsdtFundStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Update USDT fund error:", error);
+      res.status(500).json({ error: "Failed to update USDT fund" });
+    }
+  });
+
+  app.get("/api/usdt-fund-available", async (req, res) => {
+    try {
+      const isAvailable = await storage.isUsdtFundAvailable();
+      res.json({ available: isAvailable });
+    } catch (error) {
+      console.error("Get USDT fund availability error:", error);
+      res.status(500).json({ error: "Failed to check USDT fund availability" });
     }
   });
 
