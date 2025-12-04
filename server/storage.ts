@@ -700,15 +700,16 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
     
+    // Store the referral CODE (not user ID) in referredBy field
     await db.update(users)
-      .set({ referredBy: referrer.id })
+      .set({ referredBy: referrerCode })
       .where(eq(users.id, newUserId));
     
     await db.update(users)
       .set({ directReferralsCount: referrer.directReferralsCount + 1 })
       .where(eq(users.id, referrer.id));
     
-    console.log(`User ${newUserId} successfully referred by ${referrer.id}`);
+    console.log(`User ${newUserId} successfully referred by code ${referrerCode} (user: ${referrer.username})`);
     return true;
   }
 

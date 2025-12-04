@@ -143,11 +143,28 @@ async function sendTelegramMessageWithButton(
 async function handleTelegramCommand(message: TelegramMessage): Promise<void> {
   const chatId = message.chat.id;
   const text = message.text || '';
-  const command = text.split(' ')[0].toLowerCase();
+  const parts = text.split(' ');
+  const command = parts[0].toLowerCase();
+  const referralCode = parts[1]?.trim() || ''; // Extract referral code from /start REFERRAL_CODE
   const appUrl = getAppUrl();
+  
+  // Build app URL with referral code if present
+  const getAppUrlWithReferral = (code: string) => {
+    if (code) {
+      return `${appUrl}?startapp=${code}`;
+    }
+    return appUrl;
+  };
   
   switch (command) {
     case '/start':
+      const startAppUrl = getAppUrlWithReferral(referralCode);
+      
+      // Log referral code for debugging
+      if (referralCode) {
+        console.log(`[Referral] User ${chatId} opened with referral code: ${referralCode}`);
+      }
+      
       await sendTelegramMessageWithButton(
         chatId,
         `<b>Добро пожаловать в BeadLine!</b>\n` +
@@ -158,7 +175,7 @@ async function handleTelegramCommand(message: TelegramMessage): Promise<void> {
         `• Бей свои рекорды и поднимайся в таблице лидеров.\n\n` +
         `Нажми кнопку ниже, чтобы начать игру.`,
         '🎮 Играть',
-        appUrl
+        startAppUrl
       );
       break;
       
