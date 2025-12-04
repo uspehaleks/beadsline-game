@@ -775,8 +775,8 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     mutationFn: async ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) => {
       return apiRequest("PATCH", `/api/admin/users/${userId}/admin`, { isAdmin });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Обновлено", description: "Статус администратора изменён" });
     },
     onError: () => {
@@ -788,9 +788,9 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     mutationFn: async ({ userId, updates }: { userId: string; updates: Record<string, unknown> }) => {
       return apiRequest("PUT", `/api/admin/users/${userId}`, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Обновлено", description: "Данные пользователя сохранены" });
       setEditingUser(null);
     },
@@ -803,9 +803,9 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     mutationFn: async (userId: string) => {
       return apiRequest("DELETE", `/api/admin/users/${userId}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Удалено", description: "Пользователь удалён (мягкое удаление)" });
     },
     onError: () => {
@@ -817,9 +817,9 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     mutationFn: async (userId: string) => {
       return apiRequest("PATCH", `/api/admin/users/${userId}/restore`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Восстановлено", description: "Пользователь восстановлен" });
     },
     onError: () => {
