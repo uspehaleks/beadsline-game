@@ -51,7 +51,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const gameEndedRef = useRef(false);
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   const gameStartTimeRef = useRef<number>(0);
-  const spawnedCountRef = useRef<number>(0);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -164,37 +163,28 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       setElapsedTime(Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
     }, 1000);
     
-    spawnedCountRef.current = GAME_CONFIG.balls.initialCount;
-    
     const scheduleNextSpawn = () => {
       if (gameEndedRef.current) return;
       
-      const { intervalFast, intervalSlow, rampUpCount, resumeThreshold } = GAME_CONFIG.spawn;
+      const { interval, resumeThreshold } = GAME_CONFIG.spawn;
       const { targetCount } = GAME_CONFIG.balls;
       
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
         if (prev.balls.length >= targetCount) {
-          if (prev.balls.length < resumeThreshold) {
-            spawnTimerRef.current = setTimeout(scheduleNextSpawn, intervalSlow);
-          } else {
-            spawnTimerRef.current = setTimeout(scheduleNextSpawn, intervalSlow * 2);
-          }
+          spawnTimerRef.current = setTimeout(scheduleNextSpawn, interval);
           return prev;
         }
         
         const newBalls = spawnBallAtStart(prev.balls);
-        spawnedCountRef.current++;
-        
-        const interval = spawnedCountRef.current < rampUpCount ? intervalFast : intervalSlow;
         spawnTimerRef.current = setTimeout(scheduleNextSpawn, interval);
         
         return { ...prev, balls: updateBallPositions(newBalls, pathRef.current) };
       });
     };
     
-    spawnTimerRef.current = setTimeout(scheduleNextSpawn, GAME_CONFIG.spawn.intervalFast);
+    spawnTimerRef.current = setTimeout(scheduleNextSpawn, GAME_CONFIG.spawn.interval);
     
     hapticFeedback('medium');
   }, [stopAllTimers]);

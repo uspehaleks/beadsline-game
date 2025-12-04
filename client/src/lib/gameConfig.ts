@@ -17,9 +17,7 @@ export const GAME_CONFIG = {
   },
   
   spawn: {
-    intervalFast: 200,
-    intervalSlow: 1500,
-    rampUpCount: 30,
+    interval: 800,
     resumeThreshold: 35,
   },
   
