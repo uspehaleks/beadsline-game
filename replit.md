@@ -132,6 +132,33 @@ GameEconomyConfig: {
 | `/api/telegram/webhook` | POST | Telegram bot webhook (public) |
 | `/api/telegram/info` | GET | Bot info (admin only) |
 | `/api/telegram/setup-webhook` | POST | Setup webhook (admin only) |
+| `/api/referral` | GET | Get user's referral code and link (requires auth) |
+| `/api/referral/rewards` | GET | Get user's referral rewards history (requires auth) |
+| `/api/referral/config` | GET | Get referral system config (public) |
+| `/api/admin/referral/config` | PUT | Update referral config (admin only) |
+
+## Referral System (2-Level)
+A 2-level referral system via Telegram bot with Beads-only rewards.
+
+**How it works:**
+- Each user gets a unique referral code (8 alphanumeric characters)
+- Referral link format: `https://t.me/BOT_USERNAME?start=REFERRAL_CODE`
+- When a new user opens the app via referral link, they become a referral
+- Referrer earns % of Beads when their referrals play games
+
+**Configuration (stored in game_config table as 'referral_config'):**
+```typescript
+ReferralConfig: {
+  maxDirectReferralsPerUser: 100,  // Max direct referrals per user
+  level1RewardPercent: 10,         // % of Beads from direct referrals
+  level2RewardPercent: 5           // % of Beads from 2nd level referrals
+}
+```
+
+**Rules:**
+- `referredBy` is set once on first registration and never changes
+- Referral rewards are processed automatically when referral plays a game
+- Rewards are added to referrer's totalPoints (Beads balance)
 
 ## Telegram Bot Integration
 The game includes a Telegram bot that:
@@ -151,10 +178,11 @@ The game includes a Telegram bot that:
 3. Configure Menu Button in BotFather for Mini App launch
 
 ## Database Schema
-- **users**: Player profiles (id, telegramId, username, totalPoints, gamesPlayed, bestScore)
+- **users**: Player profiles (id, telegramId, username, totalPoints, gamesPlayed, bestScore, referralCode, referredBy, directReferralsCount)
 - **game_scores**: Individual game results (score, crypto counts, combo, accuracy, duration)
 - **game_config**: Configuration key-value store
 - **prize_pool**: Future reward system structure
+- **referral_rewards**: Referral bonus history (userId, refUserId, level, beadsAmount, gameScoreId)
 
 ## Running the Application
 ```bash

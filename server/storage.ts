@@ -5,6 +5,7 @@ import {
   prizePool,
   usdtFundSettings,
   realRewards,
+  referralRewards,
   type User, 
   type InsertUser,
   type GameScore,
@@ -20,12 +21,16 @@ import {
   type InsertUsdtFundSettings,
   type RealReward,
   type InsertRealReward,
+  type ReferralReward,
+  type InsertReferralReward,
   type UsdtFundStats,
   type RewardResult,
   type GameEconomyConfig,
+  type ReferralConfig,
+  type ReferralInfo,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, isNull, and, gte } from "drizzle-orm";
+import { eq, desc, sql, isNull, and, gte, sum } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -76,6 +81,18 @@ export interface IStorage {
   
   getGameEconomyConfig(): Promise<GameEconomyConfig>;
   updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
+  
+  getUserByReferralCode(referralCode: string): Promise<User | undefined>;
+  generateReferralCode(): string;
+  ensureUserHasReferralCode(userId: string): Promise<string>;
+  processReferral(newUserId: string, referrerCode: string): Promise<boolean>;
+  getReferralConfig(): Promise<ReferralConfig>;
+  updateReferralConfig(config: Partial<ReferralConfig>): Promise<ReferralConfig>;
+  getReferralInfo(userId: string, botUsername: string): Promise<ReferralInfo>;
+  createReferralReward(reward: InsertReferralReward): Promise<ReferralReward>;
+  processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void>;
+  getUserReferralRewards(userId: string): Promise<ReferralReward[]>;
+  getTotalReferralBeads(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -591,6 +608,230 @@ export class DatabaseStorage implements IStorage {
     });
     
     return newConfig;
+  }
+
+  async getUserByReferralCode(referralCode: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.referralCode, referralCode));
+    return user || undefined;
+  }
+
+  generateReferralCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  async ensureUserHasReferralCode(userId: string): Promise<string> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error('User not found');
+    
+    if (user.referralCode) {
+      return user.referralCode;
+    }
+    
+    let code: string;
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    do {
+      code = this.generateReferralCode();
+      const existing = await this.getUserByReferralCode(code);
+      if (!existing) break;
+      attempts++;
+    } while (attempts < maxAttempts);
+    
+    if (attempts >= maxAttempts) {
+      code = `${this.generateReferralCode()}${userId.substring(0, 4).toUpperCase()}`;
+    }
+    
+    try {
+      await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        code = `${this.generateReferralCode()}${Date.now().toString(36).toUpperCase()}`;
+        await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+      } else {
+        throw error;
+      }
+    }
+    
+    return code;
+  }
+
+  async processReferral(newUserId: string, referrerCode: string): Promise<boolean> {
+    const referrer = await this.getUserByReferralCode(referrerCode);
+    if (!referrer) {
+      console.log(`Referral code ${referrerCode} not found`);
+      return false;
+    }
+    
+    const newUser = await this.getUser(newUserId);
+    if (!newUser) {
+      console.log(`New user ${newUserId} not found`);
+      return false;
+    }
+    
+    if (newUser.referredBy) {
+      console.log(`User ${newUserId} already has a referrer`);
+      return false;
+    }
+    
+    if (referrer.id === newUserId) {
+      console.log(`User cannot refer themselves`);
+      return false;
+    }
+    
+    const config = await this.getReferralConfig();
+    if (referrer.directReferralsCount >= config.maxDirectReferralsPerUser) {
+      console.log(`Referrer ${referrer.id} has reached max referrals limit`);
+      return false;
+    }
+    
+    await db.update(users)
+      .set({ referredBy: referrer.id })
+      .where(eq(users.id, newUserId));
+    
+    await db.update(users)
+      .set({ directReferralsCount: referrer.directReferralsCount + 1 })
+      .where(eq(users.id, referrer.id));
+    
+    console.log(`User ${newUserId} successfully referred by ${referrer.id}`);
+    return true;
+  }
+
+  private getDefaultReferralConfig(): ReferralConfig {
+    return {
+      maxDirectReferralsPerUser: 100,
+      level1RewardPercent: 10,
+      level2RewardPercent: 5,
+    };
+  }
+
+  async getReferralConfig(): Promise<ReferralConfig> {
+    const config = await this.getGameConfig('referral_config');
+    if (!config) {
+      const defaultConfig = this.getDefaultReferralConfig();
+      await this.setGameConfig({
+        key: 'referral_config',
+        value: defaultConfig,
+        description: 'Referral system configuration (limits, reward percentages)',
+      });
+      return defaultConfig;
+    }
+    
+    const stored = config.value as ReferralConfig;
+    const defaults = this.getDefaultReferralConfig();
+    
+    return {
+      maxDirectReferralsPerUser: stored.maxDirectReferralsPerUser ?? defaults.maxDirectReferralsPerUser,
+      level1RewardPercent: stored.level1RewardPercent ?? defaults.level1RewardPercent,
+      level2RewardPercent: stored.level2RewardPercent ?? defaults.level2RewardPercent,
+    };
+  }
+
+  async updateReferralConfig(updates: Partial<ReferralConfig>): Promise<ReferralConfig> {
+    const current = await this.getReferralConfig();
+    
+    const newConfig: ReferralConfig = {
+      maxDirectReferralsPerUser: updates.maxDirectReferralsPerUser ?? current.maxDirectReferralsPerUser,
+      level1RewardPercent: updates.level1RewardPercent ?? current.level1RewardPercent,
+      level2RewardPercent: updates.level2RewardPercent ?? current.level2RewardPercent,
+    };
+    
+    await this.setGameConfig({
+      key: 'referral_config',
+      value: newConfig,
+      description: 'Referral system configuration (limits, reward percentages)',
+    });
+    
+    return newConfig;
+  }
+
+  async getReferralInfo(userId: string, botUsername: string): Promise<ReferralInfo> {
+    const referralCode = await this.ensureUserHasReferralCode(userId);
+    const user = await this.getUser(userId);
+    const totalEarnedBeads = await this.getTotalReferralBeads(userId);
+    
+    return {
+      referralCode,
+      referralLink: `https://t.me/${botUsername}?start=${referralCode}`,
+      directReferralsCount: user?.directReferralsCount ?? 0,
+      totalEarnedBeads,
+    };
+  }
+
+  async createReferralReward(reward: InsertReferralReward): Promise<ReferralReward> {
+    const [created] = await db.insert(referralRewards).values(reward).returning();
+    return created;
+  }
+
+  async processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void> {
+    if (beadsEarned <= 0) return;
+    
+    const player = await this.getUser(playerId);
+    if (!player || !player.referredBy) return;
+    
+    const config = await this.getReferralConfig();
+    
+    const level1Referrer = await this.getUser(player.referredBy);
+    if (level1Referrer) {
+      const level1Reward = Math.floor(beadsEarned * config.level1RewardPercent / 100);
+      if (level1Reward > 0) {
+        await this.createReferralReward({
+          userId: level1Referrer.id,
+          refUserId: playerId,
+          level: 1,
+          beadsAmount: level1Reward,
+          gameScoreId,
+        });
+        
+        await db.update(users)
+          .set({ totalPoints: level1Referrer.totalPoints + level1Reward })
+          .where(eq(users.id, level1Referrer.id));
+        
+        console.log(`Level 1 referral reward: ${level1Reward} beads to ${level1Referrer.username}`);
+      }
+      
+      if (level1Referrer.referredBy) {
+        const level2Referrer = await this.getUser(level1Referrer.referredBy);
+        if (level2Referrer) {
+          const level2Reward = Math.floor(beadsEarned * config.level2RewardPercent / 100);
+          if (level2Reward > 0) {
+            await this.createReferralReward({
+              userId: level2Referrer.id,
+              refUserId: playerId,
+              level: 2,
+              beadsAmount: level2Reward,
+              gameScoreId,
+            });
+            
+            await db.update(users)
+              .set({ totalPoints: level2Referrer.totalPoints + level2Reward })
+              .where(eq(users.id, level2Referrer.id));
+            
+            console.log(`Level 2 referral reward: ${level2Reward} beads to ${level2Referrer.username}`);
+          }
+        }
+      }
+    }
+  }
+
+  async getUserReferralRewards(userId: string): Promise<ReferralReward[]> {
+    return await db.select()
+      .from(referralRewards)
+      .where(eq(referralRewards.userId, userId))
+      .orderBy(desc(referralRewards.createdAt));
+  }
+
+  async getTotalReferralBeads(userId: string): Promise<number> {
+    const result = await db.select({ total: sum(referralRewards.beadsAmount) })
+      .from(referralRewards)
+      .where(eq(referralRewards.userId, userId));
+    
+    return Number(result[0]?.total) || 0;
   }
 }
 

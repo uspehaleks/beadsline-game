@@ -18,6 +18,9 @@ export const users = pgTable("users", {
   btcBalance: real("btc_balance").default(0).notNull(),
   ethBalance: real("eth_balance").default(0).notNull(),
   usdtBalance: real("usdt_balance").default(0).notNull(),
+  referralCode: varchar("referral_code", { length: 20 }).unique(),
+  referredBy: varchar("referred_by", { length: 255 }),
+  directReferralsCount: integer("direct_referrals_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -97,6 +100,31 @@ export const realRewardsRelations = relations(realRewards, ({ one }) => ({
   }),
 }));
 
+export const referralRewards = pgTable("referral_rewards", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  refUserId: varchar("ref_user_id", { length: 255 }).notNull().references(() => users.id),
+  level: integer("level").notNull(),
+  beadsAmount: integer("beads_amount").notNull(),
+  gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const referralRewardsRelations = relations(referralRewards, ({ one }) => ({
+  user: one(users, {
+    fields: [referralRewards.userId],
+    references: [users.id],
+  }),
+  refUser: one(users, {
+    fields: [referralRewards.refUserId],
+    references: [users.id],
+  }),
+  gameScore: one(gameScores, {
+    fields: [referralRewards.gameScoreId],
+    references: [gameScores.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   totalPoints: true,
@@ -131,6 +159,11 @@ export const insertRealRewardSchema = createInsertSchema(realRewards).omit({
   createdAt: true,
 });
 
+export const insertReferralRewardSchema = createInsertSchema(referralRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGameScore = z.infer<typeof insertGameScoreSchema>;
@@ -143,6 +176,8 @@ export type InsertUsdtFundSettings = z.infer<typeof insertUsdtFundSettingsSchema
 export type UsdtFundSettings = typeof usdtFundSettings.$inferSelect;
 export type InsertRealReward = z.infer<typeof insertRealRewardSchema>;
 export type RealReward = typeof realRewards.$inferSelect;
+export type InsertReferralReward = z.infer<typeof insertReferralRewardSchema>;
+export type ReferralReward = typeof referralRewards.$inferSelect;
 
 export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple';
 export type CryptoType = 'btc' | 'eth' | 'usdt';
@@ -229,4 +264,17 @@ export interface GameEconomyConfig {
   crypto: {
     spawnChance: number;
   };
+}
+
+export interface ReferralConfig {
+  maxDirectReferralsPerUser: number;
+  level1RewardPercent: number;
+  level2RewardPercent: number;
+}
+
+export interface ReferralInfo {
+  referralCode: string;
+  referralLink: string;
+  directReferralsCount: number;
+  totalEarnedBeads: number;
 }

@@ -22,6 +22,7 @@ interface TelegramWebApp {
     query_id?: string;
     auth_date?: number;
     hash?: string;
+    start_param?: string;
   };
   version: string;
   platform: string;
@@ -99,4 +100,12 @@ export function hapticFeedback(type: 'light' | 'medium' | 'heavy' | 'success' | 
 
 export function isTelegramWebApp(): boolean {
   return getTelegramWebApp() !== null;
+}
+
+export function getStartParam(): string | null {
+  const webApp = getTelegramWebApp();
+  if (webApp?.initDataUnsafe?.start_param) {
+    return webApp.initDataUnsafe.start_param;
+  }
+  return null;
 }

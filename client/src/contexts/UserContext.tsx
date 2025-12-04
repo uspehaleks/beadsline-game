@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User } from '@shared/schema';
-import { getTelegramUser, initTelegramApp, isTelegramWebApp } from '@/lib/telegram';
+import { getTelegramUser, initTelegramApp, isTelegramWebApp, getStartParam } from '@/lib/telegram';
 import { apiRequest } from '@/lib/queryClient';
 
 interface UserContextType {
@@ -44,6 +44,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       const telegramUser = getTelegramUser();
+      const startParam = getStartParam();
       
       if (telegramUser) {
         const response = await apiRequest('POST', '/api/auth/telegram', {
@@ -52,6 +53,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           firstName: telegramUser.first_name,
           lastName: telegramUser.last_name,
           photoUrl: telegramUser.photo_url,
+          startParam: startParam || undefined,
         });
         
         const data = await response.json();

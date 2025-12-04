@@ -397,13 +397,14 @@ export async function registerRoutes(
   
   app.post("/api/auth/telegram", async (req, res) => {
     try {
-      const { telegramId, username, firstName, lastName, photoUrl } = req.body;
+      const { telegramId, username, firstName, lastName, photoUrl, startParam } = req.body;
       
       if (!telegramId || !username) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       
       let user = await storage.getUserByTelegramId(telegramId);
+      let isNewUser = false;
       
       if (!user) {
         user = await storage.createUser({
@@ -413,11 +414,24 @@ export async function registerRoutes(
           lastName,
           photoUrl,
         });
+        isNewUser = true;
+        
+        if (startParam && typeof startParam === 'string' && startParam.length > 0) {
+          try {
+            const referralSuccess = await storage.processReferral(user.id, startParam);
+            if (referralSuccess) {
+              console.log(`New user ${username} referred by code: ${startParam}`);
+              user = await storage.getUser(user.id) || user;
+            }
+          } catch (refError) {
+            console.error("Referral processing error:", refError);
+          }
+        }
       }
       
       req.session.userId = user.id;
       
-      res.json(user);
+      res.json({ ...user, isNewUser });
     } catch (error) {
       console.error("Telegram auth error:", error);
       res.status(500).json({ error: "Failed to authenticate" });
@@ -636,6 +650,12 @@ export async function registerRoutes(
           usdtCollected, 
           score.id
         );
+      }
+      
+      try {
+        await storage.processReferralRewards(score.id, userId, validatedData.score);
+      } catch (refError) {
+        console.error("Referral reward processing error:", refError);
       }
       
       res.json({ 
@@ -898,6 +918,75 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get crypto balances error:", error);
       res.status(500).json({ error: "Failed to get balances" });
+    }
+  });
+
+  app.get("/api/referral", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      
+      let botUsername = 'BeadsLineBot';
+      
+      if (botToken) {
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+          const data = await response.json();
+          if (data.ok && data.result?.username) {
+            botUsername = data.result.username;
+          }
+        } catch (e) {
+          console.error("Failed to get bot username:", e);
+        }
+      }
+      
+      const referralInfo = await storage.getReferralInfo(userId, botUsername);
+      res.json(referralInfo);
+    } catch (error) {
+      console.error("Get referral info error:", error);
+      res.status(500).json({ error: "Failed to get referral info" });
+    }
+  });
+
+  app.get("/api/referral/rewards", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const rewards = await storage.getUserReferralRewards(userId);
+      const total = await storage.getTotalReferralBeads(userId);
+      res.json({ rewards, total });
+    } catch (error) {
+      console.error("Get referral rewards error:", error);
+      res.status(500).json({ error: "Failed to get referral rewards" });
+    }
+  });
+
+  app.get("/api/referral/config", async (req, res) => {
+    try {
+      const config = await storage.getReferralConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get referral config error:", error);
+      res.status(500).json({ error: "Failed to get referral config" });
+    }
+  });
+
+  app.put("/api/admin/referral/config", requireAdmin, async (req, res) => {
+    try {
+      const { maxDirectReferralsPerUser, level1RewardPercent, level2RewardPercent } = req.body;
+      
+      const config = await storage.updateReferralConfig({
+        maxDirectReferralsPerUser: maxDirectReferralsPerUser !== undefined 
+          ? Math.max(1, Number(maxDirectReferralsPerUser)) : undefined,
+        level1RewardPercent: level1RewardPercent !== undefined 
+          ? Math.max(0, Math.min(100, Number(level1RewardPercent))) : undefined,
+        level2RewardPercent: level2RewardPercent !== undefined 
+          ? Math.max(0, Math.min(100, Number(level2RewardPercent))) : undefined,
+      });
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Update referral config error:", error);
+      res.status(500).json({ error: "Failed to update referral config" });
     }
   });
 
