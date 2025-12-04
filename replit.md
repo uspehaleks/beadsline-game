@@ -53,38 +53,41 @@ The application is a fully functional MVP with:
 ```
 
 ## Game Mechanics
-- **Objective**: Match 3+ same-colored balls before time runs out
+- **Objective**: Match 3+ same-colored balls before they reach the finish line
 - **Controls**: Touch/click to aim, release to shoot
 - **Scoring**: 100 Beads per ball, combo multipliers (1.5x per consecutive match)
 - **Crypto Balls**: Special balls with bonus Beads (spawn at 8% rate)
-- **Win Condition**: Score 5000+ Beads in 60 seconds
+- **Win Condition**: Score 5000+ Beads OR clear all balls
+- **Game Over**: When any ball reaches the finish line
 - **Ball Colors**: Red, Blue, Green, Yellow, Purple
-- **Dynamic Speed**: Balls start slow and accelerate as they approach finish
+- **Dynamic Speed**: Constant base speed with light acceleration in last 20% of path
 
 ## Game Configuration (client/src/lib/gameConfig.ts)
 All game parameters are centralized for easy tuning:
 ```typescript
 path: {
-  segments: 350,        // Path length (more = longer path)
-  amplitude: 0.35,      // Snake width
-  frequency: 3.5,       // Number of curves
-  startY: 0.1,          // Start position
-  endY: 0.9,            // End position (finish line)
+  segments: 500,        // Path length (more = longer path)
+  amplitude: 0.38,      // Snake width
+  frequency: 4.5,       // Number of curves
+  startY: 0.05,         // Start position
+  endY: 0.88,           // End position (finish line)
 }
 balls: {
   radius: 18,           // Ball size
-  spacing: 0.028,       // Gap between balls
-  initialCount: 25,     // Starting balls in chain
-  shooterSpeed: 12,     // Projectile speed
+  spacing: 0.022,       // Gap between balls
+  initialCount: 40,     // Starting balls in chain
+  shooterSpeed: 14,     // Projectile speed
+  collisionRadius: 2.2, // Collision detection multiplier
 }
 speed: {
-  base: 0.008,          // Starting speed (slow)
-  max: 0.035,           // Maximum speed (at finish)
-  accelerationCurve: 2.0, // Quadratic curve (1=linear, 2=smooth, 3=aggressive)
+  base: 0.012,          // Constant base speed
+  max: 0.022,           // Maximum speed (at finish)
+  accelerationStart: 0.8, // Start acceleration at 80% of path
 }
 gameplay: {
-  duration: 60,         // Game time in seconds
-  winCondition: 5000,   // Points to win
+  winCondition: 5000,   // Beads to win
+  addBallsInterval: 4000, // Add new balls every 4s
+  addBallsCount: 3,     // Balls to add
 }
 ```
 

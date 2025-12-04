@@ -15,9 +15,9 @@ import {
   checkWin,
   addNewBallsToChain,
   SHOOTER_BALL_SPEED,
-  GAME_DURATION,
   type PathPoint,
 } from '@/lib/gameEngine';
+import { GAME_CONFIG } from '@/lib/gameConfig';
 import { hapticFeedback } from '@/lib/telegram';
 
 interface UseGameStateProps {
@@ -39,15 +39,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const [path, setPath] = useState<PathPoint[]>([]);
   const [projectile, setProjectile] = useState<Projectile | null>(null);
   const [shooterAngle, setShooterAngle] = useState(-Math.PI / 2);
+  const [elapsedTime, setElapsedTime] = useState(0);
   
   const gameLoopRef = useRef<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const addBallsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTimeRef = useRef<number>(0);
   const pathRef = useRef<PathPoint[]>([]);
   const onGameEndRef = useRef(onGameEnd);
   const gameEndedRef = useRef(false);
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
+  const gameStartTimeRef = useRef<number>(0);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -71,9 +73,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       cancelAnimationFrame(gameLoopRef.current);
       gameLoopRef.current = null;
     }
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    if (timeTrackerRef.current !== null) {
+      clearInterval(timeTrackerRef.current);
+      timeTrackerRef.current = null;
     }
     if (addBallsTimerRef.current !== null) {
       clearInterval(addBallsTimerRef.current);
@@ -82,13 +84,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   }, []);
 
   const startGame = useCallback(() => {
-    if (timerRef.current !== null) {
+    if (timeTrackerRef.current !== null) {
       console.warn('Game already running, ignoring startGame call');
       return;
     }
     
     stopAllTimers();
     gameEndedRef.current = false;
+    gameStartTimeRef.current = Date.now();
+    setElapsedTime(0);
     
     const dims = dimensionsRef.current;
     const newPath = generatePath(dims.width, dims.height);
@@ -102,7 +106,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       ...initialState,
       balls: ballsWithPositions,
       isPlaying: true,
-      timeLeft: GAME_DURATION,
+      timeLeft: 0,
     });
     setProjectile(null);
     setShooterAngle(-Math.PI / 2);
@@ -121,13 +125,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         let newBalls = moveBallsForward(prev.balls, deltaTime);
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        if (checkGameOver(newBalls) && prev.timeLeft < GAME_DURATION - 3) {
+        if (checkGameOver(newBalls)) {
           gameEndedRef.current = true;
           stopAllTimers();
-          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: false };
+          const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+          const won = prev.score >= GAME_CONFIG.gameplay.winCondition;
+          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won, timeLeft: duration };
           setTimeout(() => {
             onGameEndRef.current?.(finalState);
-            hapticFeedback('error');
+            hapticFeedback(won ? 'success' : 'error');
           }, 0);
           return finalState;
         }
@@ -154,43 +160,20 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     
     gameLoopRef.current = requestAnimationFrame(runLoop);
     
-    const timerStartTime = Date.now();
-    
-    timerRef.current = setInterval(() => {
+    timeTrackerRef.current = setInterval(() => {
       if (gameEndedRef.current) return;
-      
-      const elapsedSeconds = Math.floor((Date.now() - timerStartTime) / 1000);
-      const newTimeLeft = Math.max(0, GAME_DURATION - elapsedSeconds);
-      
-      setGameState(prev => {
-        if (!prev.isPlaying || gameEndedRef.current) return prev;
-        
-        if (newTimeLeft <= 0) {
-          gameEndedRef.current = true;
-          stopAllTimers();
-          const won = prev.score >= 5000;
-          const finalState = { ...prev, timeLeft: 0, isPlaying: false, isGameOver: true, won };
-          setTimeout(() => {
-            onGameEndRef.current?.(finalState);
-            hapticFeedback(won ? 'success' : 'error');
-          }, 0);
-          return finalState;
-        }
-        
-        if (prev.timeLeft === newTimeLeft) return prev;
-        return { ...prev, timeLeft: newTimeLeft };
-      });
-    }, 100);
+      setElapsedTime(Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
+    }, 1000);
     
     addBallsTimerRef.current = setInterval(() => {
       if (gameEndedRef.current) return;
       
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
-        const newBalls = addNewBallsToChain(prev.balls, 2);
+        const newBalls = addNewBallsToChain(prev.balls, GAME_CONFIG.gameplay.addBallsCount);
         return { ...prev, balls: updateBallPositions(newBalls, pathRef.current) };
       });
-    }, 5000);
+    }, GAME_CONFIG.gameplay.addBallsInterval);
     
     hapticFeedback('medium');
   }, [stopAllTimers]);
@@ -207,7 +190,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setGameState(prev => {
       if (!prev.isPlaying || gameEndedRef.current) return prev;
       
-      const collision = checkCollision(projectile.x, projectile.y, prev.balls);
+      const collision = checkCollision(projectile.x, projectile.y, prev.balls, pathRef.current);
       
       if (collision) {
         const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
@@ -231,6 +214,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           if (checkWin(newScore)) {
             gameEndedRef.current = true;
             stopAllTimers();
+            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
             const finalState = {
               ...prev,
               balls: newBalls,
@@ -246,6 +230,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               isPlaying: false,
               isGameOver: true,
               won: true,
+              timeLeft: duration,
             };
             setTimeout(() => {
               onGameEndRef.current?.(finalState);
@@ -332,6 +317,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     projectile,
     shooterAngle,
     shooterPosition,
+    elapsedTime,
     startGame,
     shoot,
     updateAim,

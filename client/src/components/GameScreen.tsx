@@ -40,6 +40,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     projectile,
     shooterAngle,
     shooterPosition,
+    elapsedTime,
     startGame,
     shoot,
     updateAim,
@@ -70,7 +71,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
       className="fixed inset-0 bg-background overflow-hidden flex flex-col"
       data-testid="game-screen"
     >
-      {gameState.isPlaying && <GameHUD gameState={gameState} />}
+      {gameState.isPlaying && <GameHUD gameState={gameState} elapsedTime={elapsedTime} />}
 
       <div className="flex-1 relative mt-24">
         {dimensions.width > 0 && dimensions.height > 0 && (

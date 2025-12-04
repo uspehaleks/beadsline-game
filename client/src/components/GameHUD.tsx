@@ -1,24 +1,31 @@
 import type { GameState } from '@shared/schema';
-import { Timer, Zap, Target } from 'lucide-react';
+import { Clock, Zap, Target } from 'lucide-react';
 
 interface GameHUDProps {
   gameState: GameState;
+  elapsedTime: number;
 }
 
-export function GameHUD({ gameState }: GameHUDProps) {
-  const { score, combo, timeLeft, cryptoCollected } = gameState;
+export function GameHUD({ gameState, elapsedTime }: GameHUDProps) {
+  const { score, combo, cryptoCollected } = gameState;
   const accuracy = gameState.shotsTotal > 0 
     ? Math.round((gameState.shotsHit / gameState.shotsTotal) * 100) 
     : 0;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+  };
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3">
       <div className="flex items-center justify-between gap-4 backdrop-blur-md bg-background/80 rounded-lg px-4 py-3 border border-border/50">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-red-400">
-            <Timer className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="w-4 h-4" />
             <span className="font-display font-bold text-lg tabular-nums" data-testid="text-timer">
-              {timeLeft}s
+              {formatTime(elapsedTime)}
             </span>
           </div>
         </div>

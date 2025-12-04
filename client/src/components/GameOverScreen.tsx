@@ -1,7 +1,7 @@
 import type { GameState } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Trophy, RefreshCw, Crown, Target, Zap } from 'lucide-react';
+import { Trophy, RefreshCw, Crown, Target, Zap, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface GameOverScreenProps {
@@ -17,9 +17,14 @@ export function GameOverScreen({
   onViewLeaderboard,
   onMainMenu,
 }: GameOverScreenProps) {
-  const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit } = gameState;
+  const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
-  const totalCrypto = cryptoCollected.btc + cryptoCollected.eth + cryptoCollected.usdt;
+  
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+  };
 
   return (
     <motion.div
@@ -83,11 +88,12 @@ export function GameOverScreen({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="grid grid-cols-2 gap-4 mb-8"
+            className="grid grid-cols-3 gap-3 mb-8"
           >
-            <StatCard icon={<Zap className="w-4 h-4" />} label="Макс. комбо" value={`x${maxCombo}`} />
+            <StatCard icon={<Clock className="w-4 h-4" />} label="Время" value={formatDuration(timeLeft)} />
+            <StatCard icon={<Zap className="w-4 h-4" />} label="Комбо" value={`x${maxCombo}`} />
             <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
-            <div className="col-span-2">
+            <div className="col-span-3">
               <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-muted/50">
                 <CryptoStat type="btc" count={cryptoCollected.btc} />
                 <CryptoStat type="eth" count={cryptoCollected.eth} />

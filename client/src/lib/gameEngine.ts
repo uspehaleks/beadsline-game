@@ -3,8 +3,8 @@ import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
 const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
-const GAME_DURATION = GAME_CONFIG.gameplay.duration;
 const WIN_CONDITION = GAME_CONFIG.gameplay.winCondition;
+const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
 
 const BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
@@ -94,7 +94,7 @@ export function createInitialGameState(): GameState {
     score: 0,
     combo: 0,
     maxCombo: 0,
-    timeLeft: GAME_DURATION,
+    timeLeft: 0,
     cryptoCollected: { btc: 0, eth: 0, usdt: 0 },
     isPlaying: false,
     isGameOver: false,
@@ -206,31 +206,52 @@ export function removeBalls(balls: Ball[], indices: number[]): Ball[] {
 export function checkCollision(
   projectileX: number,
   projectileY: number,
-  balls: Ball[]
+  balls: Ball[],
+  path: PathPoint[]
 ): { index: number; insertBefore: boolean } | null {
+  const collisionDistance = BALL_RADIUS * COLLISION_RADIUS_MULTIPLIER;
+  
+  let closestIndex = -1;
+  let closestDistance = Infinity;
+  
   for (let i = 0; i < balls.length; i++) {
     const ball = balls[i];
     const dx = projectileX - ball.x;
     const dy = projectileY - ball.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance < BALL_RADIUS * 2) {
-      const nextBall = balls[i + 1];
-      if (nextBall) {
-        const dxNext = projectileX - nextBall.x;
-        const dyNext = projectileY - nextBall.y;
-        const distanceNext = Math.sqrt(dxNext * dxNext + dyNext * dyNext);
-        
-        if (distanceNext < distance) {
-          return { index: i + 1, insertBefore: true };
-        }
-      }
-      
-      return { index: i, insertBefore: ball.y > projectileY };
+    if (distance < collisionDistance && distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = i;
     }
   }
   
-  return null;
+  if (closestIndex === -1) return null;
+  
+  const hitBall = balls[closestIndex];
+  
+  const projectileProgress = findClosestProgressOnPath(projectileX, projectileY, path);
+  
+  const insertBefore = projectileProgress < hitBall.pathProgress;
+  
+  return { index: closestIndex, insertBefore };
+}
+
+function findClosestProgressOnPath(x: number, y: number, path: PathPoint[]): number {
+  let closestIndex = 0;
+  let closestDistance = Infinity;
+  
+  for (let i = 0; i < path.length; i++) {
+    const dx = x - path[i].x;
+    const dy = y - path[i].y;
+    const dist = dx * dx + dy * dy;
+    if (dist < closestDistance) {
+      closestDistance = dist;
+      closestIndex = i;
+    }
+  }
+  
+  return closestIndex / (path.length - 1);
 }
 
 export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
@@ -276,4 +297,4 @@ export const CRYPTO_SYMBOL_MAP: Record<CryptoType, string> = {
   usdt: '\u20AE',
 };
 
-export { BALL_RADIUS, SHOOTER_BALL_SPEED, GAME_DURATION, WIN_CONDITION };
+export { BALL_RADIUS, SHOOTER_BALL_SPEED, WIN_CONDITION };
