@@ -341,10 +341,14 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="balances" className="space-y-4">
-          <TabsList className="grid grid-cols-6 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-7 w-full max-w-3xl">
             <TabsTrigger value="balances" data-testid="tab-balances">
               <Wallet className="w-4 h-4 mr-2" />
               Фонд
+            </TabsTrigger>
+            <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund">
+              <SiTether className="w-4 h-4 mr-2" />
+              USDT
             </TabsTrigger>
             <TabsTrigger value="users" data-testid="tab-users">
               <Users className="w-4 h-4 mr-2" />
@@ -370,6 +374,10 @@ export default function Admin() {
 
           <TabsContent value="balances">
             <CryptoBalancesTab balances={cryptoBalances || { btc: 0, eth: 0, usdt: 0 }} />
+          </TabsContent>
+
+          <TabsContent value="usdt-fund">
+            <UsdtFundTab />
           </TabsContent>
 
           <TabsContent value="users">
@@ -493,6 +501,204 @@ function CryptoBalancesTab({ balances }: { balances: AdminCryptoBalances }) {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+interface UsdtFundSettingsData {
+  usdtTotalFund: number;
+  usdtAvailable: number;
+  usdtDailyLimit: number;
+  usdtPerDrop: number;
+  usdtMaxPerUserPerDay: number;
+  usdtDistributedToday: number;
+  lastResetDate: string;
+}
+
+interface UsdtFundStatsResponse {
+  settings: UsdtFundSettingsData | null;
+  totalDistributed: number;
+  distributedToday: number;
+}
+
+function UsdtFundTab() {
+  const { toast } = useToast();
+  const [editSettings, setEditSettings] = useState({
+    usdtTotalFund: 50,
+    usdtAvailable: 50,
+    usdtDailyLimit: 1.0,
+    usdtPerDrop: 0.02,
+    usdtMaxPerUserPerDay: 0.1,
+  });
+
+  const { data: fundStats, isLoading } = useQuery<UsdtFundStatsResponse>({
+    queryKey: ["/api/admin/usdt-fund/stats"],
+  });
+
+  const { data: fundSettings } = useQuery<UsdtFundSettingsData>({
+    queryKey: ["/api/admin/usdt-fund"],
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (settings: typeof editSettings) => {
+      return apiRequest("PUT", "/api/admin/usdt-fund", settings);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/usdt-fund"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/usdt-fund/stats"] });
+      toast({ title: "Сохранено", description: "Настройки USDT-фонда обновлены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить настройки", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex justify-center">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const settings = fundSettings || fundStats?.settings;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SiTether className="w-5 h-5 text-green-500" />
+            Статистика USDT-фонда
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Общий фонд</p>
+              <p className="text-2xl font-bold" data-testid="text-usdt-total">
+                ${settings?.usdtTotalFund?.toFixed(2) || '50.00'}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Доступно</p>
+              <p className="text-2xl font-bold text-green-500" data-testid="text-usdt-available">
+                ${settings?.usdtAvailable?.toFixed(2) || '50.00'}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Выдано сегодня</p>
+              <p className="text-2xl font-bold text-amber-500" data-testid="text-usdt-today">
+                ${fundStats?.distributedToday?.toFixed(2) || '0.00'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                лимит: ${settings?.usdtDailyLimit?.toFixed(2) || '1.00'}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Всего выдано</p>
+              <p className="text-2xl font-bold text-blue-500" data-testid="text-usdt-total-distributed">
+                ${fundStats?.totalDistributed?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Настройки USDT-фонда
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Настройте параметры выдачи реальных USDT-наград игрокам
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="usdt-total">Общий фонд (USDT)</Label>
+              <Input
+                id="usdt-total"
+                type="number"
+                min="0"
+                step="1"
+                value={editSettings.usdtTotalFund}
+                onChange={(e) => setEditSettings({ ...editSettings, usdtTotalFund: parseFloat(e.target.value) || 0 })}
+                data-testid="input-usdt-total-fund"
+              />
+              <p className="text-xs text-muted-foreground">Общая сумма фонда для выдачи наград</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="usdt-available">Доступно (USDT)</Label>
+              <Input
+                id="usdt-available"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editSettings.usdtAvailable}
+                onChange={(e) => setEditSettings({ ...editSettings, usdtAvailable: parseFloat(e.target.value) || 0 })}
+                data-testid="input-usdt-available"
+              />
+              <p className="text-xs text-muted-foreground">Остаток для распределения</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="usdt-daily">Дневной лимит (USDT)</Label>
+              <Input
+                id="usdt-daily"
+                type="number"
+                min="0"
+                step="0.1"
+                value={editSettings.usdtDailyLimit}
+                onChange={(e) => setEditSettings({ ...editSettings, usdtDailyLimit: parseFloat(e.target.value) || 0 })}
+                data-testid="input-usdt-daily-limit"
+              />
+              <p className="text-xs text-muted-foreground">Максимум USDT в день для всех игроков</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="usdt-per-drop">Награда за шарик (USDT)</Label>
+              <Input
+                id="usdt-per-drop"
+                type="number"
+                min="0"
+                step="0.001"
+                value={editSettings.usdtPerDrop}
+                onChange={(e) => setEditSettings({ ...editSettings, usdtPerDrop: parseFloat(e.target.value) || 0 })}
+                data-testid="input-usdt-per-drop"
+              />
+              <p className="text-xs text-muted-foreground">USDT за каждый собранный USDT-шарик</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="usdt-per-user">Лимит на игрока/день (USDT)</Label>
+              <Input
+                id="usdt-per-user"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editSettings.usdtMaxPerUserPerDay}
+                onChange={(e) => setEditSettings({ ...editSettings, usdtMaxPerUserPerDay: parseFloat(e.target.value) || 0 })}
+                data-testid="input-usdt-per-user"
+              />
+              <p className="text-xs text-muted-foreground">Максимум USDT в день для одного игрока</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => updateSettingsMutation.mutate(editSettings)}
+            disabled={updateSettingsMutation.isPending}
+            data-testid="button-save-usdt-settings"
+          >
+            {updateSettingsMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Сохранить настройки
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
