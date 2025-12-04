@@ -32,8 +32,13 @@ import {
   RefreshCw,
   Link,
   CheckCircle,
-  XCircle
+  XCircle,
+  Pencil,
+  RotateCcw,
+  Wallet,
+  Bitcoin
 } from "lucide-react";
+import { SiEthereum, SiTether } from "react-icons/si";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +65,12 @@ interface ScoresResponse {
   total: number;
   limit: number;
   offset: number;
+}
+
+interface AdminCryptoBalances {
+  btc: number;
+  eth: number;
+  usdt: number;
 }
 
 export default function Admin() {
@@ -91,6 +102,11 @@ export default function Admin() {
 
   const { data: scoresData } = useQuery<ScoresResponse>({
     queryKey: ["/api/admin/scores"],
+    enabled: isAdmin,
+  });
+
+  const { data: cryptoBalances } = useQuery<AdminCryptoBalances>({
+    queryKey: ["/api/admin/balances"],
     enabled: isAdmin,
   });
 
@@ -324,8 +340,12 @@ export default function Admin() {
           </div>
         )}
 
-        <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid grid-cols-5 w-full max-w-lg">
+        <Tabs defaultValue="balances" className="space-y-4">
+          <TabsList className="grid grid-cols-6 w-full max-w-2xl">
+            <TabsTrigger value="balances" data-testid="tab-balances">
+              <Wallet className="w-4 h-4 mr-2" />
+              Фонд
+            </TabsTrigger>
             <TabsTrigger value="users" data-testid="tab-users">
               <Users className="w-4 h-4 mr-2" />
               Игроки
@@ -347,6 +367,10 @@ export default function Admin() {
               Бот
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="balances">
+            <CryptoBalancesTab balances={cryptoBalances || { btc: 0, eth: 0, usdt: 0 }} />
+          </TabsContent>
 
           <TabsContent value="users">
             <UsersTab users={usersData?.users || []} total={usersData?.total || 0} />
@@ -373,8 +397,114 @@ export default function Admin() {
   );
 }
 
+function CryptoBalancesTab({ balances }: { balances: AdminCryptoBalances }) {
+  const { toast } = useToast();
+  const [editBalances, setEditBalances] = useState(balances);
+
+  const updateBalancesMutation = useMutation({
+    mutationFn: async (newBalances: AdminCryptoBalances) => {
+      return apiRequest("PUT", "/api/admin/balances", newBalances);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/balances"] });
+      toast({ title: "Сохранено", description: "Балансы крипто-фонда обновлены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить балансы", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Wallet className="w-5 h-5" />
+          Крипто-фонд администратора
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Крипто-шарики в игре появляются только если баланс соответствующей монеты больше 0
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Bitcoin className="w-5 h-5 text-amber-500" />
+              BTC баланс
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.001"
+              value={editBalances.btc}
+              onChange={(e) => setEditBalances({ ...editBalances, btc: parseFloat(e.target.value) || 0 })}
+              data-testid="input-btc-balance"
+            />
+            <p className="text-xs text-muted-foreground">
+              {balances.btc > 0 ? "BTC-шарики активны" : "BTC-шарики отключены"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <SiEthereum className="w-5 h-5 text-blue-500" />
+              ETH баланс
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.001"
+              value={editBalances.eth}
+              onChange={(e) => setEditBalances({ ...editBalances, eth: parseFloat(e.target.value) || 0 })}
+              data-testid="input-eth-balance"
+            />
+            <p className="text-xs text-muted-foreground">
+              {balances.eth > 0 ? "ETH-шарики активны" : "ETH-шарики отключены"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <SiTether className="w-5 h-5 text-green-500" />
+              USDT баланс
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editBalances.usdt}
+              onChange={(e) => setEditBalances({ ...editBalances, usdt: parseFloat(e.target.value) || 0 })}
+              data-testid="input-usdt-balance"
+            />
+            <p className="text-xs text-muted-foreground">
+              {balances.usdt > 0 ? "USDT-шарики активны" : "USDT-шарики отключены"}
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => updateBalancesMutation.mutate(editBalances)}
+          disabled={updateBalancesMutation.isPending}
+          data-testid="button-save-balances"
+        >
+          {updateBalancesMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Сохранить балансы
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function UsersTab({ users, total }: { users: User[]; total: number }) {
   const { toast } = useToast();
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ 
+    username: "", 
+    totalPoints: 0, 
+    gamesPlayed: 0, 
+    bestScore: 0 
+  });
 
   const toggleAdminMutation = useMutation({
     mutationFn: async ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) => {
@@ -389,6 +519,59 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Record<string, unknown> }) => {
+      return apiRequest("PUT", `/api/admin/users/${userId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "Обновлено", description: "Данные пользователя сохранены" });
+      setEditingUser(null);
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить пользователя", variant: "destructive" });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "Удалено", description: "Пользователь удалён (мягкое удаление)" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось удалить пользователя", variant: "destructive" });
+    },
+  });
+
+  const restoreUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("PATCH", `/api/admin/users/${userId}/restore`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "Восстановлено", description: "Пользователь восстановлен" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось восстановить пользователя", variant: "destructive" });
+    },
+  });
+
+  const openEditDialog = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      username: user.username,
+      totalPoints: user.totalPoints,
+      gamesPlayed: user.gamesPlayed,
+      bestScore: user.bestScore,
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -398,45 +581,149 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[500px]">
           <div className="space-y-3">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-3 rounded-lg border"
-                data-testid={`user-row-${user.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-bold">
-                      {user.username[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium">{user.username}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{user.totalPoints} очков</span>
-                      <span>•</span>
-                      <span>{user.gamesPlayed} игр</span>
+            {users.map((user) => {
+              const isDeleted = !!(user as User & { deletedAt?: Date }).deletedAt;
+              return (
+                <div
+                  key={user.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${isDeleted ? 'opacity-50 bg-muted' : ''}`}
+                  data-testid={`user-row-${user.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-bold">
+                        {user.username[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{user.username}</p>
+                        {isDeleted && <Badge variant="destructive">Удалён</Badge>}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{user.totalPoints} очков</span>
+                        <span>•</span>
+                        <span>{user.gamesPlayed} игр</span>
+                        <span>•</span>
+                        <span>Лучший: {user.bestScore}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    {user.isAdmin && <Badge variant="secondary">Админ</Badge>}
+                    <Switch
+                      checked={user.isAdmin}
+                      onCheckedChange={(isAdmin) =>
+                        toggleAdminMutation.mutate({ userId: user.id, isAdmin })
+                      }
+                      disabled={toggleAdminMutation.isPending || isDeleted}
+                      data-testid={`toggle-admin-${user.id}`}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(user)}
+                      disabled={isDeleted}
+                      data-testid={`edit-user-${user.id}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    {isDeleted ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => restoreUserMutation.mutate(user.id)}
+                        disabled={restoreUserMutation.isPending}
+                        data-testid={`restore-user-${user.id}`}
+                      >
+                        <RotateCcw className="w-4 h-4 text-green-500" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteUserMutation.mutate(user.id)}
+                        disabled={deleteUserMutation.isPending}
+                        data-testid={`delete-user-${user.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {user.isAdmin && <Badge variant="secondary">Админ</Badge>}
-                  <Switch
-                    checked={user.isAdmin}
-                    onCheckedChange={(isAdmin) =>
-                      toggleAdminMutation.mutate({ userId: user.id, isAdmin })
-                    }
-                    disabled={toggleAdminMutation.isPending}
-                    data-testid={`toggle-admin-${user.id}`}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </CardContent>
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактирование пользователя</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <Label htmlFor="edit-username">Имя пользователя</Label>
+              <Input
+                id="edit-username"
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                data-testid="input-edit-username"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-points">Очки</Label>
+              <Input
+                id="edit-points"
+                type="number"
+                value={editForm.totalPoints}
+                onChange={(e) => setEditForm({ ...editForm, totalPoints: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-points"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-games">Игр сыграно</Label>
+              <Input
+                id="edit-games"
+                type="number"
+                value={editForm.gamesPlayed}
+                onChange={(e) => setEditForm({ ...editForm, gamesPlayed: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-games"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-best">Лучший результат</Label>
+              <Input
+                id="edit-best"
+                type="number"
+                value={editForm.bestScore}
+                onChange={(e) => setEditForm({ ...editForm, bestScore: parseInt(e.target.value) || 0 })}
+                data-testid="input-edit-best"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (editingUser) {
+                  updateUserMutation.mutate({ userId: editingUser.id, updates: editForm });
+                }
+              }}
+              disabled={updateUserMutation.isPending}
+              data-testid="button-save-user"
+            >
+              {updateUserMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Сохранить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
