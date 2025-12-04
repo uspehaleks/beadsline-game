@@ -1809,19 +1809,40 @@ function EconomyTab() {
               <Label>Вероятность появления (0-1)</Label>
               <Input
                 type="text"
-                value={editConfig.crypto.spawnChance}
+                value={(() => {
+                  const val = editConfig.crypto.spawnChance;
+                  if (typeof val === 'string') return val;
+                  if (val === 0) return '0';
+                  return val.toFixed(20).replace(/\.?0+$/, '');
+                })()}
                 onChange={(e) => {
                   const val = e.target.value;
-                  const num = parseFloat(val);
-                  if (val === '' || val === '0.' || /^0\.0*$/.test(val)) {
+                  if (val === '' || /^0?\.?0*$/.test(val)) {
                     setEditConfig({
                       ...editConfig,
                       crypto: { spawnChance: val as unknown as number }
                     });
-                  } else if (!isNaN(num) && num >= 0 && num <= 1) {
+                    return;
+                  }
+                  const num = parseFloat(val);
+                  if (!isNaN(num) && num >= 0 && num <= 1) {
+                    setEditConfig({
+                      ...editConfig,
+                      crypto: { spawnChance: val as unknown as number }
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  const num = parseFloat(e.target.value);
+                  if (!isNaN(num) && num >= 0 && num <= 1) {
                     setEditConfig({
                       ...editConfig,
                       crypto: { spawnChance: num }
+                    });
+                  } else {
+                    setEditConfig({
+                      ...editConfig,
+                      crypto: { spawnChance: 0 }
                     });
                   }
                 }}
