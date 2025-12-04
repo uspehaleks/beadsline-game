@@ -566,12 +566,12 @@ function UsdtFundTab() {
     queryKey: ["/api/admin/usdt-fund/stats"],
   });
 
-  const { data: fundSettings } = useQuery<UsdtFundSettingsData>({
+  const { data: fundResponse } = useQuery<UsdtFundStatsResponse>({
     queryKey: ["/api/admin/usdt-fund"],
   });
 
   useEffect(() => {
-    const settings = fundSettings || fundStats?.settings;
+    const settings = fundResponse?.settings || fundStats?.settings;
     if (settings) {
       setEditSettings({
         usdtTotalFund: settings.usdtTotalFund ?? 0,
@@ -581,7 +581,7 @@ function UsdtFundTab() {
         usdtMaxPerUserPerDay: settings.usdtMaxPerUserPerDay ?? 0.1,
       });
     }
-  }, [fundSettings, fundStats]);
+  }, [fundResponse, fundStats]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (settings: typeof editSettings) => {
@@ -607,7 +607,7 @@ function UsdtFundTab() {
     );
   }
 
-  const settings = fundSettings || fundStats?.settings;
+  const settings = fundResponse?.settings || fundStats?.settings;
 
   return (
     <div className="space-y-4">
