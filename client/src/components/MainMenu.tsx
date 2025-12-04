@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users, Gift, Copy, Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 interface MainMenuProps {
   user: User | null;
@@ -14,11 +16,47 @@ interface MainMenuProps {
   isLoading?: boolean;
 }
 
+interface ReferralInfo {
+  referralCode: string;
+  referralLink: string;
+  directReferralsCount: number;
+  totalReferralRewards: number;
+}
+
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
+  const [showReferral, setShowReferral] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
   const { data: activePlayers } = useQuery<{ count: number }>({
     queryKey: ["/api/active-players"],
     refetchInterval: 10000,
   });
+
+  const { data: referralInfo } = useQuery<ReferralInfo>({
+    queryKey: ["/api/referral"],
+    enabled: !!user && !user.username?.startsWith('guest_'),
+  });
+
+  const copyReferralLink = async () => {
+    if (!referralInfo?.referralLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(referralInfo.referralLink);
+      setCopied(true);
+      toast({
+        title: "Ссылка скопирована!",
+        description: "Отправьте её друзьям",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скопировать ссылку",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background via-background to-primary/5">
@@ -163,7 +201,88 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             </Button>
           </Link>
         )}
+
+        {referralInfo && (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full font-display"
+            onClick={() => setShowReferral(!showReferral)}
+            data-testid="button-referral"
+          >
+            <Gift className="w-5 h-5 mr-2" />
+            Пригласить друзей
+          </Button>
+        )}
       </motion.div>
+
+      <AnimatePresence>
+        {showReferral && referralInfo && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            className="w-full max-w-sm overflow-hidden"
+          >
+            <Card className="p-4 relative">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute top-2 right-2 h-6 w-6"
+                onClick={() => setShowReferral(false)}
+                data-testid="button-close-referral"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              
+              <div className="mb-3">
+                <h3 className="font-display font-semibold text-lg flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-primary" />
+                  Реферальная программа
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Приглашай друзей и получай 10% от их Beads!
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Твоя ссылка:</div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-background rounded px-2 py-1.5 truncate" data-testid="text-referral-link">
+                      {referralInfo.referralLink}
+                    </code>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="shrink-0"
+                      onClick={copyReferralLink}
+                      data-testid="button-copy-referral"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="bg-muted/30 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">Рефералов</div>
+                    <div className="font-display font-bold text-lg" data-testid="text-referrals-count">
+                      {referralInfo.directReferralsCount}
+                    </div>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">Заработано</div>
+                    <div className="font-display font-bold text-lg text-primary" data-testid="text-referral-rewards">
+                      {referralInfo.totalReferralRewards.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0 }}
