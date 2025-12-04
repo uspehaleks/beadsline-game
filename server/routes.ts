@@ -738,6 +738,104 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { username, totalPoints, gamesPlayed, bestScore, isAdmin } = req.body;
+      
+      const updates: Record<string, unknown> = {};
+      if (username !== undefined) updates.username = username;
+      if (totalPoints !== undefined) updates.totalPoints = Number(totalPoints);
+      if (gamesPlayed !== undefined) updates.gamesPlayed = Number(gamesPlayed);
+      if (bestScore !== undefined) updates.bestScore = Number(bestScore);
+      if (isAdmin !== undefined) updates.isAdmin = Boolean(isAdmin);
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No updates provided" });
+      }
+      
+      const user = await storage.updateUser(id, updates);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.softDeleteUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/restore", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.restoreUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Restore user error:", error);
+      res.status(500).json({ error: "Failed to restore user" });
+    }
+  });
+
+  app.get("/api/admin/balances", requireAdmin, async (req, res) => {
+    try {
+      const balances = await storage.getAdminCryptoBalances();
+      res.json(balances);
+    } catch (error) {
+      console.error("Get admin balances error:", error);
+      res.status(500).json({ error: "Failed to get balances" });
+    }
+  });
+
+  app.put("/api/admin/balances", requireAdmin, async (req, res) => {
+    try {
+      const { btc, eth, usdt } = req.body;
+      
+      const balances = {
+        btc: Math.max(0, Number(btc) || 0),
+        eth: Math.max(0, Number(eth) || 0),
+        usdt: Math.max(0, Number(usdt) || 0),
+      };
+      
+      const updated = await storage.setAdminCryptoBalances(balances);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update admin balances error:", error);
+      res.status(500).json({ error: "Failed to update balances" });
+    }
+  });
+
+  app.get("/api/crypto-balances", async (req, res) => {
+    try {
+      const balances = await storage.getAdminCryptoBalances();
+      res.json({
+        btc: balances.btc > 0,
+        eth: balances.eth > 0,
+        usdt: balances.usdt > 0,
+      });
+    } catch (error) {
+      console.error("Get crypto balances error:", error);
+      res.status(500).json({ error: "Failed to get balances" });
+    }
+  });
+
   app.get("/api/admin/configs", requireAdmin, async (req, res) => {
     try {
       const configs = await storage.getAllGameConfigs();
