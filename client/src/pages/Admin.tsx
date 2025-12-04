@@ -555,8 +555,8 @@ interface UsdtFundStatsResponse {
 function UsdtFundTab() {
   const { toast } = useToast();
   const [editSettings, setEditSettings] = useState({
-    usdtTotalFund: 50,
-    usdtAvailable: 50,
+    usdtTotalFund: 0,
+    usdtAvailable: 0,
     usdtDailyLimit: 1.0,
     usdtPerDrop: 0.02,
     usdtMaxPerUserPerDay: 0.1,
@@ -569,6 +569,19 @@ function UsdtFundTab() {
   const { data: fundSettings } = useQuery<UsdtFundSettingsData>({
     queryKey: ["/api/admin/usdt-fund"],
   });
+
+  useEffect(() => {
+    const settings = fundSettings || fundStats?.settings;
+    if (settings) {
+      setEditSettings({
+        usdtTotalFund: settings.usdtTotalFund ?? 0,
+        usdtAvailable: settings.usdtAvailable ?? 0,
+        usdtDailyLimit: settings.usdtDailyLimit ?? 1.0,
+        usdtPerDrop: settings.usdtPerDrop ?? 0.02,
+        usdtMaxPerUserPerDay: settings.usdtMaxPerUserPerDay ?? 0.1,
+      });
+    }
+  }, [fundSettings, fundStats]);
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (settings: typeof editSettings) => {
@@ -610,28 +623,28 @@ function UsdtFundTab() {
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground">Общий фонд</p>
               <p className="text-2xl font-bold" data-testid="text-usdt-total">
-                ${settings?.usdtTotalFund?.toFixed(2) || '50.00'}
+                ${(settings?.usdtTotalFund ?? 0).toFixed(2)}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground">Доступно</p>
               <p className="text-2xl font-bold text-green-500" data-testid="text-usdt-available">
-                ${settings?.usdtAvailable?.toFixed(2) || '50.00'}
+                ${(settings?.usdtAvailable ?? 0).toFixed(2)}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground">Выдано сегодня</p>
               <p className="text-2xl font-bold text-amber-500" data-testid="text-usdt-today">
-                ${fundStats?.distributedToday?.toFixed(2) || '0.00'}
+                ${(fundStats?.distributedToday ?? 0).toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                лимит: ${settings?.usdtDailyLimit?.toFixed(2) || '1.00'}
+                лимит: ${(settings?.usdtDailyLimit ?? 0).toFixed(2)}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground">Всего выдано</p>
               <p className="text-2xl font-bold text-blue-500" data-testid="text-usdt-total-distributed">
-                ${fundStats?.totalDistributed?.toFixed(2) || '0.00'}
+                ${(fundStats?.totalDistributed ?? 0).toFixed(2)}
               </p>
             </div>
           </div>
