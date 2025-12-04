@@ -1362,7 +1362,16 @@ export async function registerRoutes(
     }
   });
 
-  // Telegram Bot Webhook
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Telegram Bot Webhook (GET for verification, POST for updates)
+  app.get("/api/telegram/webhook", (req, res) => {
+    res.json({ ok: true, message: "Webhook endpoint is active" });
+  });
+
   app.post("/api/telegram/webhook", async (req, res) => {
     try {
       const update: TelegramUpdate = req.body;
