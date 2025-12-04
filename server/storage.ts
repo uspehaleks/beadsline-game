@@ -12,9 +12,11 @@ import {
   type PrizePool,
   type InsertPrizePool,
   type LeaderboardEntry,
+  type AdminCryptoBalances,
+  type UserUpdate,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, isNull, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -22,9 +24,13 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStats(userId: string, score: number): Promise<User | undefined>;
+  updateUser(userId: string, updates: UserUpdate): Promise<User | undefined>;
   setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
-  getAllUsers(limit?: number, offset?: number): Promise<User[]>;
-  getUserCount(): Promise<number>;
+  softDeleteUser(userId: string): Promise<User | undefined>;
+  restoreUser(userId: string): Promise<User | undefined>;
+  getAllUsers(limit?: number, offset?: number, includeDeleted?: boolean): Promise<User[]>;
+  getActiveUsers(limit?: number, offset?: number): Promise<User[]>;
+  getUserCount(includeDeleted?: boolean): Promise<number>;
   
   createGameScore(score: InsertGameScore): Promise<GameScore>;
   getUserScores(userId: string, limit?: number): Promise<GameScore[]>;
@@ -37,6 +43,9 @@ export interface IStorage {
   getAllGameConfigs(): Promise<GameConfig[]>;
   setGameConfig(config: InsertGameConfig): Promise<GameConfig>;
   deleteGameConfig(key: string): Promise<void>;
+  
+  getAdminCryptoBalances(): Promise<AdminCryptoBalances>;
+  setAdminCryptoBalances(balances: AdminCryptoBalances): Promise<AdminCryptoBalances>;
   
   getPrizePool(id: string): Promise<PrizePool | undefined>;
   getActivePrizePool(): Promise<PrizePool | undefined>;
@@ -96,17 +105,70 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getAllUsers(limit: number = 50, offset: number = 0): Promise<User[]> {
+  async updateUser(userId: string, updates: UserUpdate): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async softDeleteUser(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async restoreUser(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ deletedAt: null })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async getAllUsers(limit: number = 50, offset: number = 0, includeDeleted: boolean = true): Promise<User[]> {
+    if (includeDeleted) {
+      return db
+        .select()
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+    }
     return db
       .select()
       .from(users)
+      .where(isNull(users.deletedAt))
       .orderBy(desc(users.createdAt))
       .limit(limit)
       .offset(offset);
   }
 
-  async getUserCount(): Promise<number> {
-    const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+  async getActiveUsers(limit: number = 50, offset: number = 0): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getUserCount(includeDeleted: boolean = false): Promise<number> {
+    if (includeDeleted) {
+      const result = await db.select({ count: sql<number>`count(*)` }).from(users);
+      return Number(result[0]?.count || 0);
+    }
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(isNull(users.deletedAt));
     return Number(result[0]?.count || 0);
   }
 
@@ -203,6 +265,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGameConfig(key: string): Promise<void> {
     await db.delete(gameConfig).where(eq(gameConfig.key, key));
+  }
+
+  async getAdminCryptoBalances(): Promise<AdminCryptoBalances> {
+    const config = await this.getGameConfig('admin_crypto_balances');
+    if (!config) {
+      return { btc: 0, eth: 0, usdt: 0 };
+    }
+    const value = config.value as Record<string, number>;
+    return {
+      btc: value.btc || 0,
+      eth: value.eth || 0,
+      usdt: value.usdt || 0,
+    };
+  }
+
+  async setAdminCryptoBalances(balances: AdminCryptoBalances): Promise<AdminCryptoBalances> {
+    await this.setGameConfig({
+      key: 'admin_crypto_balances',
+      value: balances,
+      description: 'Admin crypto fund balances for BTC, ETH, USDT',
+    });
+    return balances;
   }
 
   async getPrizePool(id: string): Promise<PrizePool | undefined> {
