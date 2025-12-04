@@ -7,11 +7,13 @@ import {
   getShooterPosition,
   updateBallPositions,
   moveBallsForward,
+  processRollback,
   findMatchingBalls,
   calculatePoints,
   insertBallInChain,
   removeBalls,
   checkCollision,
+  checkPathCollision,
   checkGameOver,
   checkWin,
   SHOOTER_BALL_SPEED,
@@ -29,6 +31,8 @@ interface UseGameStateProps {
 interface Projectile {
   x: number;
   y: number;
+  prevX: number;
+  prevY: number;
   vx: number;
   vy: number;
   ball: Ball;
@@ -118,6 +122,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         let newBalls = moveBallsForward(prev.balls, deltaTime);
         
+        newBalls = processRollback(newBalls, deltaTime);
+        
         const { period, buffer } = GAME_CONFIG.spawn;
         const { targetCount } = GAME_CONFIG.balls;
         
@@ -158,7 +164,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           return null;
         }
         
-        return { ...prev, x: newX, y: newY };
+        return { ...prev, prevX: prev.x, prevY: prev.y, x: newX, y: newY };
       });
       
       gameLoopRef.current = requestAnimationFrame(runLoop);
@@ -186,7 +192,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setGameState(prev => {
       if (!prev.isPlaying || gameEndedRef.current) return prev;
       
-      const collision = checkCollision(projectile.x, projectile.y, prev.balls, pathRef.current);
+      const collision = checkPathCollision(
+        projectile.x, projectile.y,
+        projectile.prevX, projectile.prevY,
+        prev.balls, pathRef.current
+      );
       
       if (collision) {
         const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
@@ -281,6 +291,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setProjectile({
       x: shooterPosition.x,
       y: shooterPosition.y,
+      prevX: shooterPosition.x,
+      prevY: shooterPosition.y,
       vx,
       vy,
       ball: gameState.shooterBall,

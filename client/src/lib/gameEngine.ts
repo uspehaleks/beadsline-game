@@ -138,6 +138,38 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
   });
 }
 
+export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
+  if (balls.length < 2) return balls;
+  
+  const spacing = GAME_CONFIG.balls.spacing;
+  const rollbackSpeed = 0.03;
+  const rollbackAmount = rollbackSpeed * deltaTime * 0.001;
+  
+  const newBalls = [...balls];
+  
+  for (let i = 1; i < newBalls.length; i++) {
+    const currentBall = newBalls[i];
+    const prevBall = newBalls[i - 1];
+    
+    const gap = currentBall.pathProgress - prevBall.pathProgress;
+    const targetGap = spacing;
+    
+    if (gap > targetGap * 1.5) {
+      const newProgress = Math.max(
+        prevBall.pathProgress + targetGap,
+        currentBall.pathProgress - rollbackAmount
+      );
+      
+      newBalls[i] = {
+        ...currentBall,
+        pathProgress: newProgress,
+      };
+    }
+  }
+  
+  return newBalls;
+}
+
 export function findMatchingBalls(balls: Ball[], insertIndex: number, color: BallColor): number[] {
   const matches: number[] = [insertIndex];
   
@@ -232,6 +264,8 @@ export function checkCollision(
   
   for (let i = 0; i < balls.length; i++) {
     const ball = balls[i];
+    if (ball.pathProgress < 0) continue;
+    
     const dx = projectileX - ball.x;
     const dy = projectileY - ball.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -251,6 +285,36 @@ export function checkCollision(
   const insertBefore = projectileProgress < hitBall.pathProgress;
   
   return { index: closestIndex, insertBefore };
+}
+
+export function checkPathCollision(
+  projectileX: number,
+  projectileY: number,
+  prevX: number,
+  prevY: number,
+  balls: Ball[],
+  path: PathPoint[]
+): { index: number; insertBefore: boolean } | null {
+  const directHit = checkCollision(projectileX, projectileY, balls, path);
+  if (directHit) return directHit;
+  
+  const dx = projectileX - prevX;
+  const dy = projectileY - prevY;
+  const stepDistance = Math.sqrt(dx * dx + dy * dy);
+  
+  if (stepDistance > BALL_RADIUS) {
+    const steps = Math.ceil(stepDistance / (BALL_RADIUS * 0.5));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const checkX = prevX + dx * t;
+      const checkY = prevY + dy * t;
+      
+      const hit = checkCollision(checkX, checkY, balls, path);
+      if (hit) return hit;
+    }
+  }
+  
+  return null;
 }
 
 function findClosestProgressOnPath(x: number, y: number, path: PathPoint[]): number {
