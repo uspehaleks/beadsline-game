@@ -895,11 +895,11 @@ export async function registerRoutes(
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const user = await storage.softDeleteUser(id);
-      if (!user) {
+      const deleted = await storage.hardDeleteUser(id);
+      if (!deleted) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.json({ success: true, user });
+      res.json({ success: true });
     } catch (error) {
       console.error("Delete user error:", error);
       res.status(500).json({ error: "Failed to delete user" });

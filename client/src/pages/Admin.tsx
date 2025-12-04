@@ -806,24 +806,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
       await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Удалено", description: "Пользователь удалён (мягкое удаление)" });
+      toast({ title: "Удалено", description: "Пользователь полностью удалён из базы данных" });
     },
     onError: () => {
       toast({ title: "Ошибка", description: "Не удалось удалить пользователя", variant: "destructive" });
-    },
-  });
-
-  const restoreUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      return apiRequest("PATCH", `/api/admin/users/${userId}/restore`);
-    },
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Восстановлено", description: "Пользователь восстановлен" });
-    },
-    onError: () => {
-      toast({ title: "Ошибка", description: "Не удалось восстановить пользователя", variant: "destructive" });
     },
   });
 
@@ -852,78 +838,59 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
       <CardContent>
         <ScrollArea className="h-[500px]">
           <div className="space-y-3">
-            {users.map((user) => {
-              const isDeleted = !!(user as User & { deletedAt?: Date }).deletedAt;
-              return (
-                <div
-                  key={user.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${isDeleted ? 'opacity-50 bg-muted' : ''}`}
-                  data-testid={`user-row-${user.id}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold">
-                        {user.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{user.username}</p>
-                        {isDeleted && <Badge variant="destructive">Удалён</Badge>}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{user.totalPoints} очков</span>
-                        <span>•</span>
-                        <span>{user.gamesPlayed} игр</span>
-                        <span>•</span>
-                        <span>Лучший: {user.bestScore}</span>
-                      </div>
-                    </div>
+            {users.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between p-3 rounded-lg border"
+                data-testid={`user-row-${user.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold">
+                      {user.username[0].toUpperCase()}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {user.isAdmin && <Badge variant="secondary">Админ</Badge>}
-                    <Switch
-                      checked={user.isAdmin}
-                      onCheckedChange={(isAdmin) =>
-                        toggleAdminMutation.mutate({ userId: user.id, isAdmin })
-                      }
-                      disabled={toggleAdminMutation.isPending || isDeleted}
-                      data-testid={`toggle-admin-${user.id}`}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditDialog(user)}
-                      disabled={isDeleted}
-                      data-testid={`edit-user-${user.id}`}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    {isDeleted ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => restoreUserMutation.mutate(user.id)}
-                        disabled={restoreUserMutation.isPending}
-                        data-testid={`restore-user-${user.id}`}
-                      >
-                        <RotateCcw className="w-4 h-4 text-green-500" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteUserMutation.mutate(user.id)}
-                        disabled={deleteUserMutation.isPending}
-                        data-testid={`delete-user-${user.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    )}
+                  <div>
+                    <p className="font-medium">{user.username}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{user.totalPoints} очков</span>
+                      <span>•</span>
+                      <span>{user.gamesPlayed} игр</span>
+                      <span>•</span>
+                      <span>Лучший: {user.bestScore}</span>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+                <div className="flex items-center gap-2">
+                  {user.isAdmin && <Badge variant="secondary">Админ</Badge>}
+                  <Switch
+                    checked={user.isAdmin}
+                    onCheckedChange={(isAdmin) =>
+                      toggleAdminMutation.mutate({ userId: user.id, isAdmin })
+                    }
+                    disabled={toggleAdminMutation.isPending}
+                    data-testid={`toggle-admin-${user.id}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(user)}
+                    data-testid={`edit-user-${user.id}`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteUserMutation.mutate(user.id)}
+                    disabled={deleteUserMutation.isPending}
+                    data-testid={`delete-user-${user.id}`}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </ScrollArea>
       </CardContent>

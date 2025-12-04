@@ -42,6 +42,7 @@ export interface IStorage {
   updateUser(userId: string, updates: UserUpdate): Promise<User | undefined>;
   setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
   softDeleteUser(userId: string): Promise<User | undefined>;
+  hardDeleteUser(userId: string): Promise<boolean>;
   restoreUser(userId: string): Promise<User | undefined>;
   getAllUsers(limit?: number, offset?: number, includeDeleted?: boolean): Promise<User[]>;
   getActiveUsers(limit?: number, offset?: number): Promise<User[]>;
@@ -162,6 +163,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;
+  }
+
+  async hardDeleteUser(userId: string): Promise<boolean> {
+    const result = await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
   }
 
   async restoreUser(userId: string): Promise<User | undefined> {
