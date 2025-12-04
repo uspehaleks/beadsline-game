@@ -62,8 +62,10 @@ The application is a fully functional MVP with:
 - **Ball Colors**: Red, Blue, Green, Yellow, Purple
 - **Dynamic Speed**: Constant base speed with light acceleration in last 20% of path
 
-## Game Configuration (client/src/lib/gameConfig.ts)
-All game parameters are centralized for easy tuning:
+## Game Configuration
+
+### Static Config (client/src/lib/gameConfig.ts)
+Path and physics parameters (compiled):
 ```typescript
 path: {
   type: 'spiral',       // Spiral path from outside to center
@@ -90,6 +92,27 @@ gameplay: {
   addBallsCount: 3,     // Balls to add
 }
 ```
+
+### Dynamic Economy Config (stored in game_config table)
+Economy parameters configurable at runtime via Admin Panel → Экономика:
+```typescript
+GameEconomyConfig: {
+  points: {
+    normal: 100,        // Points per regular ball matched
+    btc: 500,           // Bonus for BTC ball (added to normal)
+    eth: 300,           // Bonus for ETH ball
+    usdt: 200           // Bonus for USDT ball
+  },
+  combo: {
+    multiplier: 1.5,    // Combo multiplier per chain
+    maxChain: 10        // Maximum combo chain
+  },
+  crypto: {
+    spawnChance: 0.08   // Chance for crypto ball (8%)
+  }
+}
+```
+**Note**: Crypto balls only give bonus points when matched in groups of 3+, not just collected.
 
 ## API Endpoints
 | Endpoint | Method | Description |
