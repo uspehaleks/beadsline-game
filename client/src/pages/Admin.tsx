@@ -341,36 +341,38 @@ export default function Admin() {
         )}
 
         <Tabs defaultValue="balances" className="space-y-4">
-          <TabsList className="grid grid-cols-7 w-full max-w-3xl">
-            <TabsTrigger value="balances" data-testid="tab-balances">
-              <Wallet className="w-4 h-4 mr-2" />
-              Фонд
-            </TabsTrigger>
-            <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund">
-              <SiTether className="w-4 h-4 mr-2" />
-              USDT
-            </TabsTrigger>
-            <TabsTrigger value="users" data-testid="tab-users">
-              <Users className="w-4 h-4 mr-2" />
-              Игроки
-            </TabsTrigger>
-            <TabsTrigger value="pools" data-testid="tab-pools">
-              <Gift className="w-4 h-4 mr-2" />
-              Призы
-            </TabsTrigger>
-            <TabsTrigger value="config" data-testid="tab-config">
-              <Settings className="w-4 h-4 mr-2" />
-              Настройки
-            </TabsTrigger>
-            <TabsTrigger value="scores" data-testid="tab-scores">
-              <Trophy className="w-4 h-4 mr-2" />
-              Очки
-            </TabsTrigger>
-            <TabsTrigger value="telegram" data-testid="tab-telegram">
-              <Bot className="w-4 h-4 mr-2" />
-              Бот
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="inline-flex w-auto min-w-full gap-1">
+              <TabsTrigger value="balances" data-testid="tab-balances" className="flex-shrink-0">
+                <Wallet className="w-4 h-4 mr-1.5" />
+                Фонд
+              </TabsTrigger>
+              <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund" className="flex-shrink-0">
+                <SiTether className="w-4 h-4 mr-1.5" />
+                USDT
+              </TabsTrigger>
+              <TabsTrigger value="users" data-testid="tab-users" className="flex-shrink-0">
+                <Users className="w-4 h-4 mr-1.5" />
+                Игроки
+              </TabsTrigger>
+              <TabsTrigger value="pools" data-testid="tab-pools" className="flex-shrink-0">
+                <Gift className="w-4 h-4 mr-1.5" />
+                Призы
+              </TabsTrigger>
+              <TabsTrigger value="config" data-testid="tab-config" className="flex-shrink-0">
+                <Settings className="w-4 h-4 mr-1.5" />
+                Настройки
+              </TabsTrigger>
+              <TabsTrigger value="scores" data-testid="tab-scores" className="flex-shrink-0">
+                <Trophy className="w-4 h-4 mr-1.5" />
+                Очки
+              </TabsTrigger>
+              <TabsTrigger value="telegram" data-testid="tab-telegram" className="flex-shrink-0">
+                <Bot className="w-4 h-4 mr-1.5" />
+                Бот
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="balances">
             <CryptoBalancesTab balances={cryptoBalances || { btc: 0, eth: 0, usdt: 0 }} />
