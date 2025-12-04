@@ -66,23 +66,23 @@ The application is a fully functional MVP with:
 All game parameters are centralized for easy tuning:
 ```typescript
 path: {
-  segments: 500,        // Path length (more = longer path)
-  amplitude: 0.38,      // Snake width
-  frequency: 4.5,       // Number of curves
-  startY: 0.05,         // Start position
-  endY: 0.88,           // End position (finish line)
+  type: 'spiral',       // Spiral path from outside to center
+  segments: 600,        // Path smoothness
+  spiralTurns: 3.5,     // Number of spiral rotations
+  outerRadius: 0.42,    // Starting radius (% of screen)
+  innerRadius: 0.08,    // End radius near center
 }
 balls: {
-  radius: 18,           // Ball size
-  spacing: 0.022,       // Gap between balls
-  initialCount: 40,     // Starting balls in chain
-  shooterSpeed: 14,     // Projectile speed
-  collisionRadius: 2.2, // Collision detection multiplier
+  radius: 16,           // Ball size
+  spacing: 0.016,       // Gap between balls
+  initialCount: 50,     // Starting balls in chain
+  shooterSpeed: 16,     // Projectile speed
+  collisionRadius: 2.0, // Collision detection multiplier
 }
 speed: {
-  base: 0.012,          // Constant base speed
-  max: 0.022,           // Maximum speed (at finish)
-  accelerationStart: 0.8, // Start acceleration at 80% of path
+  base: 0.003,          // Very slow constant speed
+  max: 0.006,           // Maximum speed near finish
+  accelerationStart: 0.85, // Accelerate at 85% of path
 }
 gameplay: {
   winCondition: 5000,   // Beads to win

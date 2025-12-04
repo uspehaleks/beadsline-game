@@ -4,6 +4,7 @@ import {
   createInitialGameState,
   createRandomBall,
   generatePath,
+  getShooterPosition,
   updateBallPositions,
   moveBallsForward,
   findMatchingBalls,
@@ -55,10 +56,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   pathRef.current = path;
   dimensionsRef.current = { width: canvasWidth, height: canvasHeight };
   
-  const shooterPosition = {
-    x: canvasWidth / 2,
-    y: canvasHeight - 80,
-  };
+  const shooterPosition = getShooterPosition(canvasWidth, canvasHeight);
 
   useEffect(() => {
     if (canvasWidth > 0 && canvasHeight > 0) {
@@ -307,8 +305,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     const dy = targetY - shooterPosition.y;
     const angle = Math.atan2(dy, dx);
     
-    const clampedAngle = Math.max(-Math.PI, Math.min(0, angle));
-    setShooterAngle(clampedAngle);
+    setShooterAngle(angle);
   }, [gameState.isPlaying, shooterPosition]);
 
   return {

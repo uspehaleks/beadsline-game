@@ -1,24 +1,24 @@
 export const GAME_CONFIG = {
   path: {
-    segments: 500,
-    amplitude: 0.38,
-    frequency: 4.5,
-    startY: 0.05,
-    endY: 0.88,
+    type: 'spiral' as const,
+    segments: 600,
+    spiralTurns: 3.5,
+    outerRadius: 0.42,
+    innerRadius: 0.08,
   },
   
   balls: {
-    radius: 18,
-    spacing: 0.022,
-    initialCount: 40,
-    shooterSpeed: 14,
-    collisionRadius: 2.2,
+    radius: 16,
+    spacing: 0.016,
+    initialCount: 50,
+    shooterSpeed: 16,
+    collisionRadius: 2.0,
   },
   
   speed: {
-    base: 0.012,
-    max: 0.022,
-    accelerationStart: 0.8,
+    base: 0.003,
+    max: 0.006,
+    accelerationStart: 0.85,
   },
   
   gameplay: {

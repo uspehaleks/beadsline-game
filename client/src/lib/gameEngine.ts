@@ -22,20 +22,31 @@ export interface PathPoint {
 
 export function generatePath(width: number, height: number): PathPoint[] {
   const points: PathPoint[] = [];
-  const { segments, amplitude, frequency, startY, endY } = GAME_CONFIG.path;
-  const amp = width * amplitude;
+  const { segments, spiralTurns, outerRadius, innerRadius } = GAME_CONFIG.path;
+  
   const centerX = width / 2;
-  const yStart = height * startY;
-  const yEnd = height * endY;
+  const centerY = height * 0.48;
+  const maxRadius = Math.min(width, height) * outerRadius;
+  const minRadius = Math.min(width, height) * innerRadius;
   
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
-    const y = yStart + (yEnd - yStart) * t;
-    const x = centerX + amp * Math.sin(t * Math.PI * frequency);
+    const angle = t * Math.PI * 2 * spiralTurns;
+    const radius = maxRadius - (maxRadius - minRadius) * t;
+    
+    const x = centerX + radius * Math.cos(angle - Math.PI / 2);
+    const y = centerY + radius * Math.sin(angle - Math.PI / 2);
     points.push({ x, y });
   }
   
   return points;
+}
+
+export function getShooterPosition(width: number, height: number): { x: number; y: number } {
+  return {
+    x: width / 2,
+    y: height * 0.48,
+  };
 }
 
 export function getPositionOnPath(path: PathPoint[], progress: number): { x: number; y: number } {
