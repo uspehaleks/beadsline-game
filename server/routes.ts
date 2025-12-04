@@ -1390,8 +1390,18 @@ export async function registerRoutes(
   // Setup Telegram webhook (admin only)
   app.post("/api/telegram/setup-webhook", requireAdmin, async (req, res) => {
     try {
-      const appUrl = getAppUrl();
-      const webhookUrl = `${appUrl}/api/telegram/webhook`;
+      const { customUrl } = req.body;
+      let webhookUrl: string;
+      
+      if (customUrl && typeof customUrl === 'string' && customUrl.trim()) {
+        // Use custom URL provided by admin
+        const baseUrl = customUrl.trim().replace(/\/$/, ''); // Remove trailing slash
+        webhookUrl = `${baseUrl}/api/telegram/webhook`;
+      } else {
+        // Use auto-detected URL
+        const appUrl = getAppUrl();
+        webhookUrl = `${appUrl}/api/telegram/webhook`;
+      }
       
       const [webhookSuccess, commandsSuccess] = await Promise.all([
         setTelegramWebhook(webhookUrl),

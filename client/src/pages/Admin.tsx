@@ -1407,14 +1407,18 @@ interface TelegramBotInfo {
 
 function TelegramTab() {
   const { toast } = useToast();
+  const [customWebhookUrl, setCustomWebhookUrl] = useState("");
+  const [useCustomUrl, setUseCustomUrl] = useState(false);
 
   const { data: botInfo, isLoading: infoLoading, refetch: refetchInfo } = useQuery<TelegramBotInfo>({
     queryKey: ["/api/telegram/info"],
   });
 
   const setupWebhookMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/telegram/setup-webhook", {});
+    mutationFn: async (customUrl?: string) => {
+      const res = await apiRequest("POST", "/api/telegram/setup-webhook", {
+        customUrl: customUrl || undefined
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Ошибка настройки webhook");
@@ -1553,10 +1557,45 @@ function TelegramTab() {
               </div>
             </div>
 
+            <div className="p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  Использовать свой URL
+                </Label>
+                <Switch
+                  checked={useCustomUrl}
+                  onCheckedChange={setUseCustomUrl}
+                  data-testid="switch-custom-url"
+                />
+              </div>
+              
+              {useCustomUrl && (
+                <div className="space-y-2 mb-3">
+                  <Input
+                    placeholder="https://your-app.replit.app"
+                    value={customWebhookUrl}
+                    onChange={(e) => setCustomWebhookUrl(e.target.value)}
+                    data-testid="input-custom-webhook-url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Укажите production URL вашего приложения (без /api/telegram/webhook)
+                  </p>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground mb-3">
+                {useCustomUrl 
+                  ? `Webhook будет: ${customWebhookUrl || '...'}/api/telegram/webhook`
+                  : `Webhook будет: ${botInfo?.appUrl || '...'}/api/telegram/webhook`
+                }
+              </p>
+            </div>
+
             <div className="flex flex-col gap-3">
               <Button
-                onClick={() => setupWebhookMutation.mutate()}
-                disabled={setupWebhookMutation.isPending}
+                onClick={() => setupWebhookMutation.mutate(useCustomUrl ? customWebhookUrl : undefined)}
+                disabled={setupWebhookMutation.isPending || (useCustomUrl && !customWebhookUrl.trim())}
                 data-testid="button-setup-webhook"
               >
                 {setupWebhookMutation.isPending ? (
