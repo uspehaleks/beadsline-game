@@ -80,9 +80,9 @@ balls: {
   collisionRadius: 2.0, // Collision detection multiplier
 }
 speed: {
-  base: 0.003,          // Very slow constant speed
-  max: 0.006,           // Maximum speed near finish
-  accelerationStart: 0.85, // Accelerate at 85% of path
+  base: 0.012,          // Base speed for visible movement
+  max: 0.025,           // Maximum speed near finish
+  accelerationStart: 0.8, // Accelerate at 80% of path
 }
 gameplay: {
   winCondition: 5000,   // Beads to win

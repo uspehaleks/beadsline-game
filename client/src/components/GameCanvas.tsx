@@ -34,6 +34,8 @@ export function GameCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
 
+  const portalAnimationRef = useRef(0);
+  
   const drawPath = useCallback((ctx: CanvasRenderingContext2D) => {
     if (path.length < 2) return;
     
@@ -57,6 +59,46 @@ export function GameCanvas({
       ctx.lineTo(path[i].x, path[i].y);
     }
     ctx.stroke();
+    
+    if (path.length > 0) {
+      const endPoint = path[path.length - 1];
+      portalAnimationRef.current = (portalAnimationRef.current + 0.05) % (Math.PI * 4);
+      const pulseScale = 1 + Math.sin(portalAnimationRef.current) * 0.15;
+      const portalRadius = BALL_RADIUS * 2 * pulseScale;
+      
+      const portalGradient = ctx.createRadialGradient(
+        endPoint.x, endPoint.y, 0,
+        endPoint.x, endPoint.y, portalRadius
+      );
+      portalGradient.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
+      portalGradient.addColorStop(0.5, 'rgba(220, 38, 38, 0.6)');
+      portalGradient.addColorStop(1, 'rgba(185, 28, 28, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(endPoint.x, endPoint.y, portalRadius, 0, Math.PI * 2);
+      ctx.fillStyle = portalGradient;
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(endPoint.x, endPoint.y, BALL_RADIUS * 1.2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      ctx.save();
+      ctx.translate(endPoint.x, endPoint.y);
+      ctx.rotate(portalAnimationRef.current * 0.5);
+      for (let i = 0; i < 6; i++) {
+        ctx.rotate(Math.PI / 3);
+        ctx.beginPath();
+        ctx.moveTo(BALL_RADIUS * 0.3, 0);
+        ctx.lineTo(BALL_RADIUS * 0.8, 0);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }, [path]);
 
   const drawBall = useCallback((ctx: CanvasRenderingContext2D, ball: Ball, isShooter: boolean = false) => {
@@ -64,12 +106,17 @@ export function GameCanvas({
       ? CRYPTO_COLOR_MAP[ball.crypto] 
       : BALL_COLOR_MAP[ball.color];
     
+    const rollAngle = (ball.pathProgress || 0) * Math.PI * 20;
+    
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    
     const gradient = ctx.createRadialGradient(
-      ball.x - BALL_RADIUS * 0.3,
-      ball.y - BALL_RADIUS * 0.3,
+      -BALL_RADIUS * 0.3,
+      -BALL_RADIUS * 0.3,
       0,
-      ball.x,
-      ball.y,
+      0,
+      0,
       BALL_RADIUS
     );
     
@@ -78,7 +125,7 @@ export function GameCanvas({
     gradient.addColorStop(1, darkenColor(baseColor, 20));
     
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.arc(0, 0, BALL_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = gradient;
     ctx.fill();
     
@@ -86,11 +133,27 @@ export function GameCanvas({
     ctx.lineWidth = 2;
     ctx.stroke();
     
+    if (!isShooter) {
+      ctx.rotate(rollAngle);
+      
+      ctx.beginPath();
+      ctx.arc(0, -BALL_RADIUS * 0.5, BALL_RADIUS * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(0, BALL_RADIUS * 0.5, BALL_RADIUS * 0.12, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fill();
+      
+      ctx.rotate(-rollAngle);
+    }
+    
     if (ball.crypto) {
       ctx.shadowColor = CRYPTO_COLOR_MAP[ball.crypto];
       ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.arc(ball.x, ball.y, BALL_RADIUS + 2, 0, Math.PI * 2);
+      ctx.arc(0, 0, BALL_RADIUS + 2, 0, Math.PI * 2);
       ctx.strokeStyle = CRYPTO_COLOR_MAP[ball.crypto];
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -100,19 +163,21 @@ export function GameCanvas({
       ctx.font = `bold ${BALL_RADIUS}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(CRYPTO_SYMBOL_MAP[ball.crypto], ball.x, ball.y);
+      ctx.fillText(CRYPTO_SYMBOL_MAP[ball.crypto], 0, 0);
     }
     
     ctx.beginPath();
     ctx.arc(
-      ball.x - BALL_RADIUS * 0.35,
-      ball.y - BALL_RADIUS * 0.35,
+      -BALL_RADIUS * 0.35,
+      -BALL_RADIUS * 0.35,
       BALL_RADIUS * 0.25,
       0,
       Math.PI * 2
     );
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.fill();
+    
+    ctx.restore();
   }, []);
 
   const drawShooter = useCallback((ctx: CanvasRenderingContext2D) => {

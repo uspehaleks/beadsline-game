@@ -16,9 +16,9 @@ export const GAME_CONFIG = {
   },
   
   speed: {
-    base: 0.003,
-    max: 0.006,
-    accelerationStart: 0.85,
+    base: 0.012,
+    max: 0.025,
+    accelerationStart: 0.8,
   },
   
   gameplay: {
