@@ -822,7 +822,8 @@ export class DatabaseStorage implements IStorage {
     
     const config = await this.getReferralConfig();
     
-    const level1Referrer = await this.getUser(player.referredBy);
+    // referredBy contains the referral CODE, not user ID
+    const level1Referrer = await this.getUserByReferralCode(player.referredBy);
     if (level1Referrer) {
       let level1Reward = Math.floor(beadsEarned * config.level1RewardPercent / 100);
       
@@ -852,8 +853,9 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
+      // Check for level 2 referrer (level1Referrer's sponsor)
       if (level1Referrer.referredBy) {
-        const level2Referrer = await this.getUser(level1Referrer.referredBy);
+        const level2Referrer = await this.getUserByReferralCode(level1Referrer.referredBy);
         if (level2Referrer) {
           let level2Reward = Math.floor(beadsEarned * config.level2RewardPercent / 100);
           
@@ -903,18 +905,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLevel2ReferralsCount(userId: string): Promise<number> {
-    const directReferrals = await db.select({ id: users.id })
+    // First get user's referral code
+    const user = await this.getUser(userId);
+    if (!user?.referralCode) return 0;
+    
+    // Find direct referrals by referral code
+    const directReferrals = await db.select({ id: users.id, referralCode: users.referralCode })
       .from(users)
-      .where(eq(users.referredBy, userId));
+      .where(eq(users.referredBy, user.referralCode));
     
     if (directReferrals.length === 0) return 0;
     
+    // Count level 2 referrals (referrals of direct referrals)
     let level2Count = 0;
     for (const ref of directReferrals) {
-      const count = await db.select({ count: sql<number>`count(*)::int` })
-        .from(users)
-        .where(eq(users.referredBy, ref.id));
-      level2Count += count[0]?.count || 0;
+      if (ref.referralCode) {
+        const count = await db.select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(eq(users.referredBy, ref.referralCode));
+        level2Count += count[0]?.count || 0;
+      }
     }
     
     return level2Count;
@@ -931,7 +941,8 @@ export class DatabaseStorage implements IStorage {
     for (const user of allUsers) {
       let referredByUsername: string | null = null;
       if (user.referredBy) {
-        const referrer = await this.getUser(user.referredBy);
+        // referredBy contains the referral CODE, so find user by that code
+        const referrer = await this.getUserByReferralCode(user.referredBy);
         referredByUsername = referrer?.username || null;
       }
       
