@@ -38,7 +38,8 @@ import {
   RotateCcw,
   Wallet,
   Bitcoin,
-  Activity
+  Activity,
+  UserPlus
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -767,6 +768,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     btcBalance: 0,
     ethBalance: 0,
     usdtBalance: 0,
+    referredBy: "",
   });
 
   const toggleAdminMutation = useMutation({
@@ -835,6 +837,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
       btcBalance: (user as User & { btcBalance?: number }).btcBalance || 0,
       ethBalance: (user as User & { ethBalance?: number }).ethBalance || 0,
       usdtBalance: (user as User & { usdtBalance?: number }).usdtBalance || 0,
+      referredBy: (user as User & { referredBy?: string | null }).referredBy || "",
     });
   };
 
@@ -969,6 +972,23 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                 onChange={(e) => setEditForm({ ...editForm, bestScore: parseInt(e.target.value) || 0 })}
                 data-testid="input-edit-best"
               />
+            </div>
+            <Separator />
+            <div>
+              <Label htmlFor="edit-sponsor" className="flex items-center gap-1">
+                <UserPlus className="w-4 h-4" />
+                Спонсор (реферальный код)
+              </Label>
+              <Input
+                id="edit-sponsor"
+                value={editForm.referredBy}
+                onChange={(e) => setEditForm({ ...editForm, referredBy: e.target.value })}
+                placeholder="Введите реферальный код спонсора"
+                data-testid="input-edit-sponsor"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Оставьте пустым для удаления спонсора
+              </p>
             </div>
             <Separator />
             <p className="text-sm font-medium text-muted-foreground">Крипто-балансы игрока</p>

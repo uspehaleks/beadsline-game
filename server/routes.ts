@@ -820,7 +820,7 @@ export async function registerRoutes(
   app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, totalPoints, gamesPlayed, bestScore, isAdmin } = req.body;
+      const { username, totalPoints, gamesPlayed, bestScore, isAdmin, referredBy } = req.body;
       
       const updates: Record<string, unknown> = {};
       if (username !== undefined) updates.username = username;
@@ -828,6 +828,53 @@ export async function registerRoutes(
       if (gamesPlayed !== undefined) updates.gamesPlayed = Number(gamesPlayed);
       if (bestScore !== undefined) updates.bestScore = Number(bestScore);
       if (isAdmin !== undefined) updates.isAdmin = Boolean(isAdmin);
+      
+      // Handle referredBy (sponsor) update
+      if (referredBy !== undefined) {
+        const currentUser = await storage.getUser(id);
+        if (!currentUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        
+        const oldSponsorCode = currentUser.referredBy;
+        const newSponsorCode = referredBy === "" ? null : referredBy;
+        
+        // Validate new sponsor if provided
+        if (newSponsorCode) {
+          const newSponsor = await storage.getUserByReferralCode(newSponsorCode);
+          if (!newSponsor) {
+            return res.status(400).json({ error: "Спонсор с таким кодом не найден" });
+          }
+          if (newSponsor.id === id) {
+            return res.status(400).json({ error: "Пользователь не может быть спонсором самого себя" });
+          }
+        }
+        
+        // Update directReferralsCount for old and new sponsors
+        if (oldSponsorCode !== newSponsorCode) {
+          // Decrement old sponsor's count
+          if (oldSponsorCode) {
+            const oldSponsor = await storage.getUserByReferralCode(oldSponsorCode);
+            if (oldSponsor && oldSponsor.directReferralsCount > 0) {
+              await storage.updateUser(oldSponsor.id, { 
+                directReferralsCount: oldSponsor.directReferralsCount - 1 
+              });
+            }
+          }
+          
+          // Increment new sponsor's count
+          if (newSponsorCode) {
+            const newSponsor = await storage.getUserByReferralCode(newSponsorCode);
+            if (newSponsor) {
+              await storage.updateUser(newSponsor.id, { 
+                directReferralsCount: newSponsor.directReferralsCount + 1 
+              });
+            }
+          }
+          
+          updates.referredBy = newSponsorCode;
+        }
+      }
       
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: "No updates provided" });

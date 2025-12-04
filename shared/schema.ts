@@ -237,6 +237,8 @@ export interface UserUpdate {
   btcBalance?: number;
   ethBalance?: number;
   usdtBalance?: number;
+  referredBy?: string | null;
+  directReferralsCount?: number;
 }
 
 export interface UsdtFundStats {
