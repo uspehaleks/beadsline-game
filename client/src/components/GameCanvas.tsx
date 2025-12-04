@@ -88,7 +88,6 @@ export function GameCanvas({
       
       ctx.save();
       ctx.translate(startPoint.x, startPoint.y);
-      ctx.rotate(-portalAnimationRef.current * 0.8);
       for (let i = 0; i < 8; i++) {
         ctx.rotate(Math.PI / 4);
         ctx.beginPath();
@@ -127,7 +126,6 @@ export function GameCanvas({
       
       ctx.save();
       ctx.translate(endPoint.x, endPoint.y);
-      ctx.rotate(portalAnimationRef.current * 0.5);
       for (let i = 0; i < 6; i++) {
         ctx.rotate(Math.PI / 3);
         ctx.beginPath();

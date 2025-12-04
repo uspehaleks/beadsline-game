@@ -92,9 +92,10 @@ export function createRandomBall(id: string, pathProgress: number = 0): Ball {
 export function createInitialBalls(count: number): Ball[] {
   const balls: Ball[] = [];
   const spacing = GAME_CONFIG.balls.spacing;
+  const startOffset = -GAME_CONFIG.spawn.buffer;
   
   for (let i = 0; i < count; i++) {
-    const ball = createRandomBall(`ball-${i}`, i * spacing);
+    const ball = createRandomBall(`ball-${i}`, startOffset + i * spacing);
     balls.push(ball);
   }
   

@@ -17,14 +17,14 @@ export const GAME_CONFIG = {
   },
   
   spawn: {
-    period: 1000,
+    period: 250,
     buffer: 0.03,
     resumeThreshold: 35,
   },
   
   speed: {
-    base: 0.012,
-    max: 0.025,
+    base: 0.004,
+    max: 0.008,
     accelerationStart: 0.8,
   },
   
