@@ -839,10 +839,16 @@ export async function registerRoutes(
   app.get("/api/crypto-balances", async (req, res) => {
     try {
       const balances = await storage.getAdminCryptoBalances();
+      const usdtFundStats = await storage.getUsdtFundStats();
+      
+      const usdtFundAvailable = usdtFundStats.settings && 
+        usdtFundStats.settings.usdtAvailable > 0 &&
+        usdtFundStats.distributedToday < usdtFundStats.settings.usdtDailyLimit;
+      
       res.json({
         btc: balances.btc > 0,
         eth: balances.eth > 0,
-        usdt: balances.usdt > 0,
+        usdt: balances.usdt > 0 && usdtFundAvailable,
       });
     } catch (error) {
       console.error("Get crypto balances error:", error);
