@@ -2,9 +2,9 @@ export const GAME_CONFIG = {
   path: {
     type: 'spiral' as const,
     segments: 600,
-    spiralTurns: 3.5,
+    spiralTurns: 3.0,
     outerRadius: 0.42,
-    innerRadius: 0.08,
+    innerRadius: 0.15,
   },
   
   balls: {
@@ -17,8 +17,8 @@ export const GAME_CONFIG = {
   },
   
   spawn: {
-    period: 250,
-    buffer: 0.03,
+    period: 800,
+    buffer: 0.02,
     resumeThreshold: 35,
   },
   
