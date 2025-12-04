@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
-import type { User, GameConfig, PrizePool, GameScore } from "@shared/schema";
+import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig } from "@shared/schema";
 import { 
   Users, 
   Trophy, 
@@ -393,6 +393,10 @@ export default function Admin() {
                 <Bot className="w-4 h-4 mr-1.5" />
                 Бот
               </TabsTrigger>
+              <TabsTrigger value="economy" data-testid="tab-economy" className="flex-shrink-0">
+                <TrendingUp className="w-4 h-4 mr-1.5" />
+                Экономика
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -422,6 +426,10 @@ export default function Admin() {
 
           <TabsContent value="telegram">
             <TelegramTab />
+          </TabsContent>
+
+          <TabsContent value="economy">
+            <EconomyTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -1597,5 +1605,267 @@ function TelegramTab() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function EconomyTab() {
+  const { toast } = useToast();
+  const [editConfig, setEditConfig] = useState<GameEconomyConfig>({
+    points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
+    combo: { multiplier: 1.5, maxChain: 10 },
+    crypto: { spawnChance: 0.08 },
+  });
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  const { data: economyConfig, isLoading, error, refetch } = useQuery<GameEconomyConfig>({
+    queryKey: ["/api/admin/game-economy"],
+  });
+
+  useEffect(() => {
+    if (economyConfig && !hasInitialized) {
+      setEditConfig(economyConfig);
+      setHasInitialized(true);
+    }
+  }, [economyConfig, hasInitialized]);
+
+  const updateConfigMutation = useMutation({
+    mutationFn: async (config: GameEconomyConfig) => {
+      return apiRequest("PUT", "/api/admin/game-economy", config);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-economy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-economy"] });
+      toast({ title: "Сохранено", description: "Настройки экономики обновлены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить настройки", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex justify-center">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <XCircle className="w-12 h-12 mx-auto text-destructive" />
+            <p className="text-muted-foreground">Не удалось загрузить настройки экономики</p>
+            <Button onClick={() => refetch()} data-testid="button-retry-economy">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Повторить
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            Экономика игры
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Настройка очков, комбо и вероятности появления крипто-шариков
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-500" />
+              Очки за шарики
+            </h3>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label>Обычный шарик</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editConfig.points.normal}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    points: { ...editConfig.points, normal: Number(e.target.value) || 0 }
+                  })}
+                  data-testid="input-points-normal"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Bitcoin className="w-4 h-4 text-amber-500" />
+                  BTC шарик
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editConfig.points.btc}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    points: { ...editConfig.points, btc: Number(e.target.value) || 0 }
+                  })}
+                  data-testid="input-points-btc"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <SiEthereum className="w-4 h-4 text-blue-500" />
+                  ETH шарик
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editConfig.points.eth}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    points: { ...editConfig.points, eth: Number(e.target.value) || 0 }
+                  })}
+                  data-testid="input-points-eth"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <SiTether className="w-4 h-4 text-green-500" />
+                  USDT шарик
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editConfig.points.usdt}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    points: { ...editConfig.points, usdt: Number(e.target.value) || 0 }
+                  })}
+                  data-testid="input-points-usdt"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              Комбо система
+            </h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Множитель комбо</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={editConfig.combo.multiplier}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    combo: { ...editConfig.combo, multiplier: Number(e.target.value) || 1 }
+                  })}
+                  data-testid="input-combo-multiplier"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Множитель применяется за каждое комбо
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Макс. цепочка комбо</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={editConfig.combo.maxChain}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    combo: { ...editConfig.combo, maxChain: Number(e.target.value) || 1 }
+                  })}
+                  data-testid="input-combo-max"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Максимальное кол-во комбо подряд
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-purple-500" />
+              Крипто-шарики
+            </h3>
+            <div className="space-y-2">
+              <Label>Вероятность появления (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={Math.round(editConfig.crypto.spawnChance * 100)}
+                onChange={(e) => setEditConfig({
+                  ...editConfig,
+                  crypto: { spawnChance: (Number(e.target.value) || 0) / 100 }
+                })}
+                data-testid="input-crypto-spawn"
+              />
+              <p className="text-xs text-muted-foreground">
+                Шанс появления крипто-шарика вместо обычного
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => updateConfigMutation.mutate(editConfig)}
+              disabled={updateConfigMutation.isPending}
+              data-testid="button-save-economy"
+            >
+              {updateConfigMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Сохранить настройки
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => economyConfig && setEditConfig(economyConfig)}
+              disabled={!economyConfig}
+              data-testid="button-reset-economy"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Сбросить изменения
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Подсказка</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+            <li>Изменения вступают в силу сразу для новых игр</li>
+            <li>Крипто-шарики появляются только если их баланс в "Фонде" больше 0</li>
+            <li>Бонусные очки за крипто-шарики начисляются только при сборе 3+ шариков одного цвета</li>
+            <li>Комбо увеличивается при каждом успешном совпадении подряд</li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
