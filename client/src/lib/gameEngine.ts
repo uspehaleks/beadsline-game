@@ -72,10 +72,32 @@ export function getPositionOnPath(path: PathPoint[], progress: number): { x: num
   };
 }
 
+export interface AvailableCrypto {
+  btc: boolean;
+  eth: boolean;
+  usdt: boolean;
+}
+
+let availableCrypto: AvailableCrypto = { btc: true, eth: true, usdt: true };
+
+export function setAvailableCrypto(crypto: AvailableCrypto) {
+  availableCrypto = crypto;
+}
+
+export function getAvailableCrypto(): AvailableCrypto {
+  return availableCrypto;
+}
+
 export function createRandomBall(id: string, pathProgress: number = 0): Ball {
   const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
-  const isCrypto = Math.random() < CRYPTO_DROP_RATE;
-  const crypto = isCrypto ? CRYPTO_TYPES[Math.floor(Math.random() * CRYPTO_TYPES.length)] : undefined;
+  
+  const availableTypes = CRYPTO_TYPES.filter(type => availableCrypto[type] === true);
+  const hasCryptoAvailable = availableTypes.length > 0;
+  const isCrypto = hasCryptoAvailable && Math.random() < CRYPTO_DROP_RATE;
+  
+  const crypto = isCrypto 
+    ? availableTypes[Math.floor(Math.random() * availableTypes.length)] 
+    : undefined;
   
   return {
     id,

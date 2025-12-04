@@ -16,6 +16,7 @@ import {
   checkPathCollision,
   checkGameOver,
   checkWin,
+  setAvailableCrypto,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -82,10 +83,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     }
   }, []);
 
-  const startGame = useCallback(() => {
+  const startGame = useCallback(async () => {
     if (timeTrackerRef.current !== null) {
       console.warn('Game already running, ignoring startGame call');
       return;
+    }
+    
+    try {
+      const response = await fetch('/api/crypto-balances');
+      if (response.ok) {
+        const balances = await response.json();
+        setAvailableCrypto(balances);
+      }
+    } catch (error) {
+      console.error('Failed to fetch crypto balances:', error);
+      setAvailableCrypto({ btc: true, eth: true, usdt: true });
     }
     
     stopAllTimers();
