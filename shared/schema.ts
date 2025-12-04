@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -15,6 +15,9 @@ export const users = pgTable("users", {
   gamesPlayed: integer("games_played").default(0).notNull(),
   bestScore: integer("best_score").default(0).notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  btcBalance: real("btc_balance").default(0).notNull(),
+  ethBalance: real("eth_balance").default(0).notNull(),
+  usdtBalance: real("usdt_balance").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -62,6 +65,38 @@ export const prizePool = pgTable("prize_pool", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const usdtFundSettings = pgTable("usdt_fund_settings", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  usdtTotalFund: real("usdt_total_fund").default(50).notNull(),
+  usdtAvailable: real("usdt_available").default(50).notNull(),
+  usdtDailyLimit: real("usdt_daily_limit").default(1.0).notNull(),
+  usdtPerDrop: real("usdt_per_drop").default(0.02).notNull(),
+  usdtMaxPerUserPerDay: real("usdt_max_per_user_per_day").default(0.1).notNull(),
+  usdtDistributedToday: real("usdt_distributed_today").default(0).notNull(),
+  lastResetDate: timestamp("last_reset_date").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const realRewards = pgTable("real_rewards", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  cryptoType: varchar("crypto_type", { length: 10 }).notNull(),
+  amount: real("amount").notNull(),
+  gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const realRewardsRelations = relations(realRewards, ({ one }) => ({
+  user: one(users, {
+    fields: [realRewards.userId],
+    references: [users.id],
+  }),
+  gameScore: one(gameScores, {
+    fields: [realRewards.gameScoreId],
+    references: [gameScores.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   totalPoints: true,
@@ -86,6 +121,16 @@ export const insertPrizePoolSchema = createInsertSchema(prizePool).omit({
   createdAt: true,
 });
 
+export const insertUsdtFundSettingsSchema = createInsertSchema(usdtFundSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertRealRewardSchema = createInsertSchema(realRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGameScore = z.infer<typeof insertGameScoreSchema>;
@@ -94,6 +139,10 @@ export type InsertGameConfig = z.infer<typeof insertGameConfigSchema>;
 export type GameConfig = typeof gameConfig.$inferSelect;
 export type InsertPrizePool = z.infer<typeof insertPrizePoolSchema>;
 export type PrizePool = typeof prizePool.$inferSelect;
+export type InsertUsdtFundSettings = z.infer<typeof insertUsdtFundSettingsSchema>;
+export type UsdtFundSettings = typeof usdtFundSettings.$inferSelect;
+export type InsertRealReward = z.infer<typeof insertRealRewardSchema>;
+export type RealReward = typeof realRewards.$inferSelect;
 
 export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple';
 export type CryptoType = 'btc' | 'eth' | 'usdt';
@@ -150,4 +199,18 @@ export interface UserUpdate {
   gamesPlayed?: number;
   bestScore?: number;
   isAdmin?: boolean;
+  btcBalance?: number;
+  ethBalance?: number;
+  usdtBalance?: number;
+}
+
+export interface UsdtFundStats {
+  settings: UsdtFundSettings;
+  totalDistributed: number;
+  distributedToday: number;
+}
+
+export interface RewardResult {
+  usdtAwarded: number;
+  rewardId?: string;
 }
