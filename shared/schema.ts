@@ -214,3 +214,19 @@ export interface RewardResult {
   usdtAwarded: number;
   rewardId?: string;
 }
+
+export interface GameEconomyConfig {
+  points: {
+    normal: number;
+    btc: number;
+    eth: number;
+    usdt: number;
+  };
+  combo: {
+    multiplier: number;
+    maxChain: number;
+  };
+  crypto: {
+    spawnChance: number;
+  };
+}

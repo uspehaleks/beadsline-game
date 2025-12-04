@@ -22,6 +22,7 @@ import {
   type InsertRealReward,
   type UsdtFundStats,
   type RewardResult,
+  type GameEconomyConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, gte } from "drizzle-orm";
@@ -72,6 +73,9 @@ export interface IStorage {
   getDistributedToday(): Promise<number>;
   processUsdtReward(userId: string, usdtBallsCollected: number, gameScoreId: string): Promise<RewardResult>;
   isUsdtFundAvailable(): Promise<boolean>;
+  
+  getGameEconomyConfig(): Promise<GameEconomyConfig>;
+  updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -509,6 +513,84 @@ export class DatabaseStorage implements IStorage {
     }
     
     return { usdtAwarded: roundedReward, rewardId: reward.id };
+  }
+
+  private getDefaultEconomyConfig(): GameEconomyConfig {
+    return {
+      points: {
+        normal: 100,
+        btc: 500,
+        eth: 300,
+        usdt: 200,
+      },
+      combo: {
+        multiplier: 1.5,
+        maxChain: 10,
+      },
+      crypto: {
+        spawnChance: 0.08,
+      },
+    };
+  }
+
+  async getGameEconomyConfig(): Promise<GameEconomyConfig> {
+    const config = await this.getGameConfig('game_economy');
+    if (!config) {
+      const defaultConfig = this.getDefaultEconomyConfig();
+      await this.setGameConfig({
+        key: 'game_economy',
+        value: defaultConfig,
+        description: 'Game economy configuration (points, combo, crypto spawn)',
+      });
+      return defaultConfig;
+    }
+    
+    const stored = config.value as GameEconomyConfig;
+    const defaults = this.getDefaultEconomyConfig();
+    
+    return {
+      points: {
+        normal: stored.points?.normal ?? defaults.points.normal,
+        btc: stored.points?.btc ?? defaults.points.btc,
+        eth: stored.points?.eth ?? defaults.points.eth,
+        usdt: stored.points?.usdt ?? defaults.points.usdt,
+      },
+      combo: {
+        multiplier: stored.combo?.multiplier ?? defaults.combo.multiplier,
+        maxChain: stored.combo?.maxChain ?? defaults.combo.maxChain,
+      },
+      crypto: {
+        spawnChance: stored.crypto?.spawnChance ?? defaults.crypto.spawnChance,
+      },
+    };
+  }
+
+  async updateGameEconomyConfig(updates: Partial<GameEconomyConfig>): Promise<GameEconomyConfig> {
+    const current = await this.getGameEconomyConfig();
+    
+    const newConfig: GameEconomyConfig = {
+      points: {
+        normal: updates.points?.normal ?? current.points.normal,
+        btc: updates.points?.btc ?? current.points.btc,
+        eth: updates.points?.eth ?? current.points.eth,
+        usdt: updates.points?.usdt ?? current.points.usdt,
+      },
+      combo: {
+        multiplier: updates.combo?.multiplier ?? current.combo.multiplier,
+        maxChain: updates.combo?.maxChain ?? current.combo.maxChain,
+      },
+      crypto: {
+        spawnChance: updates.crypto?.spawnChance ?? current.crypto.spawnChance,
+      },
+    };
+    
+    await this.setGameConfig({
+      key: 'game_economy',
+      value: newConfig,
+      description: 'Game economy configuration (points, combo, crypto spawn)',
+    });
+    
+    return newConfig;
   }
 }
 

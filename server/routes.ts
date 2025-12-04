@@ -976,6 +976,76 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/game-economy", async (req, res) => {
+    try {
+      const config = await storage.getGameEconomyConfig();
+      const balances = await storage.getAdminCryptoBalances();
+      const usdtFundStats = await storage.getUsdtFundStats();
+      
+      const usdtFundAvailable = usdtFundStats.settings && 
+        usdtFundStats.settings.usdtAvailable > 0 &&
+        usdtFundStats.distributedToday < usdtFundStats.settings.usdtDailyLimit;
+      
+      res.json({
+        ...config,
+        cryptoAvailable: {
+          btc: balances.btc > 0,
+          eth: balances.eth > 0,
+          usdt: balances.usdt > 0 && usdtFundAvailable,
+        },
+      });
+    } catch (error) {
+      console.error("Get game economy error:", error);
+      res.status(500).json({ error: "Failed to get game economy" });
+    }
+  });
+
+  app.get("/api/admin/game-economy", requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.getGameEconomyConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get admin game economy error:", error);
+      res.status(500).json({ error: "Failed to get game economy" });
+    }
+  });
+
+  app.put("/api/admin/game-economy", requireAdmin, async (req, res) => {
+    try {
+      const { points, combo, crypto } = req.body;
+      
+      const updates: Record<string, any> = {};
+      
+      if (points) {
+        updates.points = {
+          normal: points.normal !== undefined ? Math.max(0, Number(points.normal)) : undefined,
+          btc: points.btc !== undefined ? Math.max(0, Number(points.btc)) : undefined,
+          eth: points.eth !== undefined ? Math.max(0, Number(points.eth)) : undefined,
+          usdt: points.usdt !== undefined ? Math.max(0, Number(points.usdt)) : undefined,
+        };
+      }
+      
+      if (combo) {
+        updates.combo = {
+          multiplier: combo.multiplier !== undefined ? Math.max(1, Number(combo.multiplier)) : undefined,
+          maxChain: combo.maxChain !== undefined ? Math.max(1, Math.floor(Number(combo.maxChain))) : undefined,
+        };
+      }
+      
+      if (crypto) {
+        updates.crypto = {
+          spawnChance: crypto.spawnChance !== undefined ? Math.max(0, Math.min(1, Number(crypto.spawnChance))) : undefined,
+        };
+      }
+      
+      const config = await storage.updateGameEconomyConfig(updates);
+      res.json(config);
+    } catch (error) {
+      console.error("Update admin game economy error:", error);
+      res.status(500).json({ error: "Failed to update game economy" });
+    }
+  });
+
   app.get("/api/admin/configs", requireAdmin, async (req, res) => {
     try {
       const configs = await storage.getAllGameConfigs();
