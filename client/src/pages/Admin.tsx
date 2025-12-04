@@ -1806,21 +1806,29 @@ function EconomyTab() {
               Крипто-шарики
             </h3>
             <div className="space-y-2">
-              <Label>Вероятность появления (%)</Label>
+              <Label>Вероятность появления (0-1)</Label>
               <Input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={Math.round(editConfig.crypto.spawnChance * 100)}
-                onChange={(e) => setEditConfig({
-                  ...editConfig,
-                  crypto: { spawnChance: (Number(e.target.value) || 0) / 100 }
-                })}
+                type="text"
+                value={editConfig.crypto.spawnChance}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const num = parseFloat(val);
+                  if (val === '' || val === '0.' || /^0\.0*$/.test(val)) {
+                    setEditConfig({
+                      ...editConfig,
+                      crypto: { spawnChance: val as unknown as number }
+                    });
+                  } else if (!isNaN(num) && num >= 0 && num <= 1) {
+                    setEditConfig({
+                      ...editConfig,
+                      crypto: { spawnChance: num }
+                    });
+                  }
+                }}
                 data-testid="input-crypto-spawn"
               />
               <p className="text-xs text-muted-foreground">
-                Шанс появления крипто-шарика вместо обычного
+                Шанс появления крипто-шарика (0.08 = 8%, 0.0001 = 0.01%)
               </p>
             </div>
           </div>
