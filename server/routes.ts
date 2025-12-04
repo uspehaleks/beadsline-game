@@ -1373,17 +1373,21 @@ export async function registerRoutes(
   });
 
   app.post("/api/telegram/webhook", async (req, res) => {
+    // Always respond with 200 OK immediately to prevent Telegram from retrying
+    // Process the update asynchronously
+    res.status(200).json({ ok: true });
+    
     try {
       const update: TelegramUpdate = req.body;
       
-      if (update.message) {
-        await handleTelegramCommand(update.message);
+      if (update?.message) {
+        // Process in background after sending response
+        handleTelegramCommand(update.message).catch(err => {
+          console.error("Telegram command processing error:", err);
+        });
       }
-      
-      res.json({ ok: true });
     } catch (error) {
       console.error("Telegram webhook error:", error);
-      res.json({ ok: true });
     }
   });
 
