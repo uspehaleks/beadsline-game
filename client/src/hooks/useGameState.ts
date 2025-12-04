@@ -17,6 +17,7 @@ import {
   checkGameOver,
   checkWin,
   setAvailableCrypto,
+  setEconomyConfig,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -90,13 +91,18 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     }
     
     try {
-      const response = await fetch('/api/crypto-balances');
+      const response = await fetch('/api/game-economy');
       if (response.ok) {
-        const balances = await response.json();
-        setAvailableCrypto(balances);
+        const economyData = await response.json();
+        setEconomyConfig({
+          points: economyData.points,
+          combo: economyData.combo,
+          crypto: economyData.crypto,
+        });
+        setAvailableCrypto(economyData.cryptoAvailable);
       }
     } catch (error) {
-      console.error('Failed to fetch crypto balances:', error);
+      console.error('Failed to fetch game economy:', error);
       setAvailableCrypto({ btc: true, eth: true, usdt: true });
     }
     

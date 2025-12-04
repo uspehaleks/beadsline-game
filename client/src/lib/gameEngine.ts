@@ -1,4 +1,4 @@
-import type { Ball, BallColor, CryptoType, GameState } from "@shared/schema";
+import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig } from "@shared/schema";
 import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
@@ -8,11 +8,21 @@ const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
 const BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
 
-const CRYPTO_DROP_RATE = GAME_CONFIG.crypto.dropRate;
-const CRYPTO_POINTS = GAME_CONFIG.crypto.points;
+const DEFAULT_ECONOMY: GameEconomyConfig = {
+  points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
+  combo: { multiplier: 1.5, maxChain: 10 },
+  crypto: { spawnChance: 0.08 },
+};
 
-const BASE_POINTS = GAME_CONFIG.scoring.basePoints;
-const COMBO_MULTIPLIER = GAME_CONFIG.scoring.comboMultiplier;
+let currentEconomy: GameEconomyConfig = DEFAULT_ECONOMY;
+
+export function setEconomyConfig(config: GameEconomyConfig) {
+  currentEconomy = config;
+}
+
+export function getEconomyConfig(): GameEconomyConfig {
+  return currentEconomy;
+}
 
 export interface PathPoint {
   x: number;
@@ -93,7 +103,8 @@ export function createRandomBall(id: string, pathProgress: number = 0): Ball {
   
   const availableTypes = CRYPTO_TYPES.filter(type => availableCrypto[type] === true);
   const hasCryptoAvailable = availableTypes.length > 0;
-  const isCrypto = hasCryptoAvailable && Math.random() < CRYPTO_DROP_RATE;
+  const spawnChance = currentEconomy.crypto.spawnChance;
+  const isCrypto = hasCryptoAvailable && Math.random() < spawnChance;
   
   const crypto = isCrypto 
     ? availableTypes[Math.floor(Math.random() * availableTypes.length)] 
@@ -215,17 +226,18 @@ export function calculatePoints(matchedBalls: Ball[], combo: number): {
 } {
   let points = 0;
   const cryptoCollected = { btc: 0, eth: 0, usdt: 0 };
+  const economy = currentEconomy;
   
   for (const ball of matchedBalls) {
     if (ball.crypto) {
-      points += CRYPTO_POINTS[ball.crypto];
+      points += economy.points[ball.crypto];
       cryptoCollected[ball.crypto]++;
     } else {
-      points += BASE_POINTS;
+      points += economy.points.normal;
     }
   }
   
-  const comboMultiplier = Math.pow(COMBO_MULTIPLIER, Math.min(combo, GAME_CONFIG.scoring.maxComboStack));
+  const comboMultiplier = Math.pow(economy.combo.multiplier, Math.min(combo, economy.combo.maxChain));
   points = Math.round(points * comboMultiplier);
   
   return { points, cryptoCollected };
