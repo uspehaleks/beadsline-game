@@ -1,12 +1,15 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Target } from 'lucide-react';
+import { Clock, Zap, Target, Circle } from 'lucide-react';
 
 interface GameHUDProps {
   gameState: GameState;
   elapsedTime: number;
+  ballsOnScreen: number;
+  ballsRemaining: number;
+  totalBalls: number;
 }
 
-export function GameHUD({ gameState, elapsedTime }: GameHUDProps) {
+export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining, totalBalls }: GameHUDProps) {
   const { score, combo, cryptoCollected } = gameState;
   const accuracy = gameState.shotsTotal > 0 
     ? Math.round((gameState.shotsHit / gameState.shotsTotal) * 100) 
@@ -47,9 +50,9 @@ export function GameHUD({ gameState, elapsedTime }: GameHUDProps) {
             </div>
           )}
           <div className="flex items-center gap-1 text-muted-foreground">
-            <Target className="w-4 h-4" />
-            <span className="font-semibold text-sm tabular-nums" data-testid="text-accuracy">
-              {accuracy}%
+            <Circle className="w-4 h-4" />
+            <span className="font-semibold text-sm tabular-nums" data-testid="text-balls">
+              {ballsOnScreen}
             </span>
           </div>
         </div>

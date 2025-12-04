@@ -41,6 +41,9 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     shooterAngle,
     shooterPosition,
     elapsedTime,
+    ballsOnScreen,
+    ballsRemaining,
+    totalBalls,
     startGame,
     shoot,
     updateAim,
@@ -71,7 +74,15 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
       className="fixed inset-0 bg-background overflow-hidden flex flex-col"
       data-testid="game-screen"
     >
-      {gameState.isPlaying && <GameHUD gameState={gameState} elapsedTime={elapsedTime} />}
+      {gameState.isPlaying && (
+        <GameHUD 
+          gameState={gameState} 
+          elapsedTime={elapsedTime}
+          ballsOnScreen={ballsOnScreen}
+          ballsRemaining={ballsRemaining}
+          totalBalls={totalBalls}
+        />
+      )}
 
       <div className="flex-1 relative mt-24">
         {dimensions.width > 0 && dimensions.height > 0 && (

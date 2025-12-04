@@ -343,6 +343,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setShooterAngle(angle);
   }, [gameState.isPlaying, shooterPosition]);
 
+  const ballsOnScreen = gameState.balls.length;
+  const totalBalls = GAME_CONFIG.gameplay.maxTotalBalls;
+  const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
+
   return {
     gameState,
     path,
@@ -350,6 +354,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     shooterAngle,
     shooterPosition,
     elapsedTime,
+    ballsOnScreen,
+    ballsRemaining,
+    totalBalls,
     startGame,
     shoot,
     updateAim,
