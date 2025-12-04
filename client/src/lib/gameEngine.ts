@@ -50,7 +50,11 @@ export function getShooterPosition(width: number, height: number): { x: number; 
 }
 
 export function getPositionOnPath(path: PathPoint[], progress: number): { x: number; y: number } {
-  const clampedProgress = Math.max(0, Math.min(1, progress));
+  if (progress < 0) {
+    return path[0] || { x: 0, y: 0 };
+  }
+  
+  const clampedProgress = Math.min(1, progress);
   const index = clampedProgress * (path.length - 1);
   const lowerIndex = Math.floor(index);
   const upperIndex = Math.ceil(index);

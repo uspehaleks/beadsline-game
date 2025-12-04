@@ -17,7 +17,8 @@ export const GAME_CONFIG = {
   },
   
   spawn: {
-    interval: 800,
+    period: 1000,
+    buffer: 0.03,
     resumeThreshold: 35,
   },
   

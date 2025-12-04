@@ -14,7 +14,6 @@ import {
   checkCollision,
   checkGameOver,
   checkWin,
-  spawnBallAtStart,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -44,13 +43,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   
   const gameLoopRef = useRef<number | null>(null);
   const timeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const spawnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTimeRef = useRef<number>(0);
   const pathRef = useRef<PathPoint[]>([]);
   const onGameEndRef = useRef(onGameEnd);
   const gameEndedRef = useRef(false);
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   const gameStartTimeRef = useRef<number>(0);
+  const spawnAccumRef = useRef<number>(0);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -74,10 +73,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     if (timeTrackerRef.current !== null) {
       clearInterval(timeTrackerRef.current);
       timeTrackerRef.current = null;
-    }
-    if (spawnTimerRef.current !== null) {
-      clearTimeout(spawnTimerRef.current);
-      spawnTimerRef.current = null;
     }
   }, []);
 
@@ -109,6 +104,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setProjectile(null);
     setShooterAngle(-Math.PI / 2);
     lastTimeRef.current = 0;
+    spawnAccumRef.current = 0;
     
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
@@ -121,6 +117,18 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
         let newBalls = moveBallsForward(prev.balls, deltaTime);
+        
+        const { period, buffer } = GAME_CONFIG.spawn;
+        const { targetCount } = GAME_CONFIG.balls;
+        
+        spawnAccumRef.current += deltaTime;
+        
+        if (spawnAccumRef.current >= period && newBalls.length < targetCount) {
+          spawnAccumRef.current = 0;
+          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -buffer);
+          newBalls = [newBall, ...newBalls];
+        }
+        
         newBalls = updateBallPositions(newBalls, currentPath);
         
         if (checkGameOver(newBalls)) {
@@ -162,29 +170,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       if (gameEndedRef.current) return;
       setElapsedTime(Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
     }, 1000);
-    
-    const scheduleNextSpawn = () => {
-      if (gameEndedRef.current) return;
-      
-      const { interval, resumeThreshold } = GAME_CONFIG.spawn;
-      const { targetCount } = GAME_CONFIG.balls;
-      
-      setGameState(prev => {
-        if (!prev.isPlaying || gameEndedRef.current) return prev;
-        
-        if (prev.balls.length >= targetCount) {
-          spawnTimerRef.current = setTimeout(scheduleNextSpawn, interval);
-          return prev;
-        }
-        
-        const newBalls = spawnBallAtStart(prev.balls);
-        spawnTimerRef.current = setTimeout(scheduleNextSpawn, interval);
-        
-        return { ...prev, balls: updateBallPositions(newBalls, pathRef.current) };
-      });
-    };
-    
-    spawnTimerRef.current = setTimeout(scheduleNextSpawn, GAME_CONFIG.spawn.interval);
     
     hapticFeedback('medium');
   }, [stopAllTimers]);

@@ -142,13 +142,20 @@ export function GameCanvas({
   }, [path]);
 
   const drawBall = useCallback((ctx: CanvasRenderingContext2D, ball: Ball, isShooter: boolean = false) => {
+    const progress = ball.pathProgress || 0;
+    
+    if (progress < -0.03) return;
+    
+    const spawnOpacity = progress < 0 ? Math.max(0, 1 + (progress / 0.03)) : 1;
+    
     const baseColor = ball.crypto 
       ? CRYPTO_COLOR_MAP[ball.crypto] 
       : BALL_COLOR_MAP[ball.color];
     
-    const rollAngle = (ball.pathProgress || 0) * Math.PI * 20;
+    const rollAngle = progress * Math.PI * 20;
     
     ctx.save();
+    ctx.globalAlpha = spawnOpacity;
     ctx.translate(ball.x, ball.y);
     
     const gradient = ctx.createRadialGradient(
