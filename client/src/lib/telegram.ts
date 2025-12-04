@@ -103,9 +103,22 @@ export function isTelegramWebApp(): boolean {
 }
 
 export function getStartParam(): string | null {
+  // First try Telegram's native start_param (works for direct Mini App links)
   const webApp = getTelegramWebApp();
   if (webApp?.initDataUnsafe?.start_param) {
     return webApp.initDataUnsafe.start_param;
   }
+  
+  // Fallback: check URL hash for referral code (works for web_app button)
+  // Format: #ref=REFERRAL_CODE
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const hash = window.location.hash.substring(1); // Remove #
+    const params = new URLSearchParams(hash);
+    const refCode = params.get('ref');
+    if (refCode) {
+      return refCode;
+    }
+  }
+  
   return null;
 }

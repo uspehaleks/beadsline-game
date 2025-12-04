@@ -149,9 +149,10 @@ async function handleTelegramCommand(message: TelegramMessage): Promise<void> {
   const appUrl = getAppUrl();
   
   // Build app URL with referral code if present
+  // Use hash fragment since Telegram doesn't pass query params to initDataUnsafe for web_app buttons
   const getAppUrlWithReferral = (code: string) => {
     if (code) {
-      return `${appUrl}?startapp=${code}`;
+      return `${appUrl}#ref=${code}`;
     }
     return appUrl;
   };
