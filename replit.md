@@ -101,6 +101,11 @@ gameplay: {
 | `/api/leaderboard` | GET | Get top players |
 | `/api/users/:id` | GET | Get user profile |
 | `/api/config/:key` | GET | Get game config |
+| `/api/crypto-balances` | GET | Get available crypto types (public) |
+| `/api/admin/balances` | GET/PUT | Manage admin crypto fund |
+| `/api/admin/users/:id` | PUT | Update user details |
+| `/api/admin/users/:id` | DELETE | Soft delete user |
+| `/api/admin/users/:id/restore` | PATCH | Restore deleted user |
 | `/api/telegram/webhook` | POST | Telegram bot webhook (public) |
 | `/api/telegram/info` | GET | Bot info (admin only) |
 | `/api/telegram/setup-webhook` | POST | Setup webhook (admin only) |
