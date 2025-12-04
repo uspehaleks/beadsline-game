@@ -417,9 +417,9 @@ export const CRYPTO_COLOR_MAP: Record<CryptoType, string> = {
 };
 
 export const CRYPTO_SYMBOL_MAP: Record<CryptoType, string> = {
-  btc: '\u20BF',
-  eth: '\u039E',
-  usdt: '\u20AE',
+  btc: '₿',
+  eth: 'Ξ',
+  usdt: '₮',
 };
 
 export { BALL_RADIUS, SHOOTER_BALL_SPEED };

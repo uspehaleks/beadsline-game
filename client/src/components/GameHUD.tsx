@@ -74,20 +74,20 @@ interface CryptoCounterProps {
 
 function CryptoCounter({ type, count }: CryptoCounterProps) {
   const config = {
-    btc: { symbol: '\u20BF', color: 'text-crypto-btc', bg: 'bg-crypto-btc/20' },
-    eth: { symbol: '\u039E', color: 'text-crypto-eth', bg: 'bg-crypto-eth/20' },
-    usdt: { symbol: '\u20AE', color: 'text-crypto-usdt', bg: 'bg-crypto-usdt/20' },
+    btc: { symbol: '₿', color: 'text-crypto-btc' },
+    eth: { symbol: 'Ξ', color: 'text-crypto-eth' },
+    usdt: { symbol: '₮', color: 'text-crypto-usdt' },
   };
 
-  const { symbol, color, bg } = config[type];
+  const { symbol, color } = config[type];
 
   return (
     <div 
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${bg} border border-border/50`}
+      className="flex items-center gap-1"
       data-testid={`crypto-counter-${type}`}
     >
-      <span className={`font-bold text-sm ${color}`}>{symbol}</span>
-      <span className="font-semibold text-sm tabular-nums">{count}</span>
+      <span className={`font-bold text-lg ${color}`}>{symbol}</span>
+      <span className="font-semibold text-base tabular-nums text-foreground">{count}</span>
     </div>
   );
 }

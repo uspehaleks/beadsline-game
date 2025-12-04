@@ -166,9 +166,9 @@ interface CryptoStatProps {
 
 function CryptoStat({ type, count }: CryptoStatProps) {
   const config = {
-    btc: { symbol: '\u20BF', color: 'text-crypto-btc' },
-    eth: { symbol: '\u039E', color: 'text-crypto-eth' },
-    usdt: { symbol: '\u20AE', color: 'text-crypto-usdt' },
+    btc: { symbol: '₿', color: 'text-crypto-btc' },
+    eth: { symbol: 'Ξ', color: 'text-crypto-eth' },
+    usdt: { symbol: '₮', color: 'text-crypto-usdt' },
   };
 
   const { symbol, color } = config[type];

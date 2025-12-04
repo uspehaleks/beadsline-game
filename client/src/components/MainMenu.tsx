@@ -314,12 +314,12 @@ interface CryptoBadgeProps {
 
 function CryptoBadge({ type, label }: CryptoBadgeProps) {
   const config = {
-    btc: { symbol: '\u20BF', color: 'bg-crypto-btc', points: '+500' },
-    eth: { symbol: '\u039E', color: 'bg-crypto-eth', points: '+300' },
-    usdt: { symbol: '\u20AE', color: 'bg-crypto-usdt', points: '+200' },
+    btc: { symbol: '₿', color: 'bg-crypto-btc', textColor: 'text-crypto-btc', points: '+500' },
+    eth: { symbol: 'Ξ', color: 'bg-crypto-eth', textColor: 'text-crypto-eth', points: '+300' },
+    usdt: { symbol: '₮', color: 'bg-crypto-usdt', textColor: 'text-crypto-usdt', points: '+200' },
   };
 
-  const { symbol, color, points } = config[type];
+  const { symbol, color, textColor, points } = config[type];
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -327,7 +327,7 @@ function CryptoBadge({ type, label }: CryptoBadgeProps) {
         className={`w-10 h-10 rounded-full ${color} flex items-center justify-center shadow-lg`}
         style={{ boxShadow: `0 0 15px ${type === 'btc' ? '#f7931a' : type === 'eth' ? '#627eea' : '#26a17b'}40` }}
       >
-        <span className="text-white font-bold">{symbol}</span>
+        <span className="text-white font-bold text-lg">{symbol}</span>
       </div>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-xs font-semibold text-primary">{points}</span>
