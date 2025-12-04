@@ -4,6 +4,28 @@ import { storage } from "./storage";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
 
+function formatNumbersInObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'number') {
+    if (obj === 0) return 0;
+    if (Math.abs(obj) < 0.0001 || Math.abs(obj) >= 1e15) {
+      return obj.toFixed(20).replace(/\.?0+$/, '');
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(formatNumbersInObject);
+  }
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key of Object.keys(obj)) {
+      result[key] = formatNumbersInObject(obj[key]);
+    }
+    return result;
+  }
+  return obj;
+}
+
 // Telegram Bot Types
 interface TelegramUser {
   id: number;
@@ -986,14 +1008,14 @@ export async function registerRoutes(
         usdtFundStats.settings.usdtAvailable > 0 &&
         usdtFundStats.distributedToday < usdtFundStats.settings.usdtDailyLimit;
       
-      res.json({
+      res.json(formatNumbersInObject({
         ...config,
         cryptoAvailable: {
           btc: balances.btc > 0,
           eth: balances.eth > 0,
           usdt: balances.usdt > 0 && usdtFundAvailable,
         },
-      });
+      }));
     } catch (error) {
       console.error("Get game economy error:", error);
       res.status(500).json({ error: "Failed to get game economy" });
@@ -1003,7 +1025,7 @@ export async function registerRoutes(
   app.get("/api/admin/game-economy", requireAdmin, async (req, res) => {
     try {
       const config = await storage.getGameEconomyConfig();
-      res.json(config);
+      res.json(formatNumbersInObject(config));
     } catch (error) {
       console.error("Get admin game economy error:", error);
       res.status(500).json({ error: "Failed to get game economy" });
@@ -1018,28 +1040,28 @@ export async function registerRoutes(
       
       if (points) {
         updates.points = {
-          normal: points.normal !== undefined ? Math.max(0, Number(points.normal)) : undefined,
-          btc: points.btc !== undefined ? Math.max(0, Number(points.btc)) : undefined,
-          eth: points.eth !== undefined ? Math.max(0, Number(points.eth)) : undefined,
-          usdt: points.usdt !== undefined ? Math.max(0, Number(points.usdt)) : undefined,
+          normal: points.normal !== undefined ? Math.max(0, parseFloat(String(points.normal))) : undefined,
+          btc: points.btc !== undefined ? Math.max(0, parseFloat(String(points.btc))) : undefined,
+          eth: points.eth !== undefined ? Math.max(0, parseFloat(String(points.eth))) : undefined,
+          usdt: points.usdt !== undefined ? Math.max(0, parseFloat(String(points.usdt))) : undefined,
         };
       }
       
       if (combo) {
         updates.combo = {
-          multiplier: combo.multiplier !== undefined ? Math.max(1, Number(combo.multiplier)) : undefined,
-          maxChain: combo.maxChain !== undefined ? Math.max(1, Math.floor(Number(combo.maxChain))) : undefined,
+          multiplier: combo.multiplier !== undefined ? Math.max(1, parseFloat(String(combo.multiplier))) : undefined,
+          maxChain: combo.maxChain !== undefined ? Math.max(1, Math.floor(parseFloat(String(combo.maxChain)))) : undefined,
         };
       }
       
       if (crypto) {
         updates.crypto = {
-          spawnChance: crypto.spawnChance !== undefined ? Math.max(0, Math.min(1, Number(crypto.spawnChance))) : undefined,
+          spawnChance: crypto.spawnChance !== undefined ? Math.max(0, Math.min(1, parseFloat(String(crypto.spawnChance)))) : undefined,
         };
       }
       
       const config = await storage.updateGameEconomyConfig(updates);
-      res.json(config);
+      res.json(formatNumbersInObject(config));
     } catch (error) {
       console.error("Update admin game economy error:", error);
       res.status(500).json({ error: "Failed to update game economy" });

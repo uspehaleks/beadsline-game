@@ -1623,7 +1623,22 @@ function EconomyTab() {
 
   useEffect(() => {
     if (economyConfig && !hasInitialized) {
-      setEditConfig(economyConfig);
+      const parseConfig = (config: any): GameEconomyConfig => ({
+        points: {
+          normal: parseFloat(String(config.points?.normal ?? 100)),
+          btc: parseFloat(String(config.points?.btc ?? 500)),
+          eth: parseFloat(String(config.points?.eth ?? 300)),
+          usdt: parseFloat(String(config.points?.usdt ?? 200)),
+        },
+        combo: {
+          multiplier: parseFloat(String(config.combo?.multiplier ?? 1.5)),
+          maxChain: parseInt(String(config.combo?.maxChain ?? 10)),
+        },
+        crypto: {
+          spawnChance: parseFloat(String(config.crypto?.spawnChance ?? 0.08)),
+        },
+      });
+      setEditConfig(parseConfig(economyConfig));
       setHasInitialized(true);
     }
   }, [economyConfig, hasInitialized]);
@@ -1871,7 +1886,26 @@ function EconomyTab() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => economyConfig && setEditConfig(economyConfig)}
+              onClick={() => {
+                if (economyConfig) {
+                  const parseConfig = (config: any): GameEconomyConfig => ({
+                    points: {
+                      normal: parseFloat(String(config.points?.normal ?? 100)),
+                      btc: parseFloat(String(config.points?.btc ?? 500)),
+                      eth: parseFloat(String(config.points?.eth ?? 300)),
+                      usdt: parseFloat(String(config.points?.usdt ?? 200)),
+                    },
+                    combo: {
+                      multiplier: parseFloat(String(config.combo?.multiplier ?? 1.5)),
+                      maxChain: parseInt(String(config.combo?.maxChain ?? 10)),
+                    },
+                    crypto: {
+                      spawnChance: parseFloat(String(config.crypto?.spawnChance ?? 0.08)),
+                    },
+                  });
+                  setEditConfig(parseConfig(economyConfig));
+                }
+              }}
               disabled={!economyConfig}
               data-testid="button-reset-economy"
             >
