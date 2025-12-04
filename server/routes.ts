@@ -271,8 +271,31 @@ interface IpRateLimit {
   firstAttempt: number;
 }
 
+interface ActiveSession {
+  sessionId: string;
+  startedAt: number;
+  userId?: number;
+}
+
 const adminCodes = new Map<string, AdminCode>();
 const ipRateLimits = new Map<string, IpRateLimit>();
+const activeSessions = new Map<string, ActiveSession>();
+
+const SESSION_TIMEOUT = 3 * 60 * 1000;
+
+function cleanupStaleSessions() {
+  const now = Date.now();
+  Array.from(activeSessions.entries()).forEach(([sessionId, session]) => {
+    if (now - session.startedAt > SESSION_TIMEOUT) {
+      activeSessions.delete(sessionId);
+    }
+  });
+}
+
+function getActivePlayersCount(): number {
+  cleanupStaleSessions();
+  return activeSessions.size;
+}
 
 const IP_RATE_LIMIT_WINDOW = 15 * 60 * 1000;
 const IP_RATE_LIMIT_MAX = 10;
@@ -853,6 +876,46 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get crypto balances error:", error);
       res.status(500).json({ error: "Failed to get balances" });
+    }
+  });
+
+  app.post("/api/game/start", async (req, res) => {
+    try {
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const userId = (req.session as any)?.userId;
+      
+      activeSessions.set(sessionId, {
+        sessionId,
+        startedAt: Date.now(),
+        userId,
+      });
+      
+      res.json({ sessionId, activePlayers: getActivePlayersCount() });
+    } catch (error) {
+      console.error("Start game session error:", error);
+      res.status(500).json({ error: "Failed to start session" });
+    }
+  });
+
+  app.post("/api/game/end", async (req, res) => {
+    try {
+      const { sessionId } = req.body;
+      if (sessionId) {
+        activeSessions.delete(sessionId);
+      }
+      res.json({ success: true, activePlayers: getActivePlayersCount() });
+    } catch (error) {
+      console.error("End game session error:", error);
+      res.status(500).json({ error: "Failed to end session" });
+    }
+  });
+
+  app.get("/api/active-players", async (req, res) => {
+    try {
+      res.json({ count: getActivePlayersCount() });
+    } catch (error) {
+      console.error("Get active players error:", error);
+      res.status(500).json({ error: "Failed to get active players" });
     }
   });
 
