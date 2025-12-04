@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   bestScore: integer("best_score").default(0).notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -135,4 +136,18 @@ export interface LeaderboardEntry {
   totalPoints: number;
   gamesPlayed: number;
   bestScore: number;
+}
+
+export interface AdminCryptoBalances {
+  btc: number;
+  eth: number;
+  usdt: number;
+}
+
+export interface UserUpdate {
+  username?: string;
+  totalPoints?: number;
+  gamesPlayed?: number;
+  bestScore?: number;
+  isAdmin?: boolean;
 }
