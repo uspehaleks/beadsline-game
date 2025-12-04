@@ -1608,6 +1608,15 @@ function TelegramTab() {
   );
 }
 
+function formatNumber(val: number | string): string {
+  if (typeof val === 'string') return val;
+  if (val === 0) return '0';
+  if (Math.abs(val) < 0.0001) {
+    return val.toFixed(20).replace(/\.?0+$/, '');
+  }
+  return String(val);
+}
+
 function EconomyTab() {
   const { toast } = useToast();
   const [editConfig, setEditConfig] = useState<GameEconomyConfig>({
@@ -1615,6 +1624,7 @@ function EconomyTab() {
     combo: { multiplier: 1.5, maxChain: 10 },
     crypto: { spawnChance: 0.08 },
   });
+  const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
   const [hasInitialized, setHasInitialized] = useState(false);
 
   const { data: economyConfig, isLoading, error, refetch } = useQuery<GameEconomyConfig>({
@@ -1706,13 +1716,20 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>Обычный шарик</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  value={editConfig.points.normal}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    points: { ...editConfig.points, normal: Number(e.target.value) || 0 }
-                  })}
+                  type="text"
+                  value={rawInputs['normal'] ?? formatNumber(editConfig.points.normal)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, normal: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        points: { ...editConfig.points, normal: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, normal: undefined as any }))}
                   data-testid="input-points-normal"
                 />
               </div>
@@ -1722,13 +1739,20 @@ function EconomyTab() {
                   BTC шарик
                 </Label>
                 <Input
-                  type="number"
-                  min="0"
-                  value={editConfig.points.btc}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    points: { ...editConfig.points, btc: Number(e.target.value) || 0 }
-                  })}
+                  type="text"
+                  value={rawInputs['btc'] ?? formatNumber(editConfig.points.btc)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, btc: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        points: { ...editConfig.points, btc: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, btc: undefined as any }))}
                   data-testid="input-points-btc"
                 />
               </div>
@@ -1738,13 +1762,20 @@ function EconomyTab() {
                   ETH шарик
                 </Label>
                 <Input
-                  type="number"
-                  min="0"
-                  value={editConfig.points.eth}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    points: { ...editConfig.points, eth: Number(e.target.value) || 0 }
-                  })}
+                  type="text"
+                  value={rawInputs['eth'] ?? formatNumber(editConfig.points.eth)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, eth: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        points: { ...editConfig.points, eth: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, eth: undefined as any }))}
                   data-testid="input-points-eth"
                 />
               </div>
@@ -1754,13 +1785,20 @@ function EconomyTab() {
                   USDT шарик
                 </Label>
                 <Input
-                  type="number"
-                  min="0"
-                  value={editConfig.points.usdt}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    points: { ...editConfig.points, usdt: Number(e.target.value) || 0 }
-                  })}
+                  type="text"
+                  value={rawInputs['usdt'] ?? formatNumber(editConfig.points.usdt)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, usdt: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        points: { ...editConfig.points, usdt: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, usdt: undefined as any }))}
                   data-testid="input-points-usdt"
                 />
               </div>
@@ -1824,43 +1862,19 @@ function EconomyTab() {
               <Label>Вероятность появления (0-1)</Label>
               <Input
                 type="text"
-                value={(() => {
-                  const val = editConfig.crypto.spawnChance;
-                  if (typeof val === 'string') return val;
-                  if (val === 0) return '0';
-                  return val.toFixed(20).replace(/\.?0+$/, '');
-                })()}
+                value={rawInputs['spawnChance'] ?? formatNumber(editConfig.crypto.spawnChance)}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val === '' || /^0?\.?0*$/.test(val)) {
-                    setEditConfig({
-                      ...editConfig,
-                      crypto: { spawnChance: val as unknown as number }
-                    });
-                    return;
-                  }
+                  setRawInputs(prev => ({ ...prev, spawnChance: val }));
                   const num = parseFloat(val);
-                  if (!isNaN(num) && num >= 0 && num <= 1) {
-                    setEditConfig({
-                      ...editConfig,
-                      crypto: { spawnChance: val as unknown as number }
-                    });
-                  }
-                }}
-                onBlur={(e) => {
-                  const num = parseFloat(e.target.value);
                   if (!isNaN(num) && num >= 0 && num <= 1) {
                     setEditConfig({
                       ...editConfig,
                       crypto: { spawnChance: num }
                     });
-                  } else {
-                    setEditConfig({
-                      ...editConfig,
-                      crypto: { spawnChance: 0 }
-                    });
                   }
                 }}
+                onBlur={() => setRawInputs(prev => ({ ...prev, spawnChance: undefined as any }))}
                 data-testid="input-crypto-spawn"
               />
               <p className="text-xs text-muted-foreground">
