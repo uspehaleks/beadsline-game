@@ -60,9 +60,49 @@ export function GameCanvas({
     }
     ctx.stroke();
     
+    portalAnimationRef.current = (portalAnimationRef.current + 0.05) % (Math.PI * 4);
+    
+    if (path.length > 0) {
+      const startPoint = path[0];
+      const spawnPulse = 1 + Math.sin(portalAnimationRef.current * 1.5) * 0.2;
+      const spawnRadius = BALL_RADIUS * 2.5 * spawnPulse;
+      
+      const spawnGradient = ctx.createRadialGradient(
+        startPoint.x, startPoint.y, 0,
+        startPoint.x, startPoint.y, spawnRadius
+      );
+      spawnGradient.addColorStop(0, 'rgba(59, 130, 246, 0.9)');
+      spawnGradient.addColorStop(0.4, 'rgba(99, 102, 241, 0.6)');
+      spawnGradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(startPoint.x, startPoint.y, spawnRadius, 0, Math.PI * 2);
+      ctx.fillStyle = spawnGradient;
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(startPoint.x, startPoint.y, BALL_RADIUS * 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      ctx.save();
+      ctx.translate(startPoint.x, startPoint.y);
+      ctx.rotate(-portalAnimationRef.current * 0.8);
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.moveTo(BALL_RADIUS * 0.5, 0);
+        ctx.lineTo(BALL_RADIUS * 1.2, 0);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    
     if (path.length > 0) {
       const endPoint = path[path.length - 1];
-      portalAnimationRef.current = (portalAnimationRef.current + 0.05) % (Math.PI * 4);
       const pulseScale = 1 + Math.sin(portalAnimationRef.current) * 0.15;
       const portalRadius = BALL_RADIUS * 2 * pulseScale;
       

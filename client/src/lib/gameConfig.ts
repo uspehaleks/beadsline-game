@@ -10,9 +10,17 @@ export const GAME_CONFIG = {
   balls: {
     radius: 16,
     spacing: 0.016,
-    initialCount: 50,
+    initialCount: 5,
+    targetCount: 50,
     shooterSpeed: 16,
     collisionRadius: 2.0,
+  },
+  
+  spawn: {
+    intervalFast: 200,
+    intervalSlow: 1500,
+    rampUpCount: 30,
+    resumeThreshold: 35,
   },
   
   speed: {

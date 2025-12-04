@@ -14,7 +14,7 @@ import {
   checkCollision,
   checkGameOver,
   checkWin,
-  addNewBallsToChain,
+  spawnBallAtStart,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -44,13 +44,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   
   const gameLoopRef = useRef<number | null>(null);
   const timeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const addBallsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const spawnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTimeRef = useRef<number>(0);
   const pathRef = useRef<PathPoint[]>([]);
   const onGameEndRef = useRef(onGameEnd);
   const gameEndedRef = useRef(false);
   const dimensionsRef = useRef({ width: canvasWidth, height: canvasHeight });
   const gameStartTimeRef = useRef<number>(0);
+  const spawnedCountRef = useRef<number>(0);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -75,9 +76,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       clearInterval(timeTrackerRef.current);
       timeTrackerRef.current = null;
     }
-    if (addBallsTimerRef.current !== null) {
-      clearInterval(addBallsTimerRef.current);
-      addBallsTimerRef.current = null;
+    if (spawnTimerRef.current !== null) {
+      clearTimeout(spawnTimerRef.current);
+      spawnTimerRef.current = null;
     }
   }, []);
 
@@ -163,15 +164,37 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       setElapsedTime(Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
     }, 1000);
     
-    addBallsTimerRef.current = setInterval(() => {
+    spawnedCountRef.current = GAME_CONFIG.balls.initialCount;
+    
+    const scheduleNextSpawn = () => {
       if (gameEndedRef.current) return;
+      
+      const { intervalFast, intervalSlow, rampUpCount, resumeThreshold } = GAME_CONFIG.spawn;
+      const { targetCount } = GAME_CONFIG.balls;
       
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
-        const newBalls = addNewBallsToChain(prev.balls, GAME_CONFIG.gameplay.addBallsCount);
+        
+        if (prev.balls.length >= targetCount) {
+          if (prev.balls.length < resumeThreshold) {
+            spawnTimerRef.current = setTimeout(scheduleNextSpawn, intervalSlow);
+          } else {
+            spawnTimerRef.current = setTimeout(scheduleNextSpawn, intervalSlow * 2);
+          }
+          return prev;
+        }
+        
+        const newBalls = spawnBallAtStart(prev.balls);
+        spawnedCountRef.current++;
+        
+        const interval = spawnedCountRef.current < rampUpCount ? intervalFast : intervalSlow;
+        spawnTimerRef.current = setTimeout(scheduleNextSpawn, interval);
+        
         return { ...prev, balls: updateBallPositions(newBalls, pathRef.current) };
       });
-    }, GAME_CONFIG.gameplay.addBallsInterval);
+    };
+    
+    spawnTimerRef.current = setTimeout(scheduleNextSpawn, GAME_CONFIG.spawn.intervalFast);
     
     hapticFeedback('medium');
   }, [stopAllTimers]);

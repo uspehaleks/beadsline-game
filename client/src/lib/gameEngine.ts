@@ -280,6 +280,18 @@ export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
   return newBalls;
 }
 
+export function spawnBallAtStart(balls: Ball[]): Ball[] {
+  const spacing = GAME_CONFIG.balls.spacing;
+  const newBall = createRandomBall(`spawn-${Date.now()}`, 0);
+  
+  const shiftedBalls = balls.map(ball => ({
+    ...ball,
+    pathProgress: ball.pathProgress + spacing,
+  }));
+  
+  return [newBall, ...shiftedBalls];
+}
+
 export function checkGameOver(balls: Ball[]): boolean {
   return balls.some(ball => ball.pathProgress >= 1);
 }
