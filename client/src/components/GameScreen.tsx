@@ -7,6 +7,7 @@ import { GameOverScreen } from './GameOverScreen';
 import { useGameState } from '@/hooks/useGameState';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface GameScreenProps {
   onGameEnd: (state: GameState) => void;
@@ -17,6 +18,41 @@ interface GameScreenProps {
 export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const sessionIdRef = useRef<string | null>(null);
+
+  const startSession = useCallback(async () => {
+    try {
+      const res = await apiRequest('POST', '/api/game/start', {});
+      const data = await res.json();
+      sessionIdRef.current = data.sessionId;
+    } catch (error) {
+      console.error('Failed to start session:', error);
+    }
+  }, []);
+
+  const endSession = useCallback(async () => {
+    if (sessionIdRef.current) {
+      try {
+        await apiRequest('POST', '/api/game/end', { sessionId: sessionIdRef.current });
+        sessionIdRef.current = null;
+      } catch (error) {
+        console.error('Failed to end session:', error);
+      }
+    }
+  }, []);
+
+  const handleGameEnd = useCallback((state: GameState) => {
+    endSession();
+    onGameEnd(state);
+  }, [endSession, onGameEnd]);
+
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current) {
+        navigator.sendBeacon('/api/game/end', JSON.stringify({ sessionId: sessionIdRef.current }));
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -44,14 +80,19 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     ballsOnScreen,
     ballsRemaining,
     totalBalls,
-    startGame,
+    startGame: originalStartGame,
     shoot,
     updateAim,
   } = useGameState({
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
-    onGameEnd,
+    onGameEnd: handleGameEnd,
   });
+
+  const startGame = useCallback(() => {
+    startSession();
+    originalStartGame();
+  }, [startSession, originalStartGame]);
 
   const hasStartedRef = useRef(false);
   const startGameRef = useRef(startGame);

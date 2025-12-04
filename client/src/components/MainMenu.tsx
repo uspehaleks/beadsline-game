@@ -2,9 +2,10 @@ import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings } from 'lucide-react';
+import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 
 interface MainMenuProps {
   user: User | null;
@@ -14,6 +15,11 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
+  const { data: activePlayers } = useQuery<{ count: number }>({
+    queryKey: ["/api/active-players"],
+    refetchInterval: 10000,
+  });
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background via-background to-primary/5">
       <motion.div
@@ -38,6 +44,18 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         <p className="text-muted-foreground mt-2">
           Собирай шарики, лови крипту, покоряй рейтинг!
         </p>
+        {activePlayers && activePlayers.count > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-sm"
+          >
+            <Users className="w-4 h-4" />
+            <span className="font-medium" data-testid="text-online-players">
+              Сейчас играют: {activePlayers.count}
+            </span>
+          </motion.div>
+        )}
       </motion.div>
 
       {user && (
