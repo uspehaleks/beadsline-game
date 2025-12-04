@@ -28,6 +28,7 @@ import {
   type GameEconomyConfig,
   type ReferralConfig,
   type ReferralInfo,
+  type ReferralUserStats,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, gte, sum } from "drizzle-orm";
@@ -704,9 +705,11 @@ export class DatabaseStorage implements IStorage {
 
   private getDefaultReferralConfig(): ReferralConfig {
     return {
-      maxDirectReferralsPerUser: 100,
+      maxDirectReferralsPerUser: 1000,
       level1RewardPercent: 10,
-      level2RewardPercent: 5,
+      level2RewardPercent: 3,
+      maxReferralBeadsPerRefPerDay: 1000000,
+      maxReferralBeadsPerUserPerDay: 10000000,
     };
   }
 
@@ -722,13 +725,15 @@ export class DatabaseStorage implements IStorage {
       return defaultConfig;
     }
     
-    const stored = config.value as ReferralConfig;
+    const stored = config.value as Partial<ReferralConfig>;
     const defaults = this.getDefaultReferralConfig();
     
     return {
       maxDirectReferralsPerUser: stored.maxDirectReferralsPerUser ?? defaults.maxDirectReferralsPerUser,
       level1RewardPercent: stored.level1RewardPercent ?? defaults.level1RewardPercent,
       level2RewardPercent: stored.level2RewardPercent ?? defaults.level2RewardPercent,
+      maxReferralBeadsPerRefPerDay: stored.maxReferralBeadsPerRefPerDay ?? defaults.maxReferralBeadsPerRefPerDay,
+      maxReferralBeadsPerUserPerDay: stored.maxReferralBeadsPerUserPerDay ?? defaults.maxReferralBeadsPerUserPerDay,
     };
   }
 
@@ -739,6 +744,8 @@ export class DatabaseStorage implements IStorage {
       maxDirectReferralsPerUser: updates.maxDirectReferralsPerUser ?? current.maxDirectReferralsPerUser,
       level1RewardPercent: updates.level1RewardPercent ?? current.level1RewardPercent,
       level2RewardPercent: updates.level2RewardPercent ?? current.level2RewardPercent,
+      maxReferralBeadsPerRefPerDay: updates.maxReferralBeadsPerRefPerDay ?? current.maxReferralBeadsPerRefPerDay,
+      maxReferralBeadsPerUserPerDay: updates.maxReferralBeadsPerUserPerDay ?? current.maxReferralBeadsPerUserPerDay,
     };
     
     await this.setGameConfig({
@@ -768,6 +775,35 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async getReferralBeadsEarnedToday(userId: string): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const result = await db.select({ total: sum(referralRewards.beadsAmount) })
+      .from(referralRewards)
+      .where(and(
+        eq(referralRewards.userId, userId),
+        gte(referralRewards.createdAt, today)
+      ));
+    
+    return Number(result[0]?.total) || 0;
+  }
+
+  async getReferralBeadsFromRefToday(userId: string, refUserId: string): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const result = await db.select({ total: sum(referralRewards.beadsAmount) })
+      .from(referralRewards)
+      .where(and(
+        eq(referralRewards.userId, userId),
+        eq(referralRewards.refUserId, refUserId),
+        gte(referralRewards.createdAt, today)
+      ));
+    
+    return Number(result[0]?.total) || 0;
+  }
+
   async processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void> {
     if (beadsEarned <= 0) return;
     
@@ -778,41 +814,63 @@ export class DatabaseStorage implements IStorage {
     
     const level1Referrer = await this.getUser(player.referredBy);
     if (level1Referrer) {
-      const level1Reward = Math.floor(beadsEarned * config.level1RewardPercent / 100);
+      let level1Reward = Math.floor(beadsEarned * config.level1RewardPercent / 100);
+      
       if (level1Reward > 0) {
-        await this.createReferralReward({
-          userId: level1Referrer.id,
-          refUserId: playerId,
-          level: 1,
-          beadsAmount: level1Reward,
-          gameScoreId,
-        });
+        const todayFromRef = await this.getReferralBeadsFromRefToday(level1Referrer.id, playerId);
+        const remainingFromRef = Math.max(0, config.maxReferralBeadsPerRefPerDay - todayFromRef);
         
-        await db.update(users)
-          .set({ totalPoints: level1Referrer.totalPoints + level1Reward })
-          .where(eq(users.id, level1Referrer.id));
+        const todayTotal = await this.getReferralBeadsEarnedToday(level1Referrer.id);
+        const remainingTotal = Math.max(0, config.maxReferralBeadsPerUserPerDay - todayTotal);
         
-        console.log(`Level 1 referral reward: ${level1Reward} beads to ${level1Referrer.username}`);
+        level1Reward = Math.min(level1Reward, remainingFromRef, remainingTotal);
+        
+        if (level1Reward > 0) {
+          await this.createReferralReward({
+            userId: level1Referrer.id,
+            refUserId: playerId,
+            level: 1,
+            beadsAmount: level1Reward,
+            gameScoreId,
+          });
+          
+          await db.update(users)
+            .set({ totalPoints: level1Referrer.totalPoints + level1Reward })
+            .where(eq(users.id, level1Referrer.id));
+          
+          console.log(`Level 1 referral reward: ${level1Reward} beads to ${level1Referrer.username}`);
+        }
       }
       
       if (level1Referrer.referredBy) {
         const level2Referrer = await this.getUser(level1Referrer.referredBy);
         if (level2Referrer) {
-          const level2Reward = Math.floor(beadsEarned * config.level2RewardPercent / 100);
+          let level2Reward = Math.floor(beadsEarned * config.level2RewardPercent / 100);
+          
           if (level2Reward > 0) {
-            await this.createReferralReward({
-              userId: level2Referrer.id,
-              refUserId: playerId,
-              level: 2,
-              beadsAmount: level2Reward,
-              gameScoreId,
-            });
+            const todayFromRef = await this.getReferralBeadsFromRefToday(level2Referrer.id, playerId);
+            const remainingFromRef = Math.max(0, config.maxReferralBeadsPerRefPerDay - todayFromRef);
             
-            await db.update(users)
-              .set({ totalPoints: level2Referrer.totalPoints + level2Reward })
-              .where(eq(users.id, level2Referrer.id));
+            const todayTotal = await this.getReferralBeadsEarnedToday(level2Referrer.id);
+            const remainingTotal = Math.max(0, config.maxReferralBeadsPerUserPerDay - todayTotal);
             
-            console.log(`Level 2 referral reward: ${level2Reward} beads to ${level2Referrer.username}`);
+            level2Reward = Math.min(level2Reward, remainingFromRef, remainingTotal);
+            
+            if (level2Reward > 0) {
+              await this.createReferralReward({
+                userId: level2Referrer.id,
+                refUserId: playerId,
+                level: 2,
+                beadsAmount: level2Reward,
+                gameScoreId,
+              });
+              
+              await db.update(users)
+                .set({ totalPoints: level2Referrer.totalPoints + level2Reward })
+                .where(eq(users.id, level2Referrer.id));
+              
+              console.log(`Level 2 referral reward: ${level2Reward} beads to ${level2Referrer.username}`);
+            }
           }
         }
       }
@@ -832,6 +890,57 @@ export class DatabaseStorage implements IStorage {
       .where(eq(referralRewards.userId, userId));
     
     return Number(result[0]?.total) || 0;
+  }
+
+  async getLevel2ReferralsCount(userId: string): Promise<number> {
+    const directReferrals = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.referredBy, userId));
+    
+    if (directReferrals.length === 0) return 0;
+    
+    let level2Count = 0;
+    for (const ref of directReferrals) {
+      const count = await db.select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.referredBy, ref.id));
+      level2Count += count[0]?.count || 0;
+    }
+    
+    return level2Count;
+  }
+
+  async getReferralUserStats(): Promise<ReferralUserStats[]> {
+    const allUsers = await db.select()
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .orderBy(desc(users.totalPoints));
+    
+    const stats: ReferralUserStats[] = [];
+    
+    for (const user of allUsers) {
+      let referredByUsername: string | null = null;
+      if (user.referredBy) {
+        const referrer = await this.getUser(user.referredBy);
+        referredByUsername = referrer?.username || null;
+      }
+      
+      const totalReferralBeads = await this.getTotalReferralBeads(user.id);
+      const level2Count = await this.getLevel2ReferralsCount(user.id);
+      
+      stats.push({
+        userId: user.id,
+        username: user.username,
+        referralCode: user.referralCode,
+        referredBy: user.referredBy,
+        referredByUsername,
+        level1ReferralsCount: user.directReferralsCount,
+        level2ReferralsCount: level2Count,
+        totalReferralBeads,
+      });
+    }
+    
+    return stats;
   }
 }
 

@@ -270,6 +270,8 @@ export interface ReferralConfig {
   maxDirectReferralsPerUser: number;
   level1RewardPercent: number;
   level2RewardPercent: number;
+  maxReferralBeadsPerRefPerDay: number;
+  maxReferralBeadsPerUserPerDay: number;
 }
 
 export interface ReferralInfo {
@@ -277,4 +279,15 @@ export interface ReferralInfo {
   referralLink: string;
   directReferralsCount: number;
   totalEarnedBeads: number;
+}
+
+export interface ReferralUserStats {
+  userId: string;
+  username: string;
+  referralCode: string | null;
+  referredBy: string | null;
+  referredByUsername: string | null;
+  level1ReferralsCount: number;
+  level2ReferralsCount: number;
+  totalReferralBeads: number;
 }

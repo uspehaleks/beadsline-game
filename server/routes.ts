@@ -972,7 +972,13 @@ export async function registerRoutes(
 
   app.put("/api/admin/referral/config", requireAdmin, async (req, res) => {
     try {
-      const { maxDirectReferralsPerUser, level1RewardPercent, level2RewardPercent } = req.body;
+      const { 
+        maxDirectReferralsPerUser, 
+        level1RewardPercent, 
+        level2RewardPercent,
+        maxReferralBeadsPerRefPerDay,
+        maxReferralBeadsPerUserPerDay,
+      } = req.body;
       
       const config = await storage.updateReferralConfig({
         maxDirectReferralsPerUser: maxDirectReferralsPerUser !== undefined 
@@ -981,12 +987,26 @@ export async function registerRoutes(
           ? Math.max(0, Math.min(100, Number(level1RewardPercent))) : undefined,
         level2RewardPercent: level2RewardPercent !== undefined 
           ? Math.max(0, Math.min(100, Number(level2RewardPercent))) : undefined,
+        maxReferralBeadsPerRefPerDay: maxReferralBeadsPerRefPerDay !== undefined 
+          ? Math.max(1, Number(maxReferralBeadsPerRefPerDay)) : undefined,
+        maxReferralBeadsPerUserPerDay: maxReferralBeadsPerUserPerDay !== undefined 
+          ? Math.max(1, Number(maxReferralBeadsPerUserPerDay)) : undefined,
       });
       
       res.json(config);
     } catch (error) {
       console.error("Update referral config error:", error);
       res.status(500).json({ error: "Failed to update referral config" });
+    }
+  });
+
+  app.get("/api/admin/referral/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getReferralUserStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get referral stats error:", error);
+      res.status(500).json({ error: "Failed to get referral stats" });
     }
   });
 

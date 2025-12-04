@@ -13,9 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
-import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig } from "@shared/schema";
+import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats } from "@shared/schema";
 import { 
   Users, 
+  Users2,
   Trophy, 
   Settings, 
   Gift, 
@@ -397,6 +398,10 @@ export default function Admin() {
                 <TrendingUp className="w-4 h-4 mr-1.5" />
                 Экономика
               </TabsTrigger>
+              <TabsTrigger value="referrals" data-testid="tab-referrals" className="flex-shrink-0">
+                <Users2 className="w-4 h-4 mr-1.5" />
+                Рефералы
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -430,6 +435,10 @@ export default function Admin() {
 
           <TabsContent value="economy">
             <EconomyTab />
+          </TabsContent>
+
+          <TabsContent value="referrals">
+            <ReferralsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -1953,6 +1962,245 @@ function EconomyTab() {
             <li>Крипто-шарики появляются только если их баланс в "Фонде" больше 0</li>
             <li>Бонусные очки за крипто-шарики начисляются только при сборе 3+ шариков одного цвета</li>
             <li>Комбо увеличивается при каждом успешном совпадении подряд</li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ReferralsTab() {
+  const { toast } = useToast();
+  
+  const { data: referralConfig, isLoading: configLoading } = useQuery<ReferralConfig>({
+    queryKey: ["/api/referral/config"],
+  });
+
+  const { data: referralStats, isLoading: statsLoading } = useQuery<ReferralUserStats[]>({
+    queryKey: ["/api/admin/referral/stats"],
+  });
+
+  const [editConfig, setEditConfig] = useState<ReferralConfig>({
+    maxDirectReferralsPerUser: 1000,
+    level1RewardPercent: 10,
+    level2RewardPercent: 3,
+    maxReferralBeadsPerRefPerDay: 1000000,
+    maxReferralBeadsPerUserPerDay: 10000000,
+  });
+
+  useEffect(() => {
+    if (referralConfig) {
+      setEditConfig(referralConfig);
+    }
+  }, [referralConfig]);
+
+  const updateConfigMutation = useMutation({
+    mutationFn: async (config: Partial<ReferralConfig>) => {
+      return apiRequest("PUT", "/api/admin/referral/config", config);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/referral/config"] });
+      toast({ title: "Настройки рефералов сохранены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка сохранения", variant: "destructive" });
+    },
+  });
+
+  if (configLoading || statsLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Настройки реферальной системы
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="font-medium">Бонусы</h3>
+              <div className="space-y-2">
+                <Label>Бонус 1-го уровня (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={editConfig.level1RewardPercent}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    level1RewardPercent: parseInt(e.target.value) || 0
+                  })}
+                  data-testid="input-level1-percent"
+                />
+                <p className="text-xs text-muted-foreground">
+                  % от Beads прямого реферала
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Бонус 2-го уровня (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={editConfig.level2RewardPercent}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    level2RewardPercent: parseInt(e.target.value) || 0
+                  })}
+                  data-testid="input-level2-percent"
+                />
+                <p className="text-xs text-muted-foreground">
+                  % от Beads реферала 2-го уровня
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium">Лимиты</h3>
+              <div className="space-y-2">
+                <Label>Макс. рефералов на пользователя</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editConfig.maxDirectReferralsPerUser}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    maxDirectReferralsPerUser: parseInt(e.target.value) || 1
+                  })}
+                  data-testid="input-max-referrals"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Макс. Beads от одного реферала в день</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editConfig.maxReferralBeadsPerRefPerDay}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    maxReferralBeadsPerRefPerDay: parseInt(e.target.value) || 1
+                  })}
+                  data-testid="input-max-beads-per-ref"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Макс. Beads от всех рефералов в день</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={editConfig.maxReferralBeadsPerUserPerDay}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    maxReferralBeadsPerUserPerDay: parseInt(e.target.value) || 1
+                  })}
+                  data-testid="input-max-beads-per-day"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => updateConfigMutation.mutate(editConfig)}
+              disabled={updateConfigMutation.isPending}
+              data-testid="button-save-referral-config"
+            >
+              {updateConfigMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Сохранить настройки
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => referralConfig && setEditConfig(referralConfig)}
+              disabled={!referralConfig}
+              data-testid="button-reset-referral-config"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Сбросить изменения
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users2 className="w-5 h-5" />
+            Статистика рефералов
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-2">
+              <div className="grid grid-cols-7 gap-2 text-xs font-medium text-muted-foreground px-2 py-1 border-b">
+                <div>Имя</div>
+                <div>Код</div>
+                <div>Приглашён</div>
+                <div className="text-center">L1</div>
+                <div className="text-center">L2</div>
+                <div className="text-right">Заработано</div>
+                <div></div>
+              </div>
+              
+              {referralStats?.map((stat) => (
+                <div 
+                  key={stat.userId} 
+                  className="grid grid-cols-7 gap-2 text-sm items-center px-2 py-2 rounded hover-elevate"
+                  data-testid={`row-referral-${stat.userId}`}
+                >
+                  <div className="truncate font-medium">{stat.username}</div>
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {stat.referralCode || '-'}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {stat.referredByUsername || '-'}
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="secondary">{stat.level1ReferralsCount}</Badge>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="outline">{stat.level2ReferralsCount}</Badge>
+                  </div>
+                  <div className="text-right font-medium text-primary">
+                    {stat.totalReferralBeads.toLocaleString()}
+                  </div>
+                  <div></div>
+                </div>
+              ))}
+
+              {(!referralStats || referralStats.length === 0) && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Нет данных о рефералах
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Подсказка</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+            <li>L1 — количество прямых рефералов (приглашённых напрямую)</li>
+            <li>L2 — количество рефералов 2-го уровня (приглашённых рефералами)</li>
+            <li>Бонус начисляется автоматически при каждой игре реферала</li>
+            <li>Реф-бонусы увеличивают только виртуальные Beads, не USDT</li>
+            <li>Лимиты "в день" — мягкие ограничения для защиты от злоупотреблений</li>
           </ul>
         </CardContent>
       </Card>
