@@ -76,6 +76,11 @@ interface AdminCryptoBalances {
   usdt: number;
 }
 
+interface FundToggles {
+  cryptoFundEnabled: boolean;
+  usdtFundEnabled: boolean;
+}
+
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
@@ -117,6 +122,24 @@ export default function Admin() {
     queryKey: ["/api/active-players"],
     enabled: isAdmin,
     refetchInterval: 5000,
+  });
+
+  const { data: fundToggles } = useQuery<FundToggles>({
+    queryKey: ["/api/admin/fund-toggles"],
+    enabled: isAdmin,
+  });
+
+  const toggleFundMutation = useMutation({
+    mutationFn: async (updates: Partial<FundToggles>) => {
+      return apiRequest("PUT", "/api/admin/fund-toggles", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/fund-toggles"] });
+      toast({ title: "Сохранено", description: "Настройки фондов обновлены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить настройки", variant: "destructive" });
+    },
   });
 
   const [loginUsername, setLoginUsername] = useState("alex851466");
@@ -363,6 +386,50 @@ export default function Admin() {
             </Card>
           </div>
         )}
+
+        {/* Fund Toggle Controls */}
+        <Card className="mb-6">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Bitcoin className="w-5 h-5 text-amber-500" />
+                    <span className="text-sm font-medium">Крипто-фонд</span>
+                  </div>
+                  <Switch
+                    checked={fundToggles?.cryptoFundEnabled ?? false}
+                    onCheckedChange={(checked) => toggleFundMutation.mutate({ cryptoFundEnabled: checked })}
+                    disabled={toggleFundMutation.isPending}
+                    data-testid="toggle-crypto-fund"
+                  />
+                  <Badge variant={fundToggles?.cryptoFundEnabled ? "default" : "secondary"}>
+                    {fundToggles?.cryptoFundEnabled ? "ВКЛ" : "ВЫКЛ"}
+                  </Badge>
+                </div>
+                <Separator orientation="vertical" className="h-8" />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <SiTether className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-medium">USDT-фонд</span>
+                  </div>
+                  <Switch
+                    checked={fundToggles?.usdtFundEnabled ?? false}
+                    onCheckedChange={(checked) => toggleFundMutation.mutate({ usdtFundEnabled: checked })}
+                    disabled={toggleFundMutation.isPending}
+                    data-testid="toggle-usdt-fund"
+                  />
+                  <Badge variant={fundToggles?.usdtFundEnabled ? "default" : "secondary"}>
+                    {fundToggles?.usdtFundEnabled ? "ВКЛ" : "ВЫКЛ"}
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Управление выдачей наград
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="users" className="space-y-4">
           <div className="overflow-x-auto pb-2">
@@ -801,15 +868,20 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return apiRequest("DELETE", `/api/admin/users/${userId}`);
+      const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Не удалось удалить пользователя");
+      }
+      return res.json();
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
       await queryClient.refetchQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Удалено", description: "Пользователь полностью удалён из базы данных" });
     },
-    onError: () => {
-      toast({ title: "Ошибка", description: "Не удалось удалить пользователя", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Защита от удаления", description: error.message, variant: "destructive" });
     },
   });
 

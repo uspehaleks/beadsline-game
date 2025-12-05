@@ -800,6 +800,71 @@ export async function registerRoutes(
     }
   });
 
+  // Fund toggle endpoints
+  app.get("/api/admin/fund-toggles", requireAdmin, async (req, res) => {
+    try {
+      const cryptoConfig = await storage.getGameConfig("crypto_fund_enabled");
+      const usdtConfig = await storage.getGameConfig("usdt_fund_enabled");
+      
+      res.json({
+        cryptoFundEnabled: cryptoConfig?.value === true,
+        usdtFundEnabled: usdtConfig?.value === true,
+      });
+    } catch (error) {
+      console.error("Get fund toggles error:", error);
+      res.status(500).json({ error: "Failed to get fund toggles" });
+    }
+  });
+
+  app.put("/api/admin/fund-toggles", requireAdmin, async (req, res) => {
+    try {
+      const { cryptoFundEnabled, usdtFundEnabled } = req.body;
+      
+      if (typeof cryptoFundEnabled === "boolean") {
+        await storage.setGameConfig({
+          key: "crypto_fund_enabled",
+          value: cryptoFundEnabled,
+          description: "Enable/disable crypto ball rewards (BTC, ETH, USDT)",
+        });
+      }
+      
+      if (typeof usdtFundEnabled === "boolean") {
+        await storage.setGameConfig({
+          key: "usdt_fund_enabled",
+          value: usdtFundEnabled,
+          description: "Enable/disable real USDT rewards distribution",
+        });
+      }
+      
+      const cryptoConfig = await storage.getGameConfig("crypto_fund_enabled");
+      const usdtConfig = await storage.getGameConfig("usdt_fund_enabled");
+      
+      res.json({
+        cryptoFundEnabled: cryptoConfig?.value === true,
+        usdtFundEnabled: usdtConfig?.value === true,
+      });
+    } catch (error) {
+      console.error("Update fund toggles error:", error);
+      res.status(500).json({ error: "Failed to update fund toggles" });
+    }
+  });
+
+  // Public endpoint for checking if rewards are enabled
+  app.get("/api/fund-status", async (req, res) => {
+    try {
+      const cryptoConfig = await storage.getGameConfig("crypto_fund_enabled");
+      const usdtConfig = await storage.getGameConfig("usdt_fund_enabled");
+      
+      res.json({
+        cryptoFundEnabled: cryptoConfig?.value === true,
+        usdtFundEnabled: usdtConfig?.value === true,
+      });
+    } catch (error) {
+      console.error("Get fund status error:", error);
+      res.status(500).json({ error: "Failed to get fund status" });
+    }
+  });
+
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
@@ -914,6 +979,21 @@ export async function registerRoutes(
   app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Check if user has Beads balance - protect from accidental deletion
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (user.totalPoints > 0) {
+        return res.status(400).json({ 
+          error: "Нельзя удалить пользователя с Beads на балансе",
+          hasBeads: true,
+          beadsBalance: user.totalPoints
+        });
+      }
+      
       const deleted = await storage.hardDeleteUser(id);
       if (!deleted) {
         return res.status(404).json({ error: "User not found" });
