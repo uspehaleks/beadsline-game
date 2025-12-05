@@ -364,9 +364,13 @@ export default function Admin() {
           </div>
         )}
 
-        <Tabs defaultValue="balances" className="space-y-4">
+        <Tabs defaultValue="users" className="space-y-4">
           <div className="overflow-x-auto pb-2">
             <TabsList className="inline-flex w-auto min-w-full gap-1">
+              <TabsTrigger value="users" data-testid="tab-users" className="flex-shrink-0">
+                <Users className="w-4 h-4 mr-1.5" />
+                Игроки
+              </TabsTrigger>
               <TabsTrigger value="balances" data-testid="tab-balances" className="flex-shrink-0">
                 <Wallet className="w-4 h-4 mr-1.5" />
                 Фонд
@@ -374,10 +378,6 @@ export default function Admin() {
               <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund" className="flex-shrink-0">
                 <SiTether className="w-4 h-4 mr-1.5" />
                 USDT
-              </TabsTrigger>
-              <TabsTrigger value="users" data-testid="tab-users" className="flex-shrink-0">
-                <Users className="w-4 h-4 mr-1.5" />
-                Игроки
               </TabsTrigger>
               <TabsTrigger value="pools" data-testid="tab-pools" className="flex-shrink-0">
                 <Gift className="w-4 h-4 mr-1.5" />
@@ -406,16 +406,16 @@ export default function Admin() {
             </TabsList>
           </div>
 
+          <TabsContent value="users">
+            <UsersTab users={usersData?.users || []} total={usersData?.total || 0} />
+          </TabsContent>
+
           <TabsContent value="balances">
             <CryptoBalancesTab balances={cryptoBalances || { btc: 0, eth: 0, usdt: 0 }} />
           </TabsContent>
 
           <TabsContent value="usdt-fund">
             <UsdtFundTab />
-          </TabsContent>
-
-          <TabsContent value="users">
-            <UsersTab users={usersData?.users || []} total={usersData?.total || 0} />
           </TabsContent>
 
           <TabsContent value="pools">
@@ -853,11 +853,25 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                   <div>
                     <p className="font-medium">{user.username}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{user.totalPoints} очков</span>
+                      <span>{user.totalPoints} Beads</span>
                       <span>•</span>
                       <span>{user.gamesPlayed} игр</span>
                       <span>•</span>
                       <span>Лучший: {user.bestScore}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                        <Bitcoin className="w-3 h-3" />
+                        {(user as User & { btcBalance?: number }).btcBalance?.toFixed(4) || "0.0000"}
+                      </span>
+                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
+                        <SiEthereum className="w-3 h-3" />
+                        {(user as User & { ethBalance?: number }).ethBalance?.toFixed(4) || "0.0000"}
+                      </span>
+                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">
+                        <SiTether className="w-3 h-3" />
+                        {(user as User & { usdtBalance?: number }).usdtBalance?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                   </div>
                 </div>
