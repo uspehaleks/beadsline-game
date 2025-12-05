@@ -60,11 +60,12 @@ interface TelegramUpdate {
   message?: TelegramMessage;
 }
 
-// App URL for Mini App
+// Production Mini App URL - HARDCODED to avoid dev domain issues
+const PRODUCTION_APP_URL = 'https://igri--uspehaleks.replit.app';
+
+// App URL for Mini App - always use production URL for Telegram bot
 function getAppUrl(): string {
-  return process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : process.env.REPLIT_DEPLOYMENT_URL || 'https://beadsline--uspehaleks.replit.app';
+  return PRODUCTION_APP_URL;
 }
 
 async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
