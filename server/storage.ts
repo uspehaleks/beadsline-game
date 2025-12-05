@@ -166,6 +166,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async hardDeleteUser(userId: string): Promise<boolean> {
+    // First delete related records to avoid foreign key constraint errors
+    await db.delete(gameScores).where(eq(gameScores.odUserId, userId));
+    await db.delete(referralRewards).where(eq(referralRewards.userId, userId));
+    await db.delete(referralRewards).where(eq(referralRewards.refUserId, userId));
+    await db.delete(realRewards).where(eq(realRewards.userId, userId));
+    
+    // Now delete the user
     const result = await db
       .delete(users)
       .where(eq(users.id, userId))
