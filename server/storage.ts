@@ -719,7 +719,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const economyConfig = await this.getGameEconomyConfig();
-    const { cryptoRewards, dailyLimits } = economyConfig;
+    const { cryptoRewards, dailyLimits, pools } = economyConfig;
 
     const sanitizeRewardRate = (val: any, defaultVal: number): number => {
       const num = typeof val === 'number' ? val : parseFloat(String(val));
@@ -747,6 +747,10 @@ export class DatabaseStorage implements IStorage {
     const ethWeiRequested = safeEth * ethWeiPerBall;
     const usdtRequested = safeUsdt * usdtRate;
 
+    const btcPoolAvailable = pools?.btcBalanceSats ?? 0;
+    const ethPoolAvailable = pools?.ethBalanceWei ?? 0;
+    const usdtPoolAvailable = pools?.usdtBalance ?? 0;
+
     const result = await db.execute(sql`
       WITH locked_user AS (
         SELECT 
@@ -760,9 +764,22 @@ export class DatabaseStorage implements IStorage {
       ),
       amounts AS (
         SELECT 
-          LEAST(${btcSatsRequested}::bigint, GREATEST(0::bigint, ${btcMaxSats}::bigint - current_btc_today)) as btc_to_add,
-          LEAST(${ethWeiRequested}::bigint, GREATEST(0::bigint, ${ethMaxWei}::bigint - current_eth_today)) as eth_to_add,
-          LEAST(${usdtRequested}::numeric, GREATEST(0::numeric, ${usdtMax}::numeric - current_usdt_today)) as usdt_to_add,
+          -- Check both daily limit AND pool balance, take minimum
+          LEAST(
+            ${btcSatsRequested}::bigint,
+            GREATEST(0::bigint, ${btcMaxSats}::bigint - current_btc_today),
+            ${btcPoolAvailable}::bigint
+          ) as btc_to_add,
+          LEAST(
+            ${ethWeiRequested}::bigint,
+            GREATEST(0::bigint, ${ethMaxWei}::bigint - current_eth_today),
+            ${ethPoolAvailable}::bigint
+          ) as eth_to_add,
+          LEAST(
+            ${usdtRequested}::numeric,
+            GREATEST(0::numeric, ${usdtMax}::numeric - current_usdt_today),
+            ${usdtPoolAvailable}::numeric
+          ) as usdt_to_add,
           current_btc_today,
           current_eth_today,
           current_usdt_today
@@ -799,15 +816,14 @@ export class DatabaseStorage implements IStorage {
     console.log(`Crypto rewards for user ${userId}: BTC +${btcSatsAwarded} sats (${btcAwarded}), ETH +${ethWeiAwarded} wei (${ethAwarded}), USDT +${usdtAwarded}`);
 
     if (btcSatsAwarded > 0 || ethWeiAwarded > 0 || usdtAwarded > 0) {
-      const currentConfig = await this.getGameEconomyConfig();
       await this.updateGameEconomyConfig({
         pools: {
-          btcBalanceSats: Math.max(0, currentConfig.pools.btcBalanceSats - btcSatsAwarded),
-          ethBalanceWei: Math.max(0, currentConfig.pools.ethBalanceWei - ethWeiAwarded),
-          usdtBalance: Math.max(0, currentConfig.pools.usdtBalance - usdtAwarded),
+          btcBalanceSats: Math.max(0, btcPoolAvailable - btcSatsAwarded),
+          ethBalanceWei: Math.max(0, ethPoolAvailable - ethWeiAwarded),
+          usdtBalance: Math.max(0, usdtPoolAvailable - usdtAwarded),
         },
       });
-      console.log(`Pools deducted: BTC -${btcSatsAwarded} sats, ETH -${ethWeiAwarded} wei, USDT -${usdtAwarded}`);
+      console.log(`Pools updated: BTC ${btcPoolAvailable} -> ${btcPoolAvailable - btcSatsAwarded} sats, ETH ${ethPoolAvailable} -> ${ethPoolAvailable - ethWeiAwarded} wei, USDT ${usdtPoolAvailable} -> ${usdtPoolAvailable - usdtAwarded}`);
     }
 
     return { btcAwarded, ethAwarded, usdtAwarded, btcSatsAwarded, ethWeiAwarded };
