@@ -268,6 +268,11 @@ export interface GameEconomyConfig {
   crypto: {
     spawnChance: number;
   };
+  cryptoRewards: {
+    btcPerBall: number;
+    ethPerBall: number;
+    usdtPerBall: number;
+  };
 }
 
 export interface ReferralConfig {

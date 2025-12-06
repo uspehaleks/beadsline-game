@@ -83,6 +83,7 @@ export interface IStorage {
   
   getGameEconomyConfig(): Promise<GameEconomyConfig>;
   updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
+  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number }>;
   
   getUserByReferralCode(referralCode: string): Promise<User | undefined>;
   generateReferralCode(): string;
@@ -554,7 +555,7 @@ export class DatabaseStorage implements IStorage {
   private getDefaultEconomyConfig(): GameEconomyConfig {
     return {
       points: {
-        normal: 100,
+        normal: 5,
         btc: 500,
         eth: 300,
         usdt: 200,
@@ -565,6 +566,11 @@ export class DatabaseStorage implements IStorage {
       },
       crypto: {
         spawnChance: 0.08,
+      },
+      cryptoRewards: {
+        btcPerBall: 0.00000005,
+        ethPerBall: 0.0000001,
+        usdtPerBall: 0.01,
       },
     };
   }
@@ -598,6 +604,11 @@ export class DatabaseStorage implements IStorage {
       crypto: {
         spawnChance: stored.crypto?.spawnChance ?? defaults.crypto.spawnChance,
       },
+      cryptoRewards: {
+        btcPerBall: stored.cryptoRewards?.btcPerBall ?? defaults.cryptoRewards.btcPerBall,
+        ethPerBall: stored.cryptoRewards?.ethPerBall ?? defaults.cryptoRewards.ethPerBall,
+        usdtPerBall: stored.cryptoRewards?.usdtPerBall ?? defaults.cryptoRewards.usdtPerBall,
+      },
     };
   }
 
@@ -618,6 +629,11 @@ export class DatabaseStorage implements IStorage {
       crypto: {
         spawnChance: updates.crypto?.spawnChance ?? current.crypto.spawnChance,
       },
+      cryptoRewards: {
+        btcPerBall: updates.cryptoRewards?.btcPerBall ?? current.cryptoRewards.btcPerBall,
+        ethPerBall: updates.cryptoRewards?.ethPerBall ?? current.cryptoRewards.ethPerBall,
+        usdtPerBall: updates.cryptoRewards?.usdtPerBall ?? current.cryptoRewards.usdtPerBall,
+      },
     };
     
     await this.setGameConfig({
@@ -627,6 +643,40 @@ export class DatabaseStorage implements IStorage {
     });
     
     return newConfig;
+  }
+
+  async processCryptoRewards(
+    userId: string, 
+    cryptoBtc: number, 
+    cryptoEth: number, 
+    cryptoUsdt: number
+  ): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0 };
+    }
+
+    const economyConfig = await this.getGameEconomyConfig();
+    const { cryptoRewards } = economyConfig;
+
+    const btcAwarded = cryptoBtc * cryptoRewards.btcPerBall;
+    const ethAwarded = cryptoEth * cryptoRewards.ethPerBall;
+    const usdtAwarded = cryptoUsdt * cryptoRewards.usdtPerBall;
+
+    if (btcAwarded > 0 || ethAwarded > 0 || usdtAwarded > 0) {
+      await db
+        .update(users)
+        .set({
+          btcBalance: (user.btcBalance || 0) + btcAwarded,
+          ethBalance: (user.ethBalance || 0) + ethAwarded,
+          usdtBalance: (user.usdtBalance || 0) + usdtAwarded,
+        })
+        .where(eq(users.id, userId));
+    }
+
+    console.log(`Crypto rewards for user ${userId}: BTC +${btcAwarded}, ETH +${ethAwarded}, USDT +${usdtAwarded}`);
+
+    return { btcAwarded, ethAwarded, usdtAwarded };
   }
 
   async getUserByReferralCode(referralCode: string): Promise<User | undefined> {
