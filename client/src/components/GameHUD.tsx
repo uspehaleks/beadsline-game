@@ -1,5 +1,6 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Target, Circle } from 'lucide-react';
+import { Clock, Zap, Circle } from 'lucide-react';
+import { getEconomyConfig } from '@/lib/gameEngine';
 
 interface GameHUDProps {
   gameState: GameState;
@@ -11,9 +12,14 @@ interface GameHUDProps {
 
 export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining, totalBalls }: GameHUDProps) {
   const { score, combo, cryptoCollected } = gameState;
-  const accuracy = gameState.shotsTotal > 0 
-    ? Math.round((gameState.shotsHit / gameState.shotsTotal) * 100) 
-    : 0;
+  
+  const economy = getEconomyConfig();
+  const SATS_PER_BTC = 100_000_000;
+  const WEI_PER_ETH = 1_000_000_000;
+  
+  const btcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
+  const ethWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
+  const usdtAmount = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -58,36 +64,43 @@ export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining,
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-4 mt-2">
-        <CryptoCounter type="btc" count={cryptoCollected.btc} />
-        <CryptoCounter type="eth" count={cryptoCollected.eth} />
-        <CryptoCounter type="usdt" count={cryptoCollected.usdt} />
+      <div className="flex items-center justify-center gap-3 mt-2 backdrop-blur-md bg-background/60 rounded-lg px-3 py-1.5 border border-border/30">
+        <CryptoRewardCounter type="btc" value={btcSats} unit="sats" />
+        <CryptoRewardCounter type="eth" value={ethWei} unit="gwei" />
+        <CryptoRewardCounter type="usdt" value={usdtAmount} unit="$" />
       </div>
     </div>
   );
 }
 
-interface CryptoCounterProps {
+interface CryptoRewardCounterProps {
   type: 'btc' | 'eth' | 'usdt';
-  count: number;
+  value: number;
+  unit: string;
 }
 
-function CryptoCounter({ type, count }: CryptoCounterProps) {
+function CryptoRewardCounter({ type, value, unit }: CryptoRewardCounterProps) {
   const config = {
-    btc: { symbol: '₿', color: 'text-crypto-btc' },
-    eth: { symbol: 'Ξ', color: 'text-crypto-eth' },
-    usdt: { symbol: '₮', color: 'text-crypto-usdt' },
+    btc: { symbol: '₿', color: 'text-[#f7931a]', bgColor: 'bg-[#f7931a]/10' },
+    eth: { symbol: 'Ξ', color: 'text-[#627eea]', bgColor: 'bg-[#627eea]/10' },
+    usdt: { symbol: '₮', color: 'text-[#26a17b]', bgColor: 'bg-[#26a17b]/10' },
   };
 
-  const { symbol, color } = config[type];
+  const { symbol, color, bgColor } = config[type];
+  
+  const displayValue = type === 'usdt' 
+    ? (value > 0 ? `$${value.toFixed(2)}` : '$0')
+    : `${value} ${unit}`;
 
   return (
     <div 
-      className="flex items-center gap-1"
-      data-testid={`crypto-counter-${type}`}
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${bgColor}`}
+      data-testid={`crypto-reward-${type}`}
     >
-      <span className={`font-bold text-lg ${color}`}>{symbol}</span>
-      <span className="font-semibold text-base tabular-nums text-foreground">{count}</span>
+      <span className={`font-bold text-sm ${color}`}>{symbol}</span>
+      <span className="font-semibold text-xs tabular-nums text-foreground">
+        {displayValue}
+      </span>
     </div>
   );
 }

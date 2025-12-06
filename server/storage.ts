@@ -793,7 +793,7 @@ export class DatabaseStorage implements IStorage {
         eth_balance_wei = u.eth_balance_wei + (SELECT eth_to_add FROM amounts),
         btc_today_sats = (SELECT current_btc_today + btc_to_add FROM amounts),
         eth_today_wei = (SELECT current_eth_today + eth_to_add FROM amounts),
-        usdt_today = (SELECT (current_usdt_today + usdt_to_add)::text FROM amounts),
+        usdt_today = (SELECT (current_usdt_today + usdt_to_add)::numeric FROM amounts),
         btc_today_date = ${today},
         eth_today_date = ${today},
         usdt_today_date = ${today}
