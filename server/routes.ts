@@ -1316,7 +1316,7 @@ export async function registerRoutes(
 
   app.put("/api/admin/game-economy", requireAdmin, async (req, res) => {
     try {
-      const { points, combo, crypto } = req.body;
+      const { points, combo, crypto, cryptoRewards, dailyLimits, pools, perGameLimits } = req.body;
       
       const updates: Record<string, any> = {};
       
@@ -1339,6 +1339,38 @@ export async function registerRoutes(
       if (crypto) {
         updates.crypto = {
           spawnChance: crypto.spawnChance !== undefined ? Math.max(0, Math.min(1, parseFloat(String(crypto.spawnChance)))) : undefined,
+        };
+      }
+      
+      if (cryptoRewards) {
+        updates.cryptoRewards = {
+          btcPerBall: cryptoRewards.btcPerBall !== undefined ? Math.max(0, parseFloat(String(cryptoRewards.btcPerBall))) : undefined,
+          ethPerBall: cryptoRewards.ethPerBall !== undefined ? Math.max(0, parseFloat(String(cryptoRewards.ethPerBall))) : undefined,
+          usdtPerBall: cryptoRewards.usdtPerBall !== undefined ? Math.max(0, parseFloat(String(cryptoRewards.usdtPerBall))) : undefined,
+        };
+      }
+      
+      if (dailyLimits) {
+        updates.dailyLimits = {
+          btcMaxSatsPerDay: dailyLimits.btcMaxSatsPerDay !== undefined ? Math.max(0, Math.floor(parseFloat(String(dailyLimits.btcMaxSatsPerDay)))) : undefined,
+          ethMaxWeiPerDay: dailyLimits.ethMaxWeiPerDay !== undefined ? Math.max(0, parseFloat(String(dailyLimits.ethMaxWeiPerDay))) : undefined,
+          usdtMaxPerDay: dailyLimits.usdtMaxPerDay !== undefined ? Math.max(0, parseFloat(String(dailyLimits.usdtMaxPerDay))) : undefined,
+        };
+      }
+      
+      if (pools) {
+        updates.pools = {
+          btcBalanceSats: pools.btcBalanceSats !== undefined ? Math.max(0, Math.floor(parseFloat(String(pools.btcBalanceSats)))) : undefined,
+          ethBalanceWei: pools.ethBalanceWei !== undefined ? Math.max(0, parseFloat(String(pools.ethBalanceWei))) : undefined,
+          usdtBalance: pools.usdtBalance !== undefined ? Math.max(0, parseFloat(String(pools.usdtBalance))) : undefined,
+        };
+      }
+      
+      if (perGameLimits) {
+        updates.perGameLimits = {
+          btcMaxBeadsPerGame: perGameLimits.btcMaxBeadsPerGame !== undefined ? Math.max(0, Math.floor(parseFloat(String(perGameLimits.btcMaxBeadsPerGame)))) : undefined,
+          ethMaxBeadsPerGame: perGameLimits.ethMaxBeadsPerGame !== undefined ? Math.max(0, Math.floor(parseFloat(String(perGameLimits.ethMaxBeadsPerGame)))) : undefined,
+          usdtMaxBeadsPerGame: perGameLimits.usdtMaxBeadsPerGame !== undefined ? Math.max(0, Math.floor(parseFloat(String(perGameLimits.usdtMaxBeadsPerGame)))) : undefined,
         };
       }
       
