@@ -661,6 +661,13 @@ export async function registerRoutes(
       
       await storage.updateUserStats(userId, validatedData.score);
       
+      const cryptoRewards = await storage.processCryptoRewards(
+        userId,
+        validatedData.cryptoBtc ?? 0,
+        validatedData.cryptoEth ?? 0,
+        validatedData.cryptoUsdt ?? 0
+      );
+      
       let rewardResult: { usdtAwarded: number; rewardId?: string } = { usdtAwarded: 0 };
       const usdtCollected = validatedData.cryptoUsdt ?? 0;
       if (usdtCollected > 0) {
@@ -681,6 +688,7 @@ export async function registerRoutes(
         ...score, 
         usdtAwarded: rewardResult.usdtAwarded,
         rewardId: rewardResult.rewardId,
+        cryptoRewards,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
