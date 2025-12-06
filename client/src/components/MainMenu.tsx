@@ -3,7 +3,8 @@ import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users, Gift, Copy, Check, X } from 'lucide-react';
+import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users, Gift, Copy, Check, X, Bitcoin } from 'lucide-react';
+import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -121,6 +122,27 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                     {user.totalPoints.toLocaleString()} Beads
                   </span>
                 </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t">
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10">
+                <Bitcoin className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-amber-600 tabular-nums" data-testid="text-btc-balance">
+                  {(user.btcBalance || 0).toFixed(8)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500/10">
+                <SiEthereum className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-600 tabular-nums" data-testid="text-eth-balance">
+                  {(user.ethBalance || 0).toFixed(8)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/10">
+                <SiTether className="w-4 h-4 text-green-500" />
+                <span className="text-sm font-medium text-green-600 tabular-nums" data-testid="text-usdt-balance">
+                  {(user.usdtBalance || 0).toFixed(2)}
+                </span>
               </div>
             </div>
           </Card>
