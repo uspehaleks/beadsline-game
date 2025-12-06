@@ -39,7 +39,8 @@ import {
   Wallet,
   Bitcoin,
   Activity,
-  UserPlus
+  UserPlus,
+  Coins
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -1754,9 +1755,10 @@ function formatNumber(val: number | string): string {
 function EconomyTab() {
   const { toast } = useToast();
   const [editConfig, setEditConfig] = useState<GameEconomyConfig>({
-    points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
+    points: { normal: 5, btc: 500, eth: 300, usdt: 200 },
     combo: { multiplier: 1.5, maxChain: 10 },
     crypto: { spawnChance: 0.08 },
+    cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
   });
   const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -1769,7 +1771,7 @@ function EconomyTab() {
     if (economyConfig && !hasInitialized) {
       const parseConfig = (config: any): GameEconomyConfig => ({
         points: {
-          normal: parseFloat(String(config.points?.normal ?? 100)),
+          normal: parseFloat(String(config.points?.normal ?? 5)),
           btc: parseFloat(String(config.points?.btc ?? 500)),
           eth: parseFloat(String(config.points?.eth ?? 300)),
           usdt: parseFloat(String(config.points?.usdt ?? 200)),
@@ -1780,6 +1782,11 @@ function EconomyTab() {
         },
         crypto: {
           spawnChance: parseFloat(String(config.crypto?.spawnChance ?? 0.08)),
+        },
+        cryptoRewards: {
+          btcPerBall: parseFloat(String(config.cryptoRewards?.btcPerBall ?? 0.00000005)),
+          ethPerBall: parseFloat(String(config.cryptoRewards?.ethPerBall ?? 0.0000001)),
+          usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
         },
       });
       setEditConfig(parseConfig(economyConfig));
@@ -2019,6 +2026,89 @@ function EconomyTab() {
 
           <Separator />
 
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <Coins className="w-5 h-5 text-amber-500" />
+              Крипто-награды за шарик
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Сколько реальной криптовалюты начисляется игроку за каждый собранный крипто-шарик
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>BTC за шарик</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['btcPerBall'] ?? formatNumber(editConfig.cryptoRewards.btcPerBall)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, btcPerBall: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        cryptoRewards: { ...editConfig.cryptoRewards, btcPerBall: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, btcPerBall: undefined as any }))}
+                  data-testid="input-btc-per-ball"
+                />
+                <p className="text-xs text-muted-foreground">
+                  0.00000005 = 5 сатош
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>ETH за шарик</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['ethPerBall'] ?? formatNumber(editConfig.cryptoRewards.ethPerBall)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, ethPerBall: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        cryptoRewards: { ...editConfig.cryptoRewards, ethPerBall: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, ethPerBall: undefined as any }))}
+                  data-testid="input-eth-per-ball"
+                />
+                <p className="text-xs text-muted-foreground">
+                  0.0000001 = 100 gwei
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>USDT за шарик</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['usdtPerBall'] ?? formatNumber(editConfig.cryptoRewards.usdtPerBall)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, usdtPerBall: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        cryptoRewards: { ...editConfig.cryptoRewards, usdtPerBall: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, usdtPerBall: undefined as any }))}
+                  data-testid="input-usdt-per-ball"
+                />
+                <p className="text-xs text-muted-foreground">
+                  0.01 = 1 цент
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="flex gap-3">
             <Button
               onClick={() => updateConfigMutation.mutate(editConfig)}
@@ -2038,7 +2128,7 @@ function EconomyTab() {
                 if (economyConfig) {
                   const parseConfig = (config: any): GameEconomyConfig => ({
                     points: {
-                      normal: parseFloat(String(config.points?.normal ?? 100)),
+                      normal: parseFloat(String(config.points?.normal ?? 5)),
                       btc: parseFloat(String(config.points?.btc ?? 500)),
                       eth: parseFloat(String(config.points?.eth ?? 300)),
                       usdt: parseFloat(String(config.points?.usdt ?? 200)),
@@ -2049,6 +2139,11 @@ function EconomyTab() {
                     },
                     crypto: {
                       spawnChance: parseFloat(String(config.crypto?.spawnChance ?? 0.08)),
+                    },
+                    cryptoRewards: {
+                      btcPerBall: parseFloat(String(config.cryptoRewards?.btcPerBall ?? 0.00000005)),
+                      ethPerBall: parseFloat(String(config.cryptoRewards?.ethPerBall ?? 0.0000001)),
+                      usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
                     },
                   });
                   setEditConfig(parseConfig(economyConfig));
