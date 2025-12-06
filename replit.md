@@ -116,15 +116,27 @@ GameEconomyConfig: {
     usdtPerBall: 0.01        // USDT awarded per crypto-USDT ball (1 cent)
   },
   dailyLimits: {
-    btcMaxSatsPerDay: 1000,     // Max satoshi per user per day (default 1000 sats)
-    ethMaxWeiPerDay: 10000000,  // Max wei/gwei per user per day (default 10M gwei)
-    usdtMaxPerDay: 1.0          // Max USDT per user per day (default $1)
+    btcMaxSatsPerDay: 300,       // Max satoshi per user per day
+    ethMaxWeiPerDay: 3000000000000000,  // Max gwei per user per day  
+    usdtMaxPerDay: 3.0           // Max USDT per user per day
+  },
+  pools: {
+    btcBalanceSats: 100000,      // Project BTC pool (satoshi)
+    ethBalanceWei: 1000000000000000,  // Project ETH pool (wei)
+    usdtBalance: 100             // Project USDT pool
+  },
+  perGameLimits: {
+    btcMaxBeadsPerGame: 15,      // Max BTC balls spawned per game
+    ethMaxBeadsPerGame: 15,      // Max ETH balls spawned per game
+    usdtMaxBeadsPerGame: 15      // Max USDT balls spawned per game
   }
 }
 ```
 **Note**: Crypto balls only give bonus points when matched in groups of 3+, not just collected.
 **Note**: Crypto balances (BTC, ETH, USDT) are persisted to user accounts after each game.
 **Note**: Daily limits reset at midnight UTC. Users can track their daily progress in the app.
+**Note**: Per-game limits control how many crypto balls of each type can spawn during one game session.
+**Note**: Crypto balls only spawn if the project pool has balance and the type is enabled.
 
 ### User Balance Tracking (in database)
 Additional fields for daily limits tracking:
