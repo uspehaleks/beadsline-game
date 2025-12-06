@@ -2,6 +2,7 @@ import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet } from 'lucide-react';
+import { SiEthereum } from 'react-icons/si';
 import { motion } from 'framer-motion';
 
 interface GameOverScreenProps {
@@ -188,15 +189,19 @@ interface CryptoStatProps {
 function CryptoStat({ type, count }: CryptoStatProps) {
   const config = {
     btc: { symbol: '₿', color: 'text-crypto-btc' },
-    eth: { symbol: 'Ξ', color: 'text-crypto-eth' },
+    eth: { symbol: null, color: 'text-crypto-eth', icon: true },
     usdt: { symbol: '₮', color: 'text-crypto-usdt' },
   };
 
-  const { symbol, color } = config[type];
+  const { symbol, color, icon } = config[type] as { symbol: string | null; color: string; icon?: boolean };
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className={`font-bold text-lg ${color}`}>{symbol}</span>
+      {icon ? (
+        <SiEthereum className={`w-5 h-5 ${color}`} />
+      ) : (
+        <span className={`font-bold text-lg ${color}`}>{symbol}</span>
+      )}
       <span className="font-semibold tabular-nums">{count}</span>
     </div>
   );
@@ -209,12 +214,12 @@ interface CryptoBalanceProps {
 
 function CryptoBalance({ type, amount }: CryptoBalanceProps) {
   const config = {
-    btc: { symbol: '₿', color: 'text-crypto-btc', unit: 'sat' },
-    eth: { symbol: 'Ξ', color: 'text-crypto-eth', unit: 'gwei' },
-    usdt: { symbol: '₮', color: 'text-crypto-usdt', unit: '' },
+    btc: { symbol: '₿', color: 'text-crypto-btc', unit: 'sat', icon: false },
+    eth: { symbol: null, color: 'text-crypto-eth', unit: 'gwei', icon: true },
+    usdt: { symbol: '₮', color: 'text-crypto-usdt', unit: '', icon: false },
   };
 
-  const { symbol, color, unit } = config[type];
+  const { symbol, color, unit, icon } = config[type];
 
   const formatAmount = () => {
     if (type === 'btc') {
@@ -229,7 +234,11 @@ function CryptoBalance({ type, amount }: CryptoBalanceProps) {
 
   return (
     <div className="flex items-center gap-1" data-testid={`balance-${type}`}>
-      <span className={`font-bold ${color}`}>{symbol}</span>
+      {icon ? (
+        <SiEthereum className={`w-4 h-4 ${color}`} />
+      ) : (
+        <span className={`font-bold ${color}`}>{symbol}</span>
+      )}
       <span className="text-sm font-medium tabular-nums">{formatAmount()}</span>
     </div>
   );
