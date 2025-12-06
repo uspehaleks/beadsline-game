@@ -96,13 +96,6 @@ export function GameOverScreen({
             <StatCard icon={<Clock className="w-4 h-4" />} label="Время" value={formatDuration(timeLeft)} />
             <StatCard icon={<Zap className="w-4 h-4" />} label="Комбо" value={`x${maxCombo}`} />
             <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
-            <div className="col-span-3">
-              <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-muted/50">
-                <CryptoStat type="btc" count={cryptoCollected.btc} />
-                <CryptoStat type="eth" count={cryptoCollected.eth} />
-                <CryptoStat type="usdt" count={cryptoCollected.usdt} />
-              </div>
-            </div>
           </motion.div>
 
           {user && (
