@@ -40,7 +40,8 @@ import {
   Bitcoin,
   Activity,
   UserPlus,
-  Coins
+  Coins,
+  Target
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -1759,7 +1760,9 @@ function EconomyTab() {
     combo: { multiplier: 1.5, maxChain: 10 },
     crypto: { spawnChance: 0.08 },
     cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
-    dailyLimits: { btcMaxSatsPerDay: 1000, ethMaxWeiPerDay: 10000000, usdtMaxPerDay: 1.0 },
+    dailyLimits: { btcMaxSatsPerDay: 300, ethMaxWeiPerDay: 3000000000000000, usdtMaxPerDay: 3.0 },
+    pools: { btcBalanceSats: 100000, ethBalanceWei: 1000000000000000, usdtBalance: 100 },
+    perGameLimits: { btcMaxBeadsPerGame: 15, ethMaxBeadsPerGame: 15, usdtMaxBeadsPerGame: 15 },
   });
   const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -1790,9 +1793,19 @@ function EconomyTab() {
           usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
         },
         dailyLimits: {
-          btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 1000)),
-          ethMaxWeiPerDay: parseInt(String(config.dailyLimits?.ethMaxWeiPerDay ?? 10000000)),
-          usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 1.0)),
+          btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 300)),
+          ethMaxWeiPerDay: parseFloat(String(config.dailyLimits?.ethMaxWeiPerDay ?? 3000000000000000)),
+          usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 3.0)),
+        },
+        pools: {
+          btcBalanceSats: parseInt(String(config.pools?.btcBalanceSats ?? 100000)),
+          ethBalanceWei: parseFloat(String(config.pools?.ethBalanceWei ?? 1000000000000000)),
+          usdtBalance: parseFloat(String(config.pools?.usdtBalance ?? 100)),
+        },
+        perGameLimits: {
+          btcMaxBeadsPerGame: parseInt(String(config.perGameLimits?.btcMaxBeadsPerGame ?? 15)),
+          ethMaxBeadsPerGame: parseInt(String(config.perGameLimits?.ethMaxBeadsPerGame ?? 15)),
+          usdtMaxBeadsPerGame: parseInt(String(config.perGameLimits?.usdtMaxBeadsPerGame ?? 15)),
         },
       });
       setEditConfig(parseConfig(economyConfig));
@@ -2187,6 +2200,157 @@ function EconomyTab() {
 
           <Separator />
 
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-blue-500" />
+              Пул крипто-фонда
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Общий баланс криптовалюты для раздачи игрокам. При нулевом балансе крипто-шарики не появляются.
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>BTC пул (сатоши)</Label>
+                <Input
+                  type="number"
+                  value={editConfig.pools.btcBalanceSats}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        pools: { ...editConfig.pools, btcBalanceSats: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-btc-pool"
+                />
+                <p className="text-xs text-muted-foreground">
+                  100000 сат = 0.001 BTC
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>ETH пул (wei/gwei)</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['ethPool'] ?? formatNumber(editConfig.pools.ethBalanceWei)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, ethPool: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        pools: { ...editConfig.pools, ethBalanceWei: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, ethPool: undefined as any }))}
+                  data-testid="input-eth-pool"
+                />
+                <p className="text-xs text-muted-foreground">
+                  1e15 wei = 0.001 ETH
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>USDT пул ($)</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['usdtPool'] ?? formatNumber(editConfig.pools.usdtBalance)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, usdtPool: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        pools: { ...editConfig.pools, usdtBalance: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, usdtPool: undefined as any }))}
+                  data-testid="input-usdt-pool"
+                />
+                <p className="text-xs text-muted-foreground">
+                  100 = $100 USDT
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium text-lg flex items-center gap-2">
+              <Target className="w-5 h-5 text-orange-500" />
+              Лимиты за игру
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Максимальное количество крипто-шариков каждого типа, которое может появиться в одной игре
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>BTC шариков/игра</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editConfig.perGameLimits.btcMaxBeadsPerGame}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        perGameLimits: { ...editConfig.perGameLimits, btcMaxBeadsPerGame: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-btc-per-game"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>ETH шариков/игра</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editConfig.perGameLimits.ethMaxBeadsPerGame}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        perGameLimits: { ...editConfig.perGameLimits, ethMaxBeadsPerGame: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-eth-per-game"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>USDT шариков/игра</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editConfig.perGameLimits.usdtMaxBeadsPerGame}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        perGameLimits: { ...editConfig.perGameLimits, usdtMaxBeadsPerGame: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-usdt-per-game"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="flex gap-3">
             <Button
               onClick={() => updateConfigMutation.mutate(editConfig)}
@@ -2224,9 +2388,19 @@ function EconomyTab() {
                       usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
                     },
                     dailyLimits: {
-                      btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 1000)),
-                      ethMaxWeiPerDay: parseInt(String(config.dailyLimits?.ethMaxWeiPerDay ?? 10000000)),
-                      usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 1.0)),
+                      btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 300)),
+                      ethMaxWeiPerDay: parseFloat(String(config.dailyLimits?.ethMaxWeiPerDay ?? 3000000000000000)),
+                      usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 3.0)),
+                    },
+                    pools: {
+                      btcBalanceSats: parseInt(String(config.pools?.btcBalanceSats ?? 100000)),
+                      ethBalanceWei: parseFloat(String(config.pools?.ethBalanceWei ?? 1000000000000000)),
+                      usdtBalance: parseFloat(String(config.pools?.usdtBalance ?? 100)),
+                    },
+                    perGameLimits: {
+                      btcMaxBeadsPerGame: parseInt(String(config.perGameLimits?.btcMaxBeadsPerGame ?? 15)),
+                      ethMaxBeadsPerGame: parseInt(String(config.perGameLimits?.ethMaxBeadsPerGame ?? 15)),
+                      usdtMaxBeadsPerGame: parseInt(String(config.perGameLimits?.usdtMaxBeadsPerGame ?? 15)),
                     },
                   });
                   setEditConfig(parseConfig(economyConfig));
