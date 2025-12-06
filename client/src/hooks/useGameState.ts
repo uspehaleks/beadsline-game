@@ -19,6 +19,7 @@ import {
   setAvailableCrypto,
   setUsdtFundEnabled,
   setEconomyConfig,
+  resetCryptoSpawnedCount,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -109,6 +110,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     gameEndedRef.current = false;
     gameStartTimeRef.current = Date.now();
     setElapsedTime(0);
+    
+    resetCryptoSpawnedCount();
     
     const dims = dimensionsRef.current;
     const newPath = generatePath(dims.width, dims.height);

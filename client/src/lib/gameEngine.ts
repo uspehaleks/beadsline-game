@@ -20,8 +20,49 @@ const DEFAULT_ECONOMY: GameEconomyConfig = {
 
 let currentEconomy: GameEconomyConfig = DEFAULT_ECONOMY;
 
-export function setEconomyConfig(config: GameEconomyConfig) {
-  currentEconomy = config;
+function toNumber(val: string | number | undefined, fallback: number): number {
+  if (val === undefined || val === null) return fallback;
+  const num = typeof val === 'string' ? parseFloat(val) : val;
+  return isNaN(num) ? fallback : num;
+}
+
+export function setEconomyConfig(config: Partial<GameEconomyConfig>) {
+  const defaults = DEFAULT_ECONOMY;
+  currentEconomy = {
+    points: {
+      normal: toNumber(config.points?.normal, defaults.points.normal),
+      btc: toNumber(config.points?.btc, defaults.points.btc),
+      eth: toNumber(config.points?.eth, defaults.points.eth),
+      usdt: toNumber(config.points?.usdt, defaults.points.usdt),
+    },
+    combo: {
+      multiplier: toNumber(config.combo?.multiplier, defaults.combo.multiplier),
+      maxChain: toNumber(config.combo?.maxChain, defaults.combo.maxChain),
+    },
+    crypto: {
+      spawnChance: toNumber(config.crypto?.spawnChance, defaults.crypto.spawnChance),
+    },
+    cryptoRewards: {
+      btcPerBall: toNumber(config.cryptoRewards?.btcPerBall, defaults.cryptoRewards.btcPerBall),
+      ethPerBall: toNumber(config.cryptoRewards?.ethPerBall, defaults.cryptoRewards.ethPerBall),
+      usdtPerBall: toNumber(config.cryptoRewards?.usdtPerBall, defaults.cryptoRewards.usdtPerBall),
+    },
+    dailyLimits: {
+      btcMaxSatsPerDay: toNumber(config.dailyLimits?.btcMaxSatsPerDay, defaults.dailyLimits.btcMaxSatsPerDay),
+      ethMaxWeiPerDay: toNumber(config.dailyLimits?.ethMaxWeiPerDay, defaults.dailyLimits.ethMaxWeiPerDay),
+      usdtMaxPerDay: toNumber(config.dailyLimits?.usdtMaxPerDay, defaults.dailyLimits.usdtMaxPerDay),
+    },
+    pools: {
+      btcBalanceSats: toNumber(config.pools?.btcBalanceSats, defaults.pools.btcBalanceSats),
+      ethBalanceWei: toNumber(config.pools?.ethBalanceWei, defaults.pools.ethBalanceWei),
+      usdtBalance: toNumber(config.pools?.usdtBalance, defaults.pools.usdtBalance),
+    },
+    perGameLimits: {
+      btcMaxBeadsPerGame: toNumber(config.perGameLimits?.btcMaxBeadsPerGame, defaults.perGameLimits.btcMaxBeadsPerGame),
+      ethMaxBeadsPerGame: toNumber(config.perGameLimits?.ethMaxBeadsPerGame, defaults.perGameLimits.ethMaxBeadsPerGame),
+      usdtMaxBeadsPerGame: toNumber(config.perGameLimits?.usdtMaxBeadsPerGame, defaults.perGameLimits.usdtMaxBeadsPerGame),
+    },
+  };
 }
 
 export function getEconomyConfig(): GameEconomyConfig {
@@ -99,6 +140,7 @@ export interface FundSettings {
 
 let availableCrypto: AvailableCrypto = { btc: true, eth: true, usdt: true };
 let usdtFundEnabled: boolean = false;
+let cryptoSpawnedThisGame: { btc: number; eth: number; usdt: number } = { btc: 0, eth: 0, usdt: 0 };
 
 export function setAvailableCrypto(crypto: AvailableCrypto) {
   availableCrypto = crypto;
@@ -116,10 +158,19 @@ export function getUsdtFundEnabled(): boolean {
   return usdtFundEnabled;
 }
 
+export function resetCryptoSpawnedCount() {
+  cryptoSpawnedThisGame = { btc: 0, eth: 0, usdt: 0 };
+}
+
+export function getCryptoSpawnedCount() {
+  return { ...cryptoSpawnedThisGame };
+}
+
 export function createRandomBall(id: string, pathProgress: number = 0): Ball {
   const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
   
   const spawnChance = currentEconomy.crypto.spawnChance;
+  const limits = currentEconomy.perGameLimits;
   
   const isUsdtFundBall = usdtFundEnabled && Math.random() < spawnChance;
   
@@ -135,13 +186,19 @@ export function createRandomBall(id: string, pathProgress: number = 0): Ball {
     };
   }
   
-  const availableTypes = CRYPTO_TYPES.filter(type => availableCrypto[type] === true);
+  const availableTypes = CRYPTO_TYPES.filter(type => {
+    if (!availableCrypto[type]) return false;
+    const limit = limits[`${type}MaxBeadsPerGame` as keyof typeof limits] || 15;
+    return cryptoSpawnedThisGame[type] < limit;
+  });
   const hasCryptoAvailable = availableTypes.length > 0;
   const isCrypto = hasCryptoAvailable && Math.random() < spawnChance;
   
-  const crypto = isCrypto 
-    ? availableTypes[Math.floor(Math.random() * availableTypes.length)] 
-    : undefined;
+  let crypto: CryptoType | undefined = undefined;
+  if (isCrypto) {
+    crypto = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    cryptoSpawnedThisGame[crypto]++;
+  }
   
   return {
     id,
