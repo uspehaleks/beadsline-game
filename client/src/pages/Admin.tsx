@@ -1976,15 +1976,21 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>Множитель комбо</Label>
                 <Input
-                  type="number"
-                  min="1"
-                  max="5"
-                  step="0.1"
-                  value={editConfig.combo.multiplier}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    combo: { ...editConfig.combo, multiplier: Number(e.target.value) || 1 }
-                  })}
+                  type="text"
+                  inputMode="decimal"
+                  value={rawInputs['comboMultiplier'] ?? formatNumber(editConfig.combo.multiplier)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, comboMultiplier: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 1 && num <= 5) {
+                      setEditConfig({
+                        ...editConfig,
+                        combo: { ...editConfig.combo, multiplier: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, comboMultiplier: undefined as any }))}
                   data-testid="input-combo-multiplier"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -1994,14 +2000,21 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>Макс. цепочка комбо</Label>
                 <Input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={editConfig.combo.maxChain}
-                  onChange={(e) => setEditConfig({
-                    ...editConfig,
-                    combo: { ...editConfig.combo, maxChain: Number(e.target.value) || 1 }
-                  })}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['comboMaxChain'] ?? String(editConfig.combo.maxChain)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, comboMaxChain: val }));
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 1 && num <= 20) {
+                      setEditConfig({
+                        ...editConfig,
+                        combo: { ...editConfig.combo, maxChain: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, comboMaxChain: undefined as any }))}
                   data-testid="input-combo-max"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -2135,10 +2148,13 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>BTC макс сатоши/день</Label>
                 <Input
-                  type="number"
-                  value={editConfig.dailyLimits.btcMaxSatsPerDay}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['btcDailyLimit'] ?? String(editConfig.dailyLimits.btcMaxSatsPerDay)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, btcDailyLimit: val }));
+                    const num = parseInt(val);
                     if (!isNaN(num) && num >= 0) {
                       setEditConfig({
                         ...editConfig,
@@ -2146,6 +2162,7 @@ function EconomyTab() {
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, btcDailyLimit: undefined as any }))}
                   data-testid="input-btc-daily-limit"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -2155,10 +2172,13 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>ETH макс gwei/день</Label>
                 <Input
-                  type="number"
-                  value={editConfig.dailyLimits.ethMaxWeiPerDay}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['ethDailyLimit'] ?? formatNumber(editConfig.dailyLimits.ethMaxWeiPerDay)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, ethDailyLimit: val }));
+                    const num = parseFloat(val);
                     if (!isNaN(num) && num >= 0) {
                       setEditConfig({
                         ...editConfig,
@@ -2166,6 +2186,7 @@ function EconomyTab() {
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, ethDailyLimit: undefined as any }))}
                   data-testid="input-eth-daily-limit"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -2212,10 +2233,13 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>BTC пул (сатоши)</Label>
                 <Input
-                  type="number"
-                  value={editConfig.pools.btcBalanceSats}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['btcPool'] ?? String(editConfig.pools.btcBalanceSats)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, btcPool: val }));
+                    const num = parseInt(val);
                     if (!isNaN(num) && num >= 0) {
                       setEditConfig({
                         ...editConfig,
@@ -2223,6 +2247,7 @@ function EconomyTab() {
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, btcPool: undefined as any }))}
                   data-testid="input-btc-pool"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -2292,57 +2317,63 @@ function EconomyTab() {
               <div className="space-y-2">
                 <Label>BTC шариков/игра</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={editConfig.perGameLimits.btcMaxBeadsPerGame}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['btcPerGame'] ?? String(editConfig.perGameLimits.btcMaxBeadsPerGame)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
-                    if (!isNaN(num) && num >= 0) {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, btcPerGame: val }));
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0 && num <= 100) {
                       setEditConfig({
                         ...editConfig,
                         perGameLimits: { ...editConfig.perGameLimits, btcMaxBeadsPerGame: num }
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, btcPerGame: undefined as any }))}
                   data-testid="input-btc-per-game"
                 />
               </div>
               <div className="space-y-2">
                 <Label>ETH шариков/игра</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={editConfig.perGameLimits.ethMaxBeadsPerGame}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['ethPerGame'] ?? String(editConfig.perGameLimits.ethMaxBeadsPerGame)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
-                    if (!isNaN(num) && num >= 0) {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, ethPerGame: val }));
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0 && num <= 100) {
                       setEditConfig({
                         ...editConfig,
                         perGameLimits: { ...editConfig.perGameLimits, ethMaxBeadsPerGame: num }
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, ethPerGame: undefined as any }))}
                   data-testid="input-eth-per-game"
                 />
               </div>
               <div className="space-y-2">
                 <Label>USDT шариков/игра</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={editConfig.perGameLimits.usdtMaxBeadsPerGame}
+                  type="text"
+                  inputMode="numeric"
+                  value={rawInputs['usdtPerGame'] ?? String(editConfig.perGameLimits.usdtMaxBeadsPerGame)}
                   onChange={(e) => {
-                    const num = parseInt(e.target.value);
-                    if (!isNaN(num) && num >= 0) {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, usdtPerGame: val }));
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0 && num <= 100) {
                       setEditConfig({
                         ...editConfig,
                         perGameLimits: { ...editConfig.perGameLimits, usdtMaxBeadsPerGame: num }
                       });
                     }
                   }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, usdtPerGame: undefined as any }))}
                   data-testid="input-usdt-per-game"
                 />
               </div>
