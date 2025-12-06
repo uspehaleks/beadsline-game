@@ -146,7 +146,7 @@ export function GameCanvas({
     
     const spawnOpacity = progress < 0 ? Math.max(0, 1 + (progress / 0.03)) : 1;
     
-    const baseColor = BALL_COLOR_MAP[ball.color];
+    const baseColor = ball.crypto ? CRYPTO_COLOR_MAP[ball.crypto] : BALL_COLOR_MAP[ball.color];
     
     const rollAngle = progress * Math.PI * 20;
     
@@ -166,11 +166,11 @@ export function GameCanvas({
       ctx.stroke();
     } else if (ball.crypto) {
       ctx.shadowColor = CRYPTO_COLOR_MAP[ball.crypto];
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 15;
       ctx.beginPath();
       ctx.arc(0, 0, BALL_RADIUS + 3, 0, Math.PI * 2);
       ctx.strokeStyle = CRYPTO_COLOR_MAP[ball.crypto];
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.stroke();
     }
     

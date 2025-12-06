@@ -293,17 +293,27 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   return newBalls;
 }
 
-export function findMatchingBalls(balls: Ball[], insertIndex: number, color: BallColor): number[] {
+function ballsMatch(ball1: Ball, ball2: Ball): boolean {
+  if (ball1.crypto && ball2.crypto) {
+    return ball1.crypto === ball2.crypto;
+  }
+  if (!ball1.crypto && !ball2.crypto) {
+    return ball1.color === ball2.color;
+  }
+  return false;
+}
+
+export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBall: Ball): number[] {
   const matches: number[] = [insertIndex];
   
   let left = insertIndex - 1;
-  while (left >= 0 && balls[left].color === color) {
+  while (left >= 0 && ballsMatch(balls[left], insertedBall)) {
     matches.unshift(left);
     left--;
   }
   
   let right = insertIndex + 1;
-  while (right < balls.length && balls[right].color === color) {
+  while (right < balls.length && ballsMatch(balls[right], insertedBall)) {
     matches.push(right);
     right++;
   }

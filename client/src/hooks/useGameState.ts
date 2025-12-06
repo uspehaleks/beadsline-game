@@ -249,7 +249,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         let newBalls = insertBallInChain(prev.balls, projectile.ball, insertIndex);
         newBalls = updateBallPositions(newBalls, pathRef.current);
         
-        const matches = findMatchingBalls(newBalls, insertIndex, projectile.ball.color);
+        const matches = findMatchingBalls(newBalls, insertIndex, projectile.ball);
         
         if (matches.length >= 3) {
           const matchedBalls = matches.map(i => newBalls[i]);
