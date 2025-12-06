@@ -95,12 +95,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
       const response = await fetch('/api/game-economy');
       if (response.ok) {
         const economyData = await response.json();
-        setEconomyConfig({
-          points: economyData.points,
-          combo: economyData.combo,
-          crypto: economyData.crypto,
-        });
-        setAvailableCrypto(economyData.cryptoAvailable);
+        setEconomyConfig(economyData);
+        setAvailableCrypto(economyData.cryptoAvailable || { btc: true, eth: true, usdt: true });
         setUsdtFundEnabled(economyData.usdtFundEnabled === true);
       }
     } catch (error) {

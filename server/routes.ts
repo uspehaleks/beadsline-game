@@ -1278,7 +1278,6 @@ export async function registerRoutes(
   app.get("/api/game-economy", async (req, res) => {
     try {
       const config = await storage.getGameEconomyConfig();
-      const balances = await storage.getAdminCryptoBalances();
       const usdtFundStats = await storage.getUsdtFundStats();
       const fundToggles = await storage.getFundToggles();
       
@@ -1286,12 +1285,16 @@ export async function registerRoutes(
         usdtFundStats.settings.usdtAvailable > 0 &&
         usdtFundStats.distributedToday < usdtFundStats.settings.usdtDailyLimit;
       
+      const btcHasPool = config.pools.btcBalanceSats > 0;
+      const ethHasPool = config.pools.ethBalanceWei > 0;
+      const usdtHasPool = config.pools.usdtBalance > 0;
+      
       res.json(formatNumbersInObject({
         ...config,
         cryptoAvailable: {
-          btc: fundToggles.cryptoFundEnabled && balances.btc > 0,
-          eth: fundToggles.cryptoFundEnabled && balances.eth > 0,
-          usdt: fundToggles.cryptoFundEnabled && balances.usdt > 0,
+          btc: fundToggles.cryptoFundEnabled && btcHasPool,
+          eth: fundToggles.cryptoFundEnabled && ethHasPool,
+          usdt: fundToggles.cryptoFundEnabled && usdtHasPool,
         },
         usdtFundEnabled: fundToggles.usdtFundEnabled && usdtFundAvailable,
       }));

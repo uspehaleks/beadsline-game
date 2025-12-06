@@ -12,6 +12,10 @@ const DEFAULT_ECONOMY: GameEconomyConfig = {
   points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
   combo: { multiplier: 1.5, maxChain: 10 },
   crypto: { spawnChance: 0.08 },
+  cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
+  dailyLimits: { btcMaxSatsPerDay: 300, ethMaxWeiPerDay: 3000000000000000, usdtMaxPerDay: 3.0 },
+  pools: { btcBalanceSats: 100000, ethBalanceWei: 1000000000000000, usdtBalance: 100 },
+  perGameLimits: { btcMaxBeadsPerGame: 15, ethMaxBeadsPerGame: 15, usdtMaxBeadsPerGame: 15 },
 };
 
 let currentEconomy: GameEconomyConfig = DEFAULT_ECONOMY;
