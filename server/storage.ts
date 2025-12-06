@@ -656,12 +656,38 @@ export class DatabaseStorage implements IStorage {
       return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0 };
     }
 
+    const MAX_CRYPTO_BALLS_PER_GAME = 50;
+    
+    const sanitizeCounts = (val: any): number => {
+      const num = typeof val === 'number' ? val : parseInt(String(val), 10);
+      if (isNaN(num) || !isFinite(num) || num < 0) return 0;
+      return Math.min(Math.floor(num), MAX_CRYPTO_BALLS_PER_GAME);
+    };
+
+    const safeBtc = sanitizeCounts(cryptoBtc);
+    const safeEth = sanitizeCounts(cryptoEth);
+    const safeUsdt = sanitizeCounts(cryptoUsdt);
+
+    if (safeBtc === 0 && safeEth === 0 && safeUsdt === 0) {
+      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0 };
+    }
+
     const economyConfig = await this.getGameEconomyConfig();
     const { cryptoRewards } = economyConfig;
 
-    const btcAwarded = cryptoBtc * cryptoRewards.btcPerBall;
-    const ethAwarded = cryptoEth * cryptoRewards.ethPerBall;
-    const usdtAwarded = cryptoUsdt * cryptoRewards.usdtPerBall;
+    const sanitizeRewardRate = (val: any, defaultVal: number): number => {
+      const num = typeof val === 'number' ? val : parseFloat(String(val));
+      if (isNaN(num) || !isFinite(num) || num < 0) return defaultVal;
+      return num;
+    };
+
+    const btcRate = sanitizeRewardRate(cryptoRewards.btcPerBall, 0.00000005);
+    const ethRate = sanitizeRewardRate(cryptoRewards.ethPerBall, 0.0000001);
+    const usdtRate = sanitizeRewardRate(cryptoRewards.usdtPerBall, 0.01);
+
+    const btcAwarded = safeBtc * btcRate;
+    const ethAwarded = safeEth * ethRate;
+    const usdtAwarded = safeUsdt * usdtRate;
 
     if (btcAwarded > 0 || ethAwarded > 0 || usdtAwarded > 0) {
       await db

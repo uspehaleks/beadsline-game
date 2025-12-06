@@ -98,7 +98,7 @@ Economy parameters configurable at runtime via Admin Panel → Экономик�
 ```typescript
 GameEconomyConfig: {
   points: {
-    normal: 100,        // Points per regular ball matched
+    normal: 5,          // Points per regular ball matched
     btc: 500,           // Bonus for BTC ball (added to normal)
     eth: 300,           // Bonus for ETH ball
     usdt: 200           // Bonus for USDT ball
@@ -109,10 +109,16 @@ GameEconomyConfig: {
   },
   crypto: {
     spawnChance: 0.08   // Chance for crypto ball (8%)
+  },
+  cryptoRewards: {
+    btcPerBall: 0.00000005,  // BTC awarded per crypto-BTC ball (5 satoshi)
+    ethPerBall: 0.0000001,   // ETH awarded per crypto-ETH ball (100 gwei)
+    usdtPerBall: 0.01        // USDT awarded per crypto-USDT ball (1 cent)
   }
 }
 ```
 **Note**: Crypto balls only give bonus points when matched in groups of 3+, not just collected.
+**Note**: Crypto balances (BTC, ETH, USDT) are persisted to user accounts after each game.
 
 ## API Endpoints
 | Endpoint | Method | Description |
