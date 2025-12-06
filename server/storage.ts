@@ -573,9 +573,19 @@ export class DatabaseStorage implements IStorage {
         usdtPerBall: 0.01,
       },
       dailyLimits: {
-        btcMaxSatsPerDay: 1000,
-        ethMaxWeiPerDay: 10000000,
-        usdtMaxPerDay: 1.0,
+        btcMaxSatsPerDay: 300,
+        ethMaxWeiPerDay: 3000000000000000,
+        usdtMaxPerDay: 3.0,
+      },
+      pools: {
+        btcBalanceSats: 100000,
+        ethBalanceWei: 1000000000000000,
+        usdtBalance: 100,
+      },
+      perGameLimits: {
+        btcMaxBeadsPerGame: 15,
+        ethMaxBeadsPerGame: 15,
+        usdtMaxBeadsPerGame: 15,
       },
     };
   }
@@ -619,6 +629,16 @@ export class DatabaseStorage implements IStorage {
         ethMaxWeiPerDay: stored.dailyLimits?.ethMaxWeiPerDay ?? defaults.dailyLimits.ethMaxWeiPerDay,
         usdtMaxPerDay: stored.dailyLimits?.usdtMaxPerDay ?? defaults.dailyLimits.usdtMaxPerDay,
       },
+      pools: {
+        btcBalanceSats: stored.pools?.btcBalanceSats ?? defaults.pools.btcBalanceSats,
+        ethBalanceWei: stored.pools?.ethBalanceWei ?? defaults.pools.ethBalanceWei,
+        usdtBalance: stored.pools?.usdtBalance ?? defaults.pools.usdtBalance,
+      },
+      perGameLimits: {
+        btcMaxBeadsPerGame: stored.perGameLimits?.btcMaxBeadsPerGame ?? defaults.perGameLimits.btcMaxBeadsPerGame,
+        ethMaxBeadsPerGame: stored.perGameLimits?.ethMaxBeadsPerGame ?? defaults.perGameLimits.ethMaxBeadsPerGame,
+        usdtMaxBeadsPerGame: stored.perGameLimits?.usdtMaxBeadsPerGame ?? defaults.perGameLimits.usdtMaxBeadsPerGame,
+      },
     };
   }
 
@@ -648,6 +668,16 @@ export class DatabaseStorage implements IStorage {
         btcMaxSatsPerDay: updates.dailyLimits?.btcMaxSatsPerDay ?? current.dailyLimits.btcMaxSatsPerDay,
         ethMaxWeiPerDay: updates.dailyLimits?.ethMaxWeiPerDay ?? current.dailyLimits.ethMaxWeiPerDay,
         usdtMaxPerDay: updates.dailyLimits?.usdtMaxPerDay ?? current.dailyLimits.usdtMaxPerDay,
+      },
+      pools: {
+        btcBalanceSats: updates.pools?.btcBalanceSats ?? current.pools.btcBalanceSats,
+        ethBalanceWei: updates.pools?.ethBalanceWei ?? current.pools.ethBalanceWei,
+        usdtBalance: updates.pools?.usdtBalance ?? current.pools.usdtBalance,
+      },
+      perGameLimits: {
+        btcMaxBeadsPerGame: updates.perGameLimits?.btcMaxBeadsPerGame ?? current.perGameLimits.btcMaxBeadsPerGame,
+        ethMaxBeadsPerGame: updates.perGameLimits?.ethMaxBeadsPerGame ?? current.perGameLimits.ethMaxBeadsPerGame,
+        usdtMaxBeadsPerGame: updates.perGameLimits?.usdtMaxBeadsPerGame ?? current.perGameLimits.usdtMaxBeadsPerGame,
       },
     };
     
@@ -768,7 +798,71 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`Crypto rewards for user ${userId}: BTC +${btcSatsAwarded} sats (${btcAwarded}), ETH +${ethWeiAwarded} wei (${ethAwarded}), USDT +${usdtAwarded}`);
 
+    if (btcSatsAwarded > 0 || ethWeiAwarded > 0 || usdtAwarded > 0) {
+      const currentConfig = await this.getGameEconomyConfig();
+      await this.updateGameEconomyConfig({
+        pools: {
+          btcBalanceSats: Math.max(0, currentConfig.pools.btcBalanceSats - btcSatsAwarded),
+          ethBalanceWei: Math.max(0, currentConfig.pools.ethBalanceWei - ethWeiAwarded),
+          usdtBalance: Math.max(0, currentConfig.pools.usdtBalance - usdtAwarded),
+        },
+      });
+      console.log(`Pools deducted: BTC -${btcSatsAwarded} sats, ETH -${ethWeiAwarded} wei, USDT -${usdtAwarded}`);
+    }
+
     return { btcAwarded, ethAwarded, usdtAwarded, btcSatsAwarded, ethWeiAwarded };
+  }
+
+  async getCryptoAvailability(userId: string): Promise<import('@shared/schema').CryptoAvailability> {
+    const user = await this.getUser(userId);
+    const config = await this.getGameEconomyConfig();
+    const { dailyLimits, pools, perGameLimits, cryptoRewards } = config;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const SATS_PER_BTC = 100_000_000;
+    const WEI_PER_ETH = 1_000_000_000;
+
+    const btcSatsPerBall = Math.round(cryptoRewards.btcPerBall * SATS_PER_BTC);
+    const ethWeiPerBall = Math.round(cryptoRewards.ethPerBall * WEI_PER_ETH);
+
+    const minBtcReward = 3 * btcSatsPerBall;
+    const minEthReward = 3 * ethWeiPerBall;
+    const minUsdtReward = 3 * cryptoRewards.usdtPerBall;
+
+    let btcTodaySats = 0;
+    let ethTodayWei = 0;
+    let usdtToday = 0;
+
+    if (user) {
+      btcTodaySats = user.btcTodayDate === today ? Number(user.btcTodaySats) || 0 : 0;
+      ethTodayWei = user.ethTodayDate === today ? Number(user.ethTodayWei) || 0 : 0;
+      usdtToday = user.usdtTodayDate === today ? parseFloat(String(user.usdtToday)) || 0 : 0;
+    }
+
+    const btcRemaining = Math.max(0, dailyLimits.btcMaxSatsPerDay - btcTodaySats);
+    const ethRemaining = Math.max(0, dailyLimits.ethMaxWeiPerDay - ethTodayWei);
+    const usdtRemaining = Math.max(0, dailyLimits.usdtMaxPerDay - usdtToday);
+
+    const btcHasFund = pools.btcBalanceSats >= minBtcReward;
+    const ethHasFund = pools.ethBalanceWei >= minEthReward;
+    const usdtHasFund = pools.usdtBalance >= minUsdtReward;
+
+    const btcHasLimit = btcRemaining >= btcSatsPerBall;
+    const ethHasLimit = ethRemaining >= ethWeiPerBall;
+    const usdtHasLimit = usdtRemaining >= cryptoRewards.usdtPerBall;
+
+    return {
+      btcEnabled: btcHasFund && btcHasLimit,
+      ethEnabled: ethHasFund && ethHasLimit,
+      usdtEnabled: usdtHasFund && usdtHasLimit,
+      btcRemainingToday: btcRemaining,
+      ethRemainingToday: ethRemaining,
+      usdtRemainingToday: usdtRemaining,
+      btcMaxBeadsPerGame: perGameLimits.btcMaxBeadsPerGame,
+      ethMaxBeadsPerGame: perGameLimits.ethMaxBeadsPerGame,
+      usdtMaxBeadsPerGame: perGameLimits.usdtMaxBeadsPerGame,
+    };
   }
 
   async getUserByReferralCode(referralCode: string): Promise<User | undefined> {

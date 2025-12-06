@@ -1078,6 +1078,17 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/crypto-availability", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const availability = await storage.getCryptoAvailability(userId);
+      res.json(availability);
+    } catch (error) {
+      console.error("Get crypto availability error:", error);
+      res.status(500).json({ error: "Failed to get crypto availability" });
+    }
+  });
+
   app.get("/api/referral", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;

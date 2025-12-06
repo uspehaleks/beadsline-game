@@ -286,6 +286,28 @@ export interface GameEconomyConfig {
     ethMaxWeiPerDay: number;
     usdtMaxPerDay: number;
   };
+  pools: {
+    btcBalanceSats: number;
+    ethBalanceWei: number;
+    usdtBalance: number;
+  };
+  perGameLimits: {
+    btcMaxBeadsPerGame: number;
+    ethMaxBeadsPerGame: number;
+    usdtMaxBeadsPerGame: number;
+  };
+}
+
+export interface CryptoAvailability {
+  btcEnabled: boolean;
+  ethEnabled: boolean;
+  usdtEnabled: boolean;
+  btcRemainingToday: number;
+  ethRemainingToday: number;
+  usdtRemainingToday: number;
+  btcMaxBeadsPerGame: number;
+  ethMaxBeadsPerGame: number;
+  usdtMaxBeadsPerGame: number;
 }
 
 export interface ReferralConfig {
