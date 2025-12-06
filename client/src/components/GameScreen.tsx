@@ -8,6 +8,7 @@ import { useGameState } from '@/hooks/useGameState';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { useUser } from '@/contexts/UserContext';
 
 interface GameScreenProps {
   onGameEnd: (state: GameState) => void;
@@ -19,6 +20,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sessionIdRef = useRef<string | null>(null);
+  const { user } = useUser();
 
   const startSession = useCallback(async () => {
     try {
@@ -166,6 +168,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
           onPlayAgain={handlePlayAgain}
           onViewLeaderboard={onViewLeaderboard}
           onMainMenu={onMainMenu}
+          user={user}
         />
       )}
     </div>

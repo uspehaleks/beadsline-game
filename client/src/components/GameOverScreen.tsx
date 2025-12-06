@@ -1,7 +1,7 @@
-import type { GameState } from '@shared/schema';
+import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Trophy, RefreshCw, Crown, Target, Zap, Clock } from 'lucide-react';
+import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface GameOverScreenProps {
@@ -9,6 +9,7 @@ interface GameOverScreenProps {
   onPlayAgain: () => void;
   onViewLeaderboard: () => void;
   onMainMenu: () => void;
+  user: User | null;
 }
 
 export function GameOverScreen({
@@ -16,6 +17,7 @@ export function GameOverScreen({
   onPlayAgain,
   onViewLeaderboard,
   onMainMenu,
+  user,
 }: GameOverScreenProps) {
   const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
@@ -102,6 +104,25 @@ export function GameOverScreen({
             </div>
           </motion.div>
 
+          {user && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55 }}
+              className="mb-6"
+            >
+              <div className="flex items-center justify-center gap-2 mb-2 text-muted-foreground">
+                <Wallet className="w-4 h-4" />
+                <span className="text-sm">Ваш баланс</span>
+              </div>
+              <div className="flex items-center justify-center gap-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <CryptoBalance type="btc" amount={user.btcBalanceSats || 0} />
+                <CryptoBalance type="eth" amount={user.ethBalanceWei || 0} />
+                <CryptoBalance type="usdt" amount={user.usdtBalance || 0} />
+              </div>
+            </motion.div>
+          )}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,6 +198,39 @@ function CryptoStat({ type, count }: CryptoStatProps) {
     <div className="flex items-center gap-1.5">
       <span className={`font-bold text-lg ${color}`}>{symbol}</span>
       <span className="font-semibold tabular-nums">{count}</span>
+    </div>
+  );
+}
+
+interface CryptoBalanceProps {
+  type: 'btc' | 'eth' | 'usdt';
+  amount: number;
+}
+
+function CryptoBalance({ type, amount }: CryptoBalanceProps) {
+  const config = {
+    btc: { symbol: '₿', color: 'text-crypto-btc', unit: 'sat' },
+    eth: { symbol: 'Ξ', color: 'text-crypto-eth', unit: 'gwei' },
+    usdt: { symbol: '₮', color: 'text-crypto-usdt', unit: '' },
+  };
+
+  const { symbol, color, unit } = config[type];
+
+  const formatAmount = () => {
+    if (type === 'btc') {
+      return `${amount} ${unit}`;
+    } else if (type === 'eth') {
+      const gwei = Math.floor(amount / 1000000000);
+      return `${gwei} ${unit}`;
+    } else {
+      return `$${Number(amount).toFixed(2)}`;
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1" data-testid={`balance-${type}`}>
+      <span className={`font-bold ${color}`}>{symbol}</span>
+      <span className="text-sm font-medium tabular-nums">{formatAmount()}</span>
     </div>
   );
 }
