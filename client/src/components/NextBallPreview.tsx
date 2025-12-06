@@ -5,12 +5,19 @@ interface NextBallPreviewProps {
   ball: Ball | null;
 }
 
+const USDT_FUND_COLOR = '#FFD700';
+
 export function NextBallPreview({ ball }: NextBallPreviewProps) {
   if (!ball) return null;
 
-  const baseColor = ball.crypto 
-    ? CRYPTO_COLOR_MAP[ball.crypto] 
-    : BALL_COLOR_MAP[ball.color];
+  const baseColor = ball.isUsdtFund 
+    ? USDT_FUND_COLOR
+    : ball.crypto 
+      ? CRYPTO_COLOR_MAP[ball.crypto] 
+      : BALL_COLOR_MAP[ball.color];
+
+  const isSpecial = ball.isUsdtFund || ball.crypto;
+  const glowColor = ball.isUsdtFund ? USDT_FUND_COLOR : (ball.crypto ? CRYPTO_COLOR_MAP[ball.crypto] : undefined);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -19,16 +26,18 @@ export function NextBallPreview({ ball }: NextBallPreviewProps) {
         className="relative w-10 h-10 rounded-full flex items-center justify-center border-2"
         style={{ 
           backgroundColor: baseColor,
-          borderColor: darkenColor(baseColor, 20),
-          boxShadow: ball.crypto ? `0 0 12px ${baseColor}` : undefined,
+          borderColor: ball.isUsdtFund ? '#8B4513' : darkenColor(baseColor, 20),
+          boxShadow: isSpecial ? `0 0 12px ${glowColor}` : undefined,
         }}
         data-testid="next-ball-preview"
       >
-        {ball.crypto && (
+        {ball.isUsdtFund ? (
+          <span className="text-black font-bold text-lg">$</span>
+        ) : ball.crypto ? (
           <span className="text-white font-bold text-sm">
             {CRYPTO_SYMBOL_MAP[ball.crypto]}
           </span>
-        )}
+        ) : null}
         <div 
           className="absolute top-1 left-1.5 w-2 h-2 rounded-full bg-white/40"
         />

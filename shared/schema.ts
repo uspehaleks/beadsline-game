@@ -188,6 +188,7 @@ export interface Ball {
   y: number;
   color: BallColor;
   crypto?: CryptoType;
+  isUsdtFund?: boolean;
   radius: number;
   pathProgress: number;
 }
@@ -205,6 +206,7 @@ export interface GameState {
     eth: number;
     usdt: number;
   };
+  usdtFundCollected: number;
   isPlaying: boolean;
   isGameOver: boolean;
   won: boolean;

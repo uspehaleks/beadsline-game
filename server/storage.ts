@@ -95,6 +95,8 @@ export interface IStorage {
   processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void>;
   getUserReferralRewards(userId: string): Promise<ReferralReward[]>;
   getTotalReferralBeads(userId: string): Promise<number>;
+  
+  getFundToggles(): Promise<{ cryptoFundEnabled: boolean; usdtFundEnabled: boolean }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -969,6 +971,16 @@ export class DatabaseStorage implements IStorage {
     }
     
     return stats;
+  }
+
+  async getFundToggles(): Promise<{ cryptoFundEnabled: boolean; usdtFundEnabled: boolean }> {
+    const cryptoConfig = await this.getGameConfig("crypto_fund_enabled");
+    const usdtConfig = await this.getGameConfig("usdt_fund_enabled");
+    
+    return {
+      cryptoFundEnabled: cryptoConfig?.value === true,
+      usdtFundEnabled: usdtConfig?.value === true,
+    };
   }
 }
 

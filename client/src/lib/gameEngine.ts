@@ -88,7 +88,13 @@ export interface AvailableCrypto {
   usdt: boolean;
 }
 
+export interface FundSettings {
+  cryptoAvailable: AvailableCrypto;
+  usdtFundEnabled: boolean;
+}
+
 let availableCrypto: AvailableCrypto = { btc: true, eth: true, usdt: true };
+let usdtFundEnabled: boolean = false;
 
 export function setAvailableCrypto(crypto: AvailableCrypto) {
   availableCrypto = crypto;
@@ -98,12 +104,35 @@ export function getAvailableCrypto(): AvailableCrypto {
   return availableCrypto;
 }
 
+export function setUsdtFundEnabled(enabled: boolean) {
+  usdtFundEnabled = enabled;
+}
+
+export function getUsdtFundEnabled(): boolean {
+  return usdtFundEnabled;
+}
+
 export function createRandomBall(id: string, pathProgress: number = 0): Ball {
   const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
   
+  const spawnChance = currentEconomy.crypto.spawnChance;
+  
+  const isUsdtFundBall = usdtFundEnabled && Math.random() < spawnChance;
+  
+  if (isUsdtFundBall) {
+    return {
+      id,
+      x: 0,
+      y: 0,
+      color,
+      isUsdtFund: true,
+      radius: BALL_RADIUS,
+      pathProgress,
+    };
+  }
+  
   const availableTypes = CRYPTO_TYPES.filter(type => availableCrypto[type] === true);
   const hasCryptoAvailable = availableTypes.length > 0;
-  const spawnChance = currentEconomy.crypto.spawnChance;
   const isCrypto = hasCryptoAvailable && Math.random() < spawnChance;
   
   const crypto = isCrypto 
@@ -144,6 +173,7 @@ export function createInitialGameState(): GameState {
     maxCombo: 0,
     timeLeft: 0,
     cryptoCollected: { btc: 0, eth: 0, usdt: 0 },
+    usdtFundCollected: 0,
     isPlaying: false,
     isGameOver: false,
     won: false,
@@ -223,13 +253,18 @@ export function findMatchingBalls(balls: Ball[], insertIndex: number, color: Bal
 export function calculatePoints(matchedBalls: Ball[], combo: number): {
   points: number;
   cryptoCollected: { btc: number; eth: number; usdt: number };
+  usdtFundCollected: number;
 } {
   let points = 0;
   const cryptoCollected = { btc: 0, eth: 0, usdt: 0 };
+  let usdtFundCollected = 0;
   const economy = currentEconomy;
   
   for (const ball of matchedBalls) {
-    if (ball.crypto) {
+    if (ball.isUsdtFund) {
+      points += economy.points.usdt;
+      usdtFundCollected++;
+    } else if (ball.crypto) {
       points += economy.points[ball.crypto];
       cryptoCollected[ball.crypto]++;
     } else {
@@ -240,7 +275,7 @@ export function calculatePoints(matchedBalls: Ball[], combo: number): {
   const comboMultiplier = Math.pow(economy.combo.multiplier, Math.min(combo, economy.combo.maxChain));
   points = Math.round(points * comboMultiplier);
   
-  return { points, cryptoCollected };
+  return { points, cryptoCollected, usdtFundCollected };
 }
 
 export function insertBallInChain(

@@ -1258,6 +1258,7 @@ export async function registerRoutes(
       const config = await storage.getGameEconomyConfig();
       const balances = await storage.getAdminCryptoBalances();
       const usdtFundStats = await storage.getUsdtFundStats();
+      const fundToggles = await storage.getFundToggles();
       
       const usdtFundAvailable = usdtFundStats.settings && 
         usdtFundStats.settings.usdtAvailable > 0 &&
@@ -1266,10 +1267,11 @@ export async function registerRoutes(
       res.json(formatNumbersInObject({
         ...config,
         cryptoAvailable: {
-          btc: balances.btc > 0,
-          eth: balances.eth > 0,
-          usdt: balances.usdt > 0 && usdtFundAvailable,
+          btc: fundToggles.cryptoFundEnabled && balances.btc > 0,
+          eth: fundToggles.cryptoFundEnabled && balances.eth > 0,
+          usdt: fundToggles.cryptoFundEnabled && balances.usdt > 0,
         },
+        usdtFundEnabled: fundToggles.usdtFundEnabled && usdtFundAvailable,
       }));
     } catch (error) {
       console.error("Get game economy error:", error);

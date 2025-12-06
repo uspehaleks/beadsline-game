@@ -17,6 +17,7 @@ import {
   checkGameOver,
   checkWin,
   setAvailableCrypto,
+  setUsdtFundEnabled,
   setEconomyConfig,
   SHOOTER_BALL_SPEED,
   type PathPoint,
@@ -100,10 +101,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           crypto: economyData.crypto,
         });
         setAvailableCrypto(economyData.cryptoAvailable);
+        setUsdtFundEnabled(economyData.usdtFundEnabled === true);
       }
     } catch (error) {
       console.error('Failed to fetch game economy:', error);
       setAvailableCrypto({ btc: true, eth: true, usdt: true });
+      setUsdtFundEnabled(false);
     }
     
     stopAllTimers();
@@ -251,7 +254,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         if (matches.length >= 3) {
           const matchedBalls = matches.map(i => newBalls[i]);
-          const { points, cryptoCollected } = calculatePoints(matchedBalls, prev.combo + 1);
+          const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, prev.combo + 1);
           
           newBalls = removeBalls(newBalls, matches);
           
@@ -277,6 +280,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
                 eth: prev.cryptoCollected.eth + cryptoCollected.eth,
                 usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
               },
+              usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
               shotsHit: prev.shotsHit + 1,
               isPlaying: false,
               isGameOver: true,
@@ -301,6 +305,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               eth: prev.cryptoCollected.eth + cryptoCollected.eth,
               usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
             },
+            usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
             shotsHit: prev.shotsHit + 1,
           };
         } else {
