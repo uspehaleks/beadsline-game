@@ -146,13 +146,7 @@ export function GameCanvas({
     
     const spawnOpacity = progress < 0 ? Math.max(0, 1 + (progress / 0.03)) : 1;
     
-    const USDT_FUND_COLOR = '#FFD700';
-    
-    const baseColor = ball.isUsdtFund 
-      ? USDT_FUND_COLOR
-      : ball.crypto 
-        ? CRYPTO_COLOR_MAP[ball.crypto] 
-        : BALL_COLOR_MAP[ball.color];
+    const baseColor = BALL_COLOR_MAP[ball.color];
     
     const rollAngle = progress * Math.PI * 20;
     
@@ -162,13 +156,21 @@ export function GameCanvas({
     
     if (ball.isUsdtFund) {
       const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.15;
-      ctx.shadowColor = USDT_FUND_COLOR;
+      ctx.shadowColor = '#FFD700';
       ctx.shadowBlur = 20 * pulse;
       
       ctx.beginPath();
       ctx.arc(0, 0, BALL_RADIUS + 4, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(255, 215, 0, ${0.4 + Math.sin(Date.now() * 0.01) * 0.3})`;
       ctx.lineWidth = 3;
+      ctx.stroke();
+    } else if (ball.crypto) {
+      ctx.shadowColor = CRYPTO_COLOR_MAP[ball.crypto];
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, BALL_RADIUS + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = CRYPTO_COLOR_MAP[ball.crypto];
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
     
@@ -181,24 +183,17 @@ export function GameCanvas({
       BALL_RADIUS
     );
     
-    if (ball.isUsdtFund) {
-      gradient.addColorStop(0, '#FFFACD');
-      gradient.addColorStop(0.3, '#FFD700');
-      gradient.addColorStop(0.7, '#FFA500');
-      gradient.addColorStop(1, '#B8860B');
-    } else {
-      gradient.addColorStop(0, lightenColor(baseColor, 40));
-      gradient.addColorStop(0.5, baseColor);
-      gradient.addColorStop(1, darkenColor(baseColor, 20));
-    }
+    gradient.addColorStop(0, lightenColor(baseColor, 40));
+    gradient.addColorStop(0.5, baseColor);
+    gradient.addColorStop(1, darkenColor(baseColor, 20));
     
     ctx.beginPath();
     ctx.arc(0, 0, BALL_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    ctx.strokeStyle = ball.isUsdtFund ? '#8B4513' : darkenColor(baseColor, 30);
-    ctx.lineWidth = ball.isUsdtFund ? 3 : 2;
+    ctx.strokeStyle = darkenColor(baseColor, 30);
+    ctx.lineWidth = 2;
     ctx.stroke();
     ctx.shadowBlur = 0;
     
@@ -229,15 +224,6 @@ export function GameCanvas({
       ctx.font = `bold ${BALL_RADIUS * 1.0}px Inter, sans-serif`;
       ctx.fillText('$', 0, 0);
     } else if (ball.crypto) {
-      ctx.shadowColor = CRYPTO_COLOR_MAP[ball.crypto];
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(0, 0, BALL_RADIUS + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = CRYPTO_COLOR_MAP[ball.crypto];
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      
       ctx.fillStyle = '#ffffff';
       ctx.font = `bold ${BALL_RADIUS}px Inter, sans-serif`;
       ctx.textAlign = 'center';
