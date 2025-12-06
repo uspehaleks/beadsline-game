@@ -1759,6 +1759,7 @@ function EconomyTab() {
     combo: { multiplier: 1.5, maxChain: 10 },
     crypto: { spawnChance: 0.08 },
     cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
+    dailyLimits: { btcMaxSatsPerDay: 1000, ethMaxWeiPerDay: 10000000, usdtMaxPerDay: 1.0 },
   });
   const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -1787,6 +1788,11 @@ function EconomyTab() {
           btcPerBall: parseFloat(String(config.cryptoRewards?.btcPerBall ?? 0.00000005)),
           ethPerBall: parseFloat(String(config.cryptoRewards?.ethPerBall ?? 0.0000001)),
           usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
+        },
+        dailyLimits: {
+          btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 1000)),
+          ethMaxWeiPerDay: parseInt(String(config.dailyLimits?.ethMaxWeiPerDay ?? 10000000)),
+          usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 1.0)),
         },
       });
       setEditConfig(parseConfig(economyConfig));
@@ -2109,6 +2115,78 @@ function EconomyTab() {
 
           <Separator />
 
+          <div className="space-y-4">
+            <h3 className="font-medium">Дневные лимиты</h3>
+            <p className="text-sm text-muted-foreground">Максимальное количество крипто-наград в день для каждого пользователя</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>BTC макс сатоши/день</Label>
+                <Input
+                  type="number"
+                  value={editConfig.dailyLimits.btcMaxSatsPerDay}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        dailyLimits: { ...editConfig.dailyLimits, btcMaxSatsPerDay: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-btc-daily-limit"
+                />
+                <p className="text-xs text-muted-foreground">
+                  1000 сат = 0.00001 BTC
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>ETH макс gwei/день</Label>
+                <Input
+                  type="number"
+                  value={editConfig.dailyLimits.ethMaxWeiPerDay}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        dailyLimits: { ...editConfig.dailyLimits, ethMaxWeiPerDay: num }
+                      });
+                    }
+                  }}
+                  data-testid="input-eth-daily-limit"
+                />
+                <p className="text-xs text-muted-foreground">
+                  10M gwei = 0.01 ETH
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>USDT макс/день</Label>
+                <Input
+                  type="text"
+                  value={rawInputs['usdtMaxPerDay'] ?? formatNumber(editConfig.dailyLimits.usdtMaxPerDay)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRawInputs(prev => ({ ...prev, usdtMaxPerDay: val }));
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditConfig({
+                        ...editConfig,
+                        dailyLimits: { ...editConfig.dailyLimits, usdtMaxPerDay: num }
+                      });
+                    }
+                  }}
+                  onBlur={() => setRawInputs(prev => ({ ...prev, usdtMaxPerDay: undefined as any }))}
+                  data-testid="input-usdt-daily-limit"
+                />
+                <p className="text-xs text-muted-foreground">
+                  1.0 = 1 USDT/день
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="flex gap-3">
             <Button
               onClick={() => updateConfigMutation.mutate(editConfig)}
@@ -2144,6 +2222,11 @@ function EconomyTab() {
                       btcPerBall: parseFloat(String(config.cryptoRewards?.btcPerBall ?? 0.00000005)),
                       ethPerBall: parseFloat(String(config.cryptoRewards?.ethPerBall ?? 0.0000001)),
                       usdtPerBall: parseFloat(String(config.cryptoRewards?.usdtPerBall ?? 0.01)),
+                    },
+                    dailyLimits: {
+                      btcMaxSatsPerDay: parseInt(String(config.dailyLimits?.btcMaxSatsPerDay ?? 1000)),
+                      ethMaxWeiPerDay: parseInt(String(config.dailyLimits?.ethMaxWeiPerDay ?? 10000000)),
+                      usdtMaxPerDay: parseFloat(String(config.dailyLimits?.usdtMaxPerDay ?? 1.0)),
                     },
                   });
                   setEditConfig(parseConfig(economyConfig));

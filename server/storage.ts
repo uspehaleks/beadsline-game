@@ -83,7 +83,7 @@ export interface IStorage {
   
   getGameEconomyConfig(): Promise<GameEconomyConfig>;
   updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
-  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number }>;
+  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }>;
   
   getUserByReferralCode(referralCode: string): Promise<User | undefined>;
   generateReferralCode(): string;
@@ -572,6 +572,11 @@ export class DatabaseStorage implements IStorage {
         ethPerBall: 0.0000001,
         usdtPerBall: 0.01,
       },
+      dailyLimits: {
+        btcMaxSatsPerDay: 1000,
+        ethMaxWeiPerDay: 10000000,
+        usdtMaxPerDay: 1.0,
+      },
     };
   }
 
@@ -609,6 +614,11 @@ export class DatabaseStorage implements IStorage {
         ethPerBall: stored.cryptoRewards?.ethPerBall ?? defaults.cryptoRewards.ethPerBall,
         usdtPerBall: stored.cryptoRewards?.usdtPerBall ?? defaults.cryptoRewards.usdtPerBall,
       },
+      dailyLimits: {
+        btcMaxSatsPerDay: stored.dailyLimits?.btcMaxSatsPerDay ?? defaults.dailyLimits.btcMaxSatsPerDay,
+        ethMaxWeiPerDay: stored.dailyLimits?.ethMaxWeiPerDay ?? defaults.dailyLimits.ethMaxWeiPerDay,
+        usdtMaxPerDay: stored.dailyLimits?.usdtMaxPerDay ?? defaults.dailyLimits.usdtMaxPerDay,
+      },
     };
   }
 
@@ -634,6 +644,11 @@ export class DatabaseStorage implements IStorage {
         ethPerBall: updates.cryptoRewards?.ethPerBall ?? current.cryptoRewards.ethPerBall,
         usdtPerBall: updates.cryptoRewards?.usdtPerBall ?? current.cryptoRewards.usdtPerBall,
       },
+      dailyLimits: {
+        btcMaxSatsPerDay: updates.dailyLimits?.btcMaxSatsPerDay ?? current.dailyLimits.btcMaxSatsPerDay,
+        ethMaxWeiPerDay: updates.dailyLimits?.ethMaxWeiPerDay ?? current.dailyLimits.ethMaxWeiPerDay,
+        usdtMaxPerDay: updates.dailyLimits?.usdtMaxPerDay ?? current.dailyLimits.usdtMaxPerDay,
+      },
     };
     
     await this.setGameConfig({
@@ -650,10 +665,11 @@ export class DatabaseStorage implements IStorage {
     cryptoBtc: number, 
     cryptoEth: number, 
     cryptoUsdt: number
-  ): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number }> {
+  ): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }> {
     const user = await this.getUser(userId);
     if (!user) {
-      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0 };
+      console.log(`processCryptoRewards: User ${userId} not found`);
+      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0, btcSatsAwarded: 0, ethWeiAwarded: 0 };
     }
 
     const MAX_CRYPTO_BALLS_PER_GAME = 50;
@@ -669,11 +685,11 @@ export class DatabaseStorage implements IStorage {
     const safeUsdt = sanitizeCounts(cryptoUsdt);
 
     if (safeBtc === 0 && safeEth === 0 && safeUsdt === 0) {
-      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0 };
+      return { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0, btcSatsAwarded: 0, ethWeiAwarded: 0 };
     }
 
     const economyConfig = await this.getGameEconomyConfig();
-    const { cryptoRewards } = economyConfig;
+    const { cryptoRewards, dailyLimits } = economyConfig;
 
     const sanitizeRewardRate = (val: any, defaultVal: number): number => {
       const num = typeof val === 'number' ? val : parseFloat(String(val));
@@ -685,24 +701,74 @@ export class DatabaseStorage implements IStorage {
     const ethRate = sanitizeRewardRate(cryptoRewards.ethPerBall, 0.0000001);
     const usdtRate = sanitizeRewardRate(cryptoRewards.usdtPerBall, 0.01);
 
-    const btcAwarded = safeBtc * btcRate;
-    const ethAwarded = safeEth * ethRate;
-    const usdtAwarded = safeUsdt * usdtRate;
+    const SATS_PER_BTC = 100_000_000;
+    const WEI_PER_ETH = 1_000_000_000;
 
-    if (btcAwarded > 0 || ethAwarded > 0 || usdtAwarded > 0) {
-      await db
-        .update(users)
-        .set({
-          btcBalance: (user.btcBalance || 0) + btcAwarded,
-          ethBalance: (user.ethBalance || 0) + ethAwarded,
-          usdtBalance: (user.usdtBalance || 0) + usdtAwarded,
-        })
-        .where(eq(users.id, userId));
-    }
+    const btcSatsPerBall = Math.round(btcRate * SATS_PER_BTC);
+    const ethWeiPerBall = Math.round(ethRate * WEI_PER_ETH);
 
-    console.log(`Crypto rewards for user ${userId}: BTC +${btcAwarded}, ETH +${ethAwarded}, USDT +${usdtAwarded}`);
+    const today = new Date().toISOString().split('T')[0];
 
-    return { btcAwarded, ethAwarded, usdtAwarded };
+    const btcMaxSats = dailyLimits?.btcMaxSatsPerDay ?? 1000;
+    const ethMaxWei = dailyLimits?.ethMaxWeiPerDay ?? 10000000;
+    const usdtMax = dailyLimits?.usdtMaxPerDay ?? 1.0;
+
+    const btcSatsRequested = safeBtc * btcSatsPerBall;
+    const ethWeiRequested = safeEth * ethWeiPerBall;
+    const usdtRequested = safeUsdt * usdtRate;
+
+    const result = await db.execute(sql`
+      WITH locked_user AS (
+        SELECT 
+          id,
+          CASE WHEN btc_today_date = ${today} THEN btc_today_sats ELSE 0 END as current_btc_today,
+          CASE WHEN eth_today_date = ${today} THEN eth_today_wei ELSE 0 END as current_eth_today,
+          CASE WHEN usdt_today_date = ${today} THEN usdt_today::numeric ELSE 0 END as current_usdt_today
+        FROM users 
+        WHERE id = ${userId}
+        FOR UPDATE
+      ),
+      amounts AS (
+        SELECT 
+          LEAST(${btcSatsRequested}::bigint, GREATEST(0::bigint, ${btcMaxSats}::bigint - current_btc_today)) as btc_to_add,
+          LEAST(${ethWeiRequested}::bigint, GREATEST(0::bigint, ${ethMaxWei}::bigint - current_eth_today)) as eth_to_add,
+          LEAST(${usdtRequested}::numeric, GREATEST(0::numeric, ${usdtMax}::numeric - current_usdt_today)) as usdt_to_add,
+          current_btc_today,
+          current_eth_today,
+          current_usdt_today
+        FROM locked_user
+      )
+      UPDATE users u SET
+        btc_balance = u.btc_balance + (SELECT btc_to_add FROM amounts)::numeric / ${SATS_PER_BTC}::numeric,
+        eth_balance = u.eth_balance + (SELECT eth_to_add FROM amounts)::numeric / ${WEI_PER_ETH}::numeric,
+        usdt_balance = u.usdt_balance + (SELECT usdt_to_add FROM amounts),
+        btc_balance_sats = u.btc_balance_sats + (SELECT btc_to_add FROM amounts),
+        eth_balance_wei = u.eth_balance_wei + (SELECT eth_to_add FROM amounts),
+        btc_today_sats = (SELECT current_btc_today + btc_to_add FROM amounts),
+        eth_today_wei = (SELECT current_eth_today + eth_to_add FROM amounts),
+        usdt_today = (SELECT (current_usdt_today + usdt_to_add)::text FROM amounts),
+        btc_today_date = ${today},
+        eth_today_date = ${today},
+        usdt_today_date = ${today}
+      FROM locked_user lu
+      WHERE u.id = lu.id
+      RETURNING 
+        (SELECT btc_to_add FROM amounts) as btc_sats_awarded,
+        (SELECT eth_to_add FROM amounts) as eth_wei_awarded,
+        (SELECT usdt_to_add FROM amounts) as usdt_awarded
+    `);
+
+    const row = (result.rows?.[0] as any) || {};
+    const btcSatsAwarded = Number(row.btc_sats_awarded) || 0;
+    const ethWeiAwarded = Number(row.eth_wei_awarded) || 0;
+    const usdtAwarded = Number(row.usdt_awarded) || 0;
+
+    const btcAwarded = btcSatsAwarded / SATS_PER_BTC;
+    const ethAwarded = ethWeiAwarded / WEI_PER_ETH;
+
+    console.log(`Crypto rewards for user ${userId}: BTC +${btcSatsAwarded} sats (${btcAwarded}), ETH +${ethWeiAwarded} wei (${ethAwarded}), USDT +${usdtAwarded}`);
+
+    return { btcAwarded, ethAwarded, usdtAwarded, btcSatsAwarded, ethWeiAwarded };
   }
 
   async getUserByReferralCode(referralCode: string): Promise<User | undefined> {

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, jsonb, real, bigint, date, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -18,6 +18,14 @@ export const users = pgTable("users", {
   btcBalance: real("btc_balance").default(0).notNull(),
   ethBalance: real("eth_balance").default(0).notNull(),
   usdtBalance: real("usdt_balance").default(0).notNull(),
+  btcBalanceSats: bigint("btc_balance_sats", { mode: "number" }).default(0).notNull(),
+  btcTodaySats: bigint("btc_today_sats", { mode: "number" }).default(0).notNull(),
+  btcTodayDate: date("btc_today_date"),
+  ethBalanceWei: bigint("eth_balance_wei", { mode: "number" }).default(0).notNull(),
+  ethTodayWei: bigint("eth_today_wei", { mode: "number" }).default(0).notNull(),
+  ethTodayDate: date("eth_today_date"),
+  usdtToday: numeric("usdt_today", { precision: 18, scale: 8 }).default("0").notNull(),
+  usdtTodayDate: date("usdt_today_date"),
   referralCode: varchar("referral_code", { length: 20 }).unique(),
   referredBy: varchar("referred_by", { length: 255 }),
   directReferralsCount: integer("direct_referrals_count").default(0).notNull(),
@@ -272,6 +280,11 @@ export interface GameEconomyConfig {
     btcPerBall: number;
     ethPerBall: number;
     usdtPerBall: number;
+  };
+  dailyLimits: {
+    btcMaxSatsPerDay: number;
+    ethMaxWeiPerDay: number;
+    usdtMaxPerDay: number;
   };
 }
 

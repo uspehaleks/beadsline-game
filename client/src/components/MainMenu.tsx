@@ -125,24 +125,37 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               </div>
             </div>
             
-            <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t">
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10">
-                <Bitcoin className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-600 tabular-nums" data-testid="text-btc-balance">
-                  {(user.btcBalance || 0).toFixed(8)}
+            <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t flex-wrap">
+              <div className="flex flex-col items-center px-2 py-1 rounded bg-amber-500/10">
+                <div className="flex items-center gap-1">
+                  <Bitcoin className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-600 tabular-nums" data-testid="text-btc-balance">
+                    {(Number(user.btcBalanceSats) || 0).toLocaleString()} сат
+                  </span>
+                </div>
+                <span className="text-xs text-amber-500/70">
+                  ≈ {(user.btcBalance || 0).toFixed(8)} BTC
                 </span>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500/10">
-                <SiEthereum className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-600 tabular-nums" data-testid="text-eth-balance">
-                  {(user.ethBalance || 0).toFixed(8)}
+              <div className="flex flex-col items-center px-2 py-1 rounded bg-blue-500/10">
+                <div className="flex items-center gap-1">
+                  <SiEthereum className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-600 tabular-nums" data-testid="text-eth-balance">
+                    {(Number(user.ethBalanceWei) || 0).toLocaleString()} gwei
+                  </span>
+                </div>
+                <span className="text-xs text-blue-500/70">
+                  ≈ {(user.ethBalance || 0).toFixed(8)} ETH
                 </span>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/10">
-                <SiTether className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-green-600 tabular-nums" data-testid="text-usdt-balance">
-                  {(user.usdtBalance || 0).toFixed(2)}
-                </span>
+              <div className="flex flex-col items-center px-2 py-1 rounded bg-green-500/10">
+                <div className="flex items-center gap-1">
+                  <SiTether className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-600 tabular-nums" data-testid="text-usdt-balance">
+                    ${(user.usdtBalance || 0).toFixed(2)}
+                  </span>
+                </div>
+                <span className="text-xs text-green-500/70">USDT</span>
               </div>
             </div>
           </Card>

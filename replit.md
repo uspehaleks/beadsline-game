@@ -114,11 +114,28 @@ GameEconomyConfig: {
     btcPerBall: 0.00000005,  // BTC awarded per crypto-BTC ball (5 satoshi)
     ethPerBall: 0.0000001,   // ETH awarded per crypto-ETH ball (100 gwei)
     usdtPerBall: 0.01        // USDT awarded per crypto-USDT ball (1 cent)
+  },
+  dailyLimits: {
+    btcMaxSatsPerDay: 1000,     // Max satoshi per user per day (default 1000 sats)
+    ethMaxWeiPerDay: 10000000,  // Max wei/gwei per user per day (default 10M gwei)
+    usdtMaxPerDay: 1.0          // Max USDT per user per day (default $1)
   }
 }
 ```
 **Note**: Crypto balls only give bonus points when matched in groups of 3+, not just collected.
 **Note**: Crypto balances (BTC, ETH, USDT) are persisted to user accounts after each game.
+**Note**: Daily limits reset at midnight UTC. Users can track their daily progress in the app.
+
+### User Balance Tracking (in database)
+Additional fields for daily limits tracking:
+- `btc_balance_sats` (bigint) - Total BTC balance in satoshi
+- `btc_today_sats` (bigint) - Satoshi earned today
+- `btc_today_date` (date) - Date of last BTC earning
+- `eth_balance_wei` (bigint) - Total ETH balance in gwei
+- `eth_today_wei` (bigint) - Gwei earned today  
+- `eth_today_date` (date) - Date of last ETH earning
+- `usdt_today` (numeric) - USDT earned today
+- `usdt_today_date` (date) - Date of last USDT earning
 
 ## API Endpoints
 | Endpoint | Method | Description |
