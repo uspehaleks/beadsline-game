@@ -316,6 +316,8 @@ export interface ReferralConfig {
   level2RewardPercent: number;
   maxReferralBeadsPerRefPerDay: number;
   maxReferralBeadsPerUserPerDay: number;
+  title: string;
+  description: string;
 }
 
 export interface ReferralInfo {

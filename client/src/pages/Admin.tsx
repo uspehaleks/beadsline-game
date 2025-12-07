@@ -2495,6 +2495,8 @@ function ReferralsTab() {
     level2RewardPercent: 3,
     maxReferralBeadsPerRefPerDay: 1000000,
     maxReferralBeadsPerUserPerDay: 10000000,
+    title: 'Реферальная программа',
+    description: 'Зови друзей — получай 10% их Beads!',
   });
 
   useEffect(() => {
@@ -2534,6 +2536,39 @@ function ReferralsTab() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-4 pb-4 border-b">
+            <h3 className="font-medium flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Тексты в приложении
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Заголовок</Label>
+                <Input
+                  value={editConfig.title || ''}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    title: e.target.value
+                  })}
+                  placeholder="Реферальная программа"
+                  data-testid="input-referral-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Описание</Label>
+                <Input
+                  value={editConfig.description || ''}
+                  onChange={(e) => setEditConfig({
+                    ...editConfig,
+                    description: e.target.value
+                  })}
+                  placeholder="Зови друзей — получай 10% их Beads!"
+                  data-testid="input-referral-description"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h3 className="font-medium">Бонусы</h3>

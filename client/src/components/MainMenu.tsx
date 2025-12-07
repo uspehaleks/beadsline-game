@@ -26,6 +26,12 @@ interface ReferralInfo {
   totalEarnedBeads: number;
 }
 
+interface ReferralConfig {
+  title: string;
+  description: string;
+  level1RewardPercent: number;
+}
+
 function getRankInfo(totalPoints: number): { name: string; level: number; progress: number; nextRankLabel: string; pointsToNext: number; isMaxLevel: boolean } {
   const ranks = [
     { name: 'Cadet', minPoints: 0, levels: 5, pointsPerLevel: 1000 },
@@ -305,6 +311,10 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
   const { data: referralInfo } = useQuery<ReferralInfo>({
     queryKey: ["/api/referral"],
     enabled: !!user && !user.username?.startsWith('guest_'),
+  });
+
+  const { data: referralConfig } = useQuery<ReferralConfig>({
+    queryKey: ["/api/referral/config"],
   });
 
   useEffect(() => {
@@ -632,10 +642,10 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               <div className="mb-3">
                 <h3 className="font-display font-semibold text-lg flex items-center gap-2">
                   <Gift className="w-5 h-5" style={{ color: '#00ff88' }} />
-                  Реферальная программа
+                  {referralConfig?.title || 'Реферальная программа'}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Зови друзей — получай 10% их Beads!
+                  {referralConfig?.description || 'Зови друзей — получай 10% их Beads!'}
                 </p>
               </div>
 

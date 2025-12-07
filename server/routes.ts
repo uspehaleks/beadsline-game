@@ -1109,7 +1109,6 @@ export async function registerRoutes(
       }
       
       const referralInfo = await storage.getReferralInfo(userId, botUsername);
-      console.log(`[Referral] Generated link for user ${userId}: ${referralInfo.referralLink}`);
       res.json(referralInfo);
     } catch (error) {
       console.error("Get referral info error:", error);

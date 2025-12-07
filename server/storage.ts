@@ -981,6 +981,8 @@ export class DatabaseStorage implements IStorage {
       level2RewardPercent: 3,
       maxReferralBeadsPerRefPerDay: 1000000,
       maxReferralBeadsPerUserPerDay: 10000000,
+      title: 'Реферальная программа',
+      description: 'Зови друзей — получай 10% их Beads!',
     };
   }
 
@@ -1005,6 +1007,8 @@ export class DatabaseStorage implements IStorage {
       level2RewardPercent: stored.level2RewardPercent ?? defaults.level2RewardPercent,
       maxReferralBeadsPerRefPerDay: stored.maxReferralBeadsPerRefPerDay ?? defaults.maxReferralBeadsPerRefPerDay,
       maxReferralBeadsPerUserPerDay: stored.maxReferralBeadsPerUserPerDay ?? defaults.maxReferralBeadsPerUserPerDay,
+      title: stored.title ?? defaults.title,
+      description: stored.description ?? defaults.description,
     };
   }
 
@@ -1017,6 +1021,8 @@ export class DatabaseStorage implements IStorage {
       level2RewardPercent: updates.level2RewardPercent ?? current.level2RewardPercent,
       maxReferralBeadsPerRefPerDay: updates.maxReferralBeadsPerRefPerDay ?? current.maxReferralBeadsPerRefPerDay,
       maxReferralBeadsPerUserPerDay: updates.maxReferralBeadsPerUserPerDay ?? current.maxReferralBeadsPerUserPerDay,
+      title: updates.title ?? current.title,
+      description: updates.description ?? current.description,
     };
     
     await this.setGameConfig({
