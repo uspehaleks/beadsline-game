@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2 } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import QRCode from 'qrcode';
 
 interface MainMenuProps {
   user: User | null;
@@ -291,6 +292,8 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
 
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
   const [showReferral, setShowReferral] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -303,6 +306,20 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
     queryKey: ["/api/referral"],
     enabled: !!user && !user.username?.startsWith('guest_'),
   });
+
+  useEffect(() => {
+    if (showQRModal && referralInfo?.referralLink) {
+      QRCode.toDataURL(referralInfo.referralLink, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#8B5CF6',
+          light: '#1a1a2e',
+        },
+        errorCorrectionLevel: 'M',
+      }).then(setQrCodeDataUrl).catch(console.error);
+    }
+  }, [showQRModal, referralInfo?.referralLink]);
 
   const copyReferralLink = async () => {
     if (!referralInfo?.referralLink) return;
@@ -322,6 +339,18 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         variant: "destructive",
       });
     }
+  };
+
+  const saveQRCode = () => {
+    if (!qrCodeDataUrl) return;
+    const link = document.createElement('a');
+    link.download = 'beadsline-invite-qr.png';
+    link.href = qrCodeDataUrl;
+    link.click();
+    toast({
+      title: "QR-код сохранён!",
+      description: "Проверьте папку загрузок",
+    });
   };
 
   const rankInfo = user ? getRankInfo(user.totalPoints) : null;
@@ -391,6 +420,28 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               />
             </div>
           </Card>
+        </motion.div>
+      )}
+
+      {user && referralInfo && !user.username?.startsWith('guest_') && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="w-full max-w-sm mb-4"
+        >
+          <Button
+            className="w-full h-12 font-display font-semibold border-0"
+            onClick={() => setShowReferral(true)}
+            data-testid="button-invite-friend"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+              boxShadow: '0 0 20px hsl(270 60% 55% / 0.3)',
+            }}
+          >
+            <UserPlus className="w-5 h-5 mr-2" />
+            Пригласить друга
+          </Button>
         </motion.div>
       )}
 
@@ -599,6 +650,15 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                       size="icon"
                       variant="secondary"
                       className="shrink-0"
+                      onClick={() => setShowQRModal(true)}
+                      data-testid="button-qr-code"
+                    >
+                      <QrCode className="w-4 h-4" style={{ color: '#8b5cf6' }} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="shrink-0"
                       onClick={copyReferralLink}
                       data-testid="button-copy-referral"
                     >
@@ -623,6 +683,86 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                 </div>
               </div>
             </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showQRModal && qrCodeDataUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+            onClick={() => setShowQRModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm"
+            >
+              <Card 
+                className="p-6 border-primary/30"
+                style={{ 
+                  background: 'linear-gradient(180deg, #1a1a2e 0%, #16161a 100%)',
+                  boxShadow: '0 0 40px hsl(270 60% 55% / 0.3)',
+                }}
+              >
+                <div className="text-center mb-4">
+                  <h3 className="font-display font-bold text-xl flex items-center justify-center gap-2">
+                    <QrCode className="w-5 h-5" style={{ color: '#8b5cf6' }} />
+                    QR-код приглашения
+                  </h3>
+                </div>
+
+                <div 
+                  className="flex justify-center mb-4 rounded-lg overflow-hidden"
+                  style={{ 
+                    boxShadow: '0 0 30px hsl(270 60% 55% / 0.4)',
+                  }}
+                >
+                  <img 
+                    src={qrCodeDataUrl} 
+                    alt="Referral QR Code" 
+                    className="w-[300px] h-[300px]"
+                    data-testid="img-qr-code"
+                  />
+                </div>
+
+                <p 
+                  className="text-center text-sm mb-4"
+                  style={{ color: '#8b5cf6' }}
+                >
+                  Дай отсканировать друзьям!
+                </p>
+
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 font-display"
+                    onClick={saveQRCode}
+                    data-testid="button-save-qr"
+                    style={{
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Сохранить
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 font-display"
+                    onClick={() => setShowQRModal(false)}
+                    data-testid="button-close-qr"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Закрыть
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
