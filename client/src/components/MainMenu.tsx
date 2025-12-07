@@ -313,10 +313,10 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         width: 300,
         margin: 2,
         color: {
-          dark: '#8B5CF6',
-          light: '#1a1a2e',
+          dark: '#000000',
+          light: '#FFFFFF',
         },
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'H',
       }).then(setQrCodeDataUrl).catch(console.error);
     }
   }, [showQRModal, referralInfo?.referralLink]);
