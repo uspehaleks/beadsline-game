@@ -1505,6 +1505,12 @@ export async function registerRoutes(
   // Maintenance mode endpoints
   app.get("/api/maintenance", async (req, res) => {
     try {
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
       const config = await storage.getGameConfig("maintenance_mode");
       if (!config) {
         return res.json({ enabled: false, endTime: null, message: null });
