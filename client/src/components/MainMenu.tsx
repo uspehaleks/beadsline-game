@@ -362,23 +362,30 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         >
           <div className="flex items-center gap-3">
             <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+              className="w-12 h-12 rounded-full flex items-center justify-center relative"
               style={{ backgroundColor: 'hsl(270 60% 55% / 0.3)' }}
             >
-              <Trophy className="w-5 h-5" style={{ color: '#8b5cf6' }} />
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-lg" style={{ color: '#00d4ff' }}>$200 TOURNAMENT</div>
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <span>03:52</span>
-                <span className="text-xs" style={{ color: '#8b5cf6' }}>Rewards boost!</span>
+              <Trophy className="w-6 h-6" style={{ color: '#8b5cf6' }} />
+              <div 
+                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ backgroundColor: '#f7931a', color: '#000' }}
+              >
+                47
               </div>
             </div>
-            <div className="flex gap-1">
-              {[1,2,3,4,5].map(i => (
-                <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
-              ))}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg" style={{ color: '#00d4ff' }}>$200</span>
+                <span className="text-xs uppercase text-muted-foreground">Призовой фонд</span>
+              </div>
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <span className="tabular-nums">03:52:14</span>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}>
+                  Твой приз: 10 USDT
+                </span>
+              </div>
             </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </div>
         </Card>
       </motion.div>
@@ -397,7 +404,10 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Stats</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Gamepad2 className="w-4 h-4" style={{ color: '#00d4ff' }} />
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Статистика</span>
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <div className="text-xs text-muted-foreground">Игр</div>
@@ -422,14 +432,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               style={{ minWidth: '90px' }}
               onClick={() => setShowReferral(!showReferral)}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Refirs</div>
-                  <div className="text-lg font-bold mt-1" style={{ color: '#00ff88' }}>
+                  <div className="flex items-center gap-1 mb-1">
+                    <Users className="w-3 h-3" style={{ color: '#8b5cf6' }} />
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Друзья</span>
+                  </div>
+                  <div className="text-lg font-bold" style={{ color: '#00ff88' }}>
                     {referralInfo?.directReferralsCount || 0}
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
               </div>
             </Card>
           </div>
@@ -453,7 +466,8 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             boxShadow: '0 0 30px hsl(270 60% 55% / 0.4), 0 0 60px hsl(195 100% 50% / 0.2)',
           }}
         >
-          START
+          <Play className="w-6 h-6 mr-2" />
+          ИГРАТЬ
         </Button>
 
         {user?.isAdmin && (
@@ -542,33 +556,49 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-border safe-area-inset-bottom">
         <div className="flex justify-around py-2 px-4 max-w-sm mx-auto">
           <button 
-            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors relative"
             onClick={onLeaderboard}
             data-testid="nav-rankings"
           >
-            <Trophy className="w-5 h-5" />
-            <span className="text-xs">Rankings</span>
+            <Trophy className="w-5 h-5" style={{ color: '#f7931a' }} />
+            <span className="text-xs">Рейтинг</span>
           </button>
           <button 
-            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors relative"
             data-testid="nav-leagues"
           >
-            <Award className="w-5 h-5" />
-            <span className="text-xs">Leagues</span>
+            <div className="relative">
+              <Award className="w-5 h-5" style={{ color: '#c0c0c0' }} />
+              <span 
+                className="absolute -top-1 -right-2 text-[10px] font-bold"
+                style={{ color: '#c0c0c0' }}
+              >
+                II
+              </span>
+            </div>
+            <span className="text-xs">Лиги</span>
           </button>
           <button 
-            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors relative"
             data-testid="nav-achievements"
           >
-            <Target className="w-5 h-5" />
-            <span className="text-xs">Quests</span>
+            <div className="relative">
+              <Target className="w-5 h-5" style={{ color: '#8b5cf6' }} />
+              <span 
+                className="absolute -top-1 -right-3 text-[10px] px-1 rounded-full font-bold"
+                style={{ backgroundColor: '#00ff88', color: '#000' }}
+              >
+                2/5
+              </span>
+            </div>
+            <span className="text-xs">Квесты</span>
           </button>
           <button 
             className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
             data-testid="nav-settings"
           >
             <Settings className="w-5 h-5" />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">Ещё</span>
           </button>
         </div>
       </div>
