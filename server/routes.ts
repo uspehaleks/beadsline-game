@@ -1146,6 +1146,8 @@ export async function registerRoutes(
         level2RewardPercent,
         maxReferralBeadsPerRefPerDay,
         maxReferralBeadsPerUserPerDay,
+        title,
+        description,
       } = req.body;
       
       const config = await storage.updateReferralConfig({
@@ -1159,6 +1161,8 @@ export async function registerRoutes(
           ? Math.max(1, Number(maxReferralBeadsPerRefPerDay)) : undefined,
         maxReferralBeadsPerUserPerDay: maxReferralBeadsPerUserPerDay !== undefined 
           ? Math.max(1, Number(maxReferralBeadsPerUserPerDay)) : undefined,
+        title: title !== undefined ? String(title) : undefined,
+        description: description !== undefined ? String(description) : undefined,
       });
       
       res.json(config);
