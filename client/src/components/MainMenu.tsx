@@ -3,7 +3,8 @@ import type { User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Play, Trophy, Gamepad2, Star, TrendingUp, Settings, Users, Gift, Copy, Check, X, Bitcoin } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2 } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -22,6 +23,196 @@ interface ReferralInfo {
   referralLink: string;
   directReferralsCount: number;
   totalEarnedBeads: number;
+}
+
+function getRankInfo(totalPoints: number): { name: string; level: number; progress: number; nextRankLabel: string; pointsToNext: number; isMaxLevel: boolean } {
+  const ranks = [
+    { name: 'Cadet', minPoints: 0, levels: 5, pointsPerLevel: 1000 },
+    { name: 'Sergeant', minPoints: 5000, levels: 5, pointsPerLevel: 2000 },
+    { name: 'Lieutenant', minPoints: 15000, levels: 5, pointsPerLevel: 5000 },
+    { name: 'Captain', minPoints: 40000, levels: 5, pointsPerLevel: 10000 },
+    { name: 'Major', minPoints: 90000, levels: 5, pointsPerLevel: 20000 },
+    { name: 'Colonel', minPoints: 190000, levels: 5, pointsPerLevel: 50000 },
+    { name: 'General', minPoints: 440000, levels: 5, pointsPerLevel: 100000 },
+    { name: 'Legend', minPoints: 940000, levels: 1, pointsPerLevel: Infinity },
+  ];
+
+  let currentRankIdx = 0;
+  
+  for (let i = ranks.length - 1; i >= 0; i--) {
+    if (totalPoints >= ranks[i].minPoints) {
+      currentRankIdx = i;
+      break;
+    }
+  }
+
+  const currentRank = ranks[currentRankIdx];
+  const nextRankData = ranks[currentRankIdx + 1];
+  const pointsInRank = totalPoints - currentRank.minPoints;
+  const level = Math.min(currentRank.levels, Math.floor(pointsInRank / currentRank.pointsPerLevel) + 1);
+  
+  const isMaxRank = !nextRankData;
+  const isMaxLevelInRank = level >= currentRank.levels;
+  const isMaxLevel = isMaxRank && isMaxLevelInRank;
+  
+  let progress: number;
+  let nextRankLabel: string;
+  let pointsToNext: number;
+  
+  if (isMaxLevel) {
+    progress = 100;
+    nextRankLabel = 'MAX';
+    pointsToNext = 0;
+  } else if (isMaxLevelInRank && nextRankData) {
+    const pointsToNextRank = nextRankData.minPoints - totalPoints;
+    const totalPointsForTransition = nextRankData.minPoints - (currentRank.minPoints + (currentRank.levels - 1) * currentRank.pointsPerLevel);
+    progress = Math.max(0, Math.min(100, ((totalPointsForTransition - pointsToNextRank) / totalPointsForTransition) * 100));
+    nextRankLabel = `${nextRankData.name} 1`;
+    pointsToNext = pointsToNextRank;
+  } else {
+    const pointsInLevel = pointsInRank - (level - 1) * currentRank.pointsPerLevel;
+    progress = Math.min(100, (pointsInLevel / currentRank.pointsPerLevel) * 100);
+    nextRankLabel = `${currentRank.name} ${level + 1}`;
+    pointsToNext = currentRank.pointsPerLevel - pointsInLevel;
+  }
+
+  return {
+    name: currentRank.name,
+    level,
+    progress,
+    nextRankLabel,
+    pointsToNext,
+    isMaxLevel,
+  };
+}
+
+function BeadsLogo() {
+  const beadColors = ['#00ff88', '#8b5cf6', '#00d4ff', '#f7931a', '#ff6b6b'];
+  
+  return (
+    <div className="relative flex flex-col items-center">
+      <div className="relative w-24 h-24 flex items-center justify-center">
+        <motion.div
+          className="absolute inset-0 rounded-full border-4 border-primary/30"
+          style={{ 
+            background: 'radial-gradient(circle at 30% 30%, hsl(155 100% 50% / 0.3), transparent 70%)',
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+        />
+        
+        {beadColors.map((color, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-4 h-4 rounded-full"
+            style={{ 
+              backgroundColor: color,
+              boxShadow: `0 0 12px ${color}, 0 0 24px ${color}50`,
+              top: '50%',
+              left: '50%',
+            }}
+            animate={{
+              x: [
+                Math.cos((i * 72 * Math.PI) / 180) * 40 - 8,
+                Math.cos(((i * 72 + 30) * Math.PI) / 180) * 40 - 8,
+                Math.cos((i * 72 * Math.PI) / 180) * 40 - 8,
+              ],
+              y: [
+                Math.sin((i * 72 * Math.PI) / 180) * 40 - 8,
+                Math.sin(((i * 72 + 30) * Math.PI) / 180) * 40 - 8,
+                Math.sin((i * 72 * Math.PI) / 180) * 40 - 8,
+              ],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: i * 0.2,
+            }}
+          />
+        ))}
+        
+        <span 
+          className="text-4xl font-bold relative z-10"
+          style={{ 
+            color: '#00ff88',
+            textShadow: '0 0 20px #00ff88, 0 0 40px #00ff8850',
+          }}
+        >
+          B
+        </span>
+      </div>
+      
+      <h1 
+        className="mt-4 font-display text-4xl font-bold"
+        style={{ 
+          background: 'linear-gradient(135deg, #00ff88 0%, #00d4ff 50%, #8b5cf6 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          textShadow: '0 0 40px #00ff8830',
+        }}
+        data-testid="text-title"
+      >
+        BeadsLine
+      </h1>
+    </div>
+  );
+}
+
+function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; balance: string; label: string }) {
+  const config = {
+    btc: { 
+      icon: Bitcoin, 
+      color: '#f7931a', 
+      bgColor: 'rgba(247, 147, 26, 0.15)',
+      borderColor: 'rgba(247, 147, 26, 0.3)',
+    },
+    eth: { 
+      icon: SiEthereum, 
+      color: '#627eea', 
+      bgColor: 'rgba(98, 126, 234, 0.15)',
+      borderColor: 'rgba(98, 126, 234, 0.3)',
+    },
+    usdt: { 
+      icon: SiTether, 
+      color: '#26a17b', 
+      bgColor: 'rgba(38, 161, 123, 0.15)',
+      borderColor: 'rgba(38, 161, 123, 0.3)',
+    },
+  };
+
+  const { icon: Icon, color, bgColor, borderColor } = config[type];
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="flex-1 rounded-xl p-3 text-center transition-all"
+      style={{ 
+        backgroundColor: bgColor,
+        border: `1px solid ${borderColor}`,
+        boxShadow: `0 0 20px ${color}20, inset 0 0 20px ${color}10`,
+      }}
+    >
+      <div 
+        className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-2"
+        style={{ 
+          backgroundColor: color,
+          boxShadow: `0 0 20px ${color}, 0 0 40px ${color}50`,
+        }}
+      >
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div 
+        className="text-sm font-bold mt-1 tabular-nums"
+        style={{ color }}
+        data-testid={`text-${type}-balance`}
+      >
+        {balance}
+      </div>
+    </motion.div>
+  );
 }
 
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
@@ -59,104 +250,71 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
     }
   };
 
+  const rankInfo = user ? getRankInfo(user.totalPoints) : null;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background via-background to-primary/5">
+    <div className="min-h-screen flex flex-col items-center p-4 pb-24 overflow-y-auto" style={{ background: 'linear-gradient(180deg, hsl(230 35% 7%) 0%, hsl(230 35% 10%) 100%)' }}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="mt-8 mb-6"
       >
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          >
-            <Gamepad2 className="w-12 h-12 text-primary" />
-          </motion.div>
-        </div>
-        <h1 
-          className="font-display text-5xl font-bold bg-gradient-to-r from-primary via-purple-400 to-primary bg-clip-text text-transparent"
-          data-testid="text-title"
-        >
-          Beads Line
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Собирай шарики, лови крипту, покоряй рейтинг!
-        </p>
-        {activePlayers && activePlayers.count > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-sm"
-          >
-            <Users className="w-4 h-4" />
-            <span className="font-medium" data-testid="text-online-players">
-              Сейчас играют: {activePlayers.count}
-            </span>
-          </motion.div>
-        )}
+        <BeadsLogo />
       </motion.div>
 
-      {user && (
+      {user && rankInfo && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="w-full max-w-sm mb-6"
+          className="w-full max-w-sm mb-4"
         >
-          <Card className="p-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-14 h-14 border-2 border-primary/30">
+          <Card className="p-4 border-primary/20" style={{ boxShadow: '0 0 30px hsl(155 100% 50% / 0.1)' }}>
+            <div className="flex items-center gap-3">
+              <Avatar className="w-14 h-14 border-2" style={{ borderColor: '#00ff88' }}>
                 <AvatarImage src={user.photoUrl || undefined} alt={user.username} />
-                <AvatarFallback className="bg-primary/20 text-primary font-display text-lg">
+                <AvatarFallback 
+                  className="font-display text-lg font-bold"
+                  style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}
+                >
                   {user.username?.substring(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h3 className="font-display font-semibold text-lg" data-testid="text-username">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display font-semibold text-lg truncate" data-testid="text-username">
                   {user.firstName || user.username}
                 </h3>
-                <div className="flex items-center gap-1 text-primary">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span className="font-semibold tabular-nums" data-testid="text-total-points">
-                    {user.totalPoints.toLocaleString()} Beads
+                <div className="flex items-center gap-2">
+                  <Medal className="w-4 h-4" style={{ color: '#f7931a' }} />
+                  <span className="text-sm text-muted-foreground">
+                    {rankInfo.name} {rankInfo.level}
                   </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div 
+                  className="flex items-center gap-1 font-bold tabular-nums"
+                  style={{ color: '#00ff88' }}
+                  data-testid="text-total-points"
+                >
+                  <span className="text-lg">P</span>
+                  <span>{user.totalPoints.toLocaleString()}</span>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t flex-wrap">
-              <div className="flex flex-col items-center px-2 py-1 rounded bg-amber-500/10">
-                <div className="flex items-center gap-1">
-                  <Bitcoin className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-600 tabular-nums" data-testid="text-btc-balance">
-                    {(Number(user.btcBalanceSats) || 0).toLocaleString()} сат
-                  </span>
-                </div>
-                <span className="text-xs text-amber-500/70">
-                  ≈ {(user.btcBalance || 0).toFixed(8)} BTC
-                </span>
+            <div className="mt-3 space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{rankInfo.isMaxLevel ? 'Максимальный уровень' : `Прогресс до ${rankInfo.nextRankLabel}`}</span>
+                <span>{Math.round(rankInfo.progress)}%</span>
               </div>
-              <div className="flex flex-col items-center px-2 py-1 rounded bg-blue-500/10">
-                <div className="flex items-center gap-1">
-                  <SiEthereum className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-blue-600 tabular-nums" data-testid="text-eth-balance">
-                    {(Number(user.ethBalanceWei) || 0).toLocaleString()} gwei
-                  </span>
-                </div>
-                <span className="text-xs text-blue-500/70">
-                  ≈ {(user.ethBalance || 0).toFixed(8)} ETH
-                </span>
-              </div>
-              <div className="flex flex-col items-center px-2 py-1 rounded bg-green-500/10">
-                <div className="flex items-center gap-1">
-                  <SiTether className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-green-600 tabular-nums" data-testid="text-usdt-balance">
-                    ${(user.usdtBalance || 0).toFixed(2)}
-                  </span>
-                </div>
-                <span className="text-xs text-green-500/70">USDT</span>
-              </div>
+              <Progress 
+                value={rankInfo.progress} 
+                className="h-2"
+                style={{ 
+                  background: 'hsl(230 30% 15%)',
+                }}
+              />
             </div>
           </Card>
         </motion.div>
@@ -166,32 +324,115 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="w-full max-w-sm mb-8"
+          transition={{ delay: 0.15 }}
+          className="w-full max-w-sm mb-4"
         >
-          <Card className="p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Игры</div>
-                <div className="font-display font-bold text-xl tabular-nums" data-testid="text-games-played">
-                  {user.gamesPlayed}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Лучший</div>
-                <div className="font-display font-bold text-xl text-primary tabular-nums" data-testid="text-best-score">
-                  {user.bestScore.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Ранг</div>
-                <div className="font-display font-bold text-xl text-amber-400 tabular-nums flex items-center justify-center gap-1">
-                  <TrendingUp className="w-4 h-4" />
-                  --
-                </div>
+          <div className="flex gap-3">
+            <CryptoCard 
+              type="btc" 
+              balance={`${(Number(user.btcBalanceSats) || 0).toLocaleString()} sat`}
+              label="BTC"
+            />
+            <CryptoCard 
+              type="eth" 
+              balance={`${(Number(user.ethBalanceWei) || 0).toLocaleString()} gwei`}
+              label="ETH"
+            />
+            <CryptoCard 
+              type="usdt" 
+              balance={`$${(user.usdtBalance || 0).toFixed(2)}`}
+              label="USDT"
+            />
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full max-w-sm mb-4"
+      >
+        <Card 
+          className="p-4 border-secondary/30"
+          style={{ 
+            background: 'linear-gradient(135deg, hsl(270 60% 55% / 0.15) 0%, hsl(195 100% 50% / 0.1) 100%)',
+            boxShadow: '0 0 30px hsl(270 60% 55% / 0.15)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: 'hsl(270 60% 55% / 0.3)' }}
+            >
+              <Trophy className="w-5 h-5" style={{ color: '#8b5cf6' }} />
+            </div>
+            <div className="flex-1">
+              <div className="font-bold text-lg" style={{ color: '#00d4ff' }}>$200 TOURNAMENT</div>
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>03:52</span>
+                <span className="text-xs" style={{ color: '#8b5cf6' }}>Rewards boost!</span>
               </div>
             </div>
-          </Card>
+            <div className="flex gap-1">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
+              ))}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {user && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="w-full max-w-sm mb-4"
+        >
+          <div className="flex gap-3">
+            <Card 
+              className="flex-1 p-3 border-muted/30 hover-elevate cursor-pointer"
+              onClick={() => {}}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Stats</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Игр</div>
+                      <div className="font-bold tabular-nums" data-testid="stats-games">{user.gamesPlayed}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Лучший</div>
+                      <div className="font-bold tabular-nums" style={{ color: '#00ff88' }} data-testid="stats-best">{user.bestScore.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Ранг</div>
+                      <div className="font-bold tabular-nums text-xs" style={{ color: '#f7931a' }} data-testid="stats-rank">{rankInfo?.name} {rankInfo?.level}</div>
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+              </div>
+            </Card>
+            
+            <Card 
+              className="p-3 border-muted/30 hover-elevate cursor-pointer"
+              style={{ minWidth: '90px' }}
+              onClick={() => setShowReferral(!showReferral)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Refirs</div>
+                  <div className="text-lg font-bold mt-1" style={{ color: '#00ff88' }}>
+                    {referralInfo?.directReferralsCount || 0}
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </div>
+            </Card>
+          </div>
         </motion.div>
       )}
 
@@ -199,28 +440,20 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="w-full max-w-sm flex flex-col gap-4"
+        className="w-full max-w-sm"
       >
         <Button
           size="lg"
-          className="w-full h-16 font-display text-xl"
+          className="w-full h-14 font-display text-xl font-bold border-0"
           onClick={onPlay}
           disabled={isLoading}
           data-testid="button-play"
+          style={{
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #00d4ff 100%)',
+            boxShadow: '0 0 30px hsl(270 60% 55% / 0.4), 0 0 60px hsl(195 100% 50% / 0.2)',
+          }}
         >
-          <Play className="w-6 h-6 mr-2 fill-current" />
-          Играть
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="lg"
-          className="w-full font-display"
-          onClick={onLeaderboard}
-          data-testid="button-leaderboard"
-        >
-          <Trophy className="w-5 h-5 mr-2" />
-          Рейтинг
+          START
         </Button>
 
         {user?.isAdmin && (
@@ -228,26 +461,13 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             <Button
               variant="outline"
               size="lg"
-              className="w-full font-display"
+              className="w-full font-display mt-3"
               data-testid="button-admin"
             >
               <Settings className="w-5 h-5 mr-2" />
               Админ-панель
             </Button>
           </Link>
-        )}
-
-        {referralInfo && (
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full font-display"
-            onClick={() => setShowReferral(!showReferral)}
-            data-testid="button-referral"
-          >
-            <Gift className="w-5 h-5 mr-2" />
-            Пригласить друзей
-          </Button>
         )}
       </motion.div>
 
@@ -259,7 +479,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
             className="w-full max-w-sm overflow-hidden"
           >
-            <Card className="p-4 relative">
+            <Card className="p-4 relative border-primary/20">
               <Button
                 size="icon"
                 variant="ghost"
@@ -272,14 +492,11 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
               
               <div className="mb-3">
                 <h3 className="font-display font-semibold text-lg flex items-center gap-2">
-                  <Gift className="w-5 h-5 text-primary" />
+                  <Gift className="w-5 h-5" style={{ color: '#00ff88' }} />
                   Реферальная программа
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Зови друзей — прокачивайся быстрее.<br/>
-                  1 уровень: твой друг фармит Beads — ты получаешь 10% его игровых Beads бонусом.<br/>
-                  2 уровень: друзья твоего друга играют — ты дополнительно получаешь 3% их Beads.<br/>
-                  Все начисления только в Beads внутри игры, без сложных условий и скрытых правил.
+                  Зови друзей — получай 10% их Beads!
                 </p>
               </div>
 
@@ -297,7 +514,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                       onClick={copyReferralLink}
                       data-testid="button-copy-referral"
                     >
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copied ? <Check className="w-4 h-4" style={{ color: '#00ff88' }} /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>
@@ -311,7 +528,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                   </div>
                   <div className="bg-muted/30 rounded-lg p-2">
                     <div className="text-xs text-muted-foreground">Заработано</div>
-                    <div className="font-display font-bold text-lg text-primary" data-testid="text-referral-rewards">
+                    <div className="font-display font-bold text-lg" style={{ color: '#00ff88' }} data-testid="text-referral-rewards">
                       {referralInfo.totalEarnedBeads.toLocaleString()}
                     </div>
                   </div>
@@ -322,53 +539,39 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         )}
       </AnimatePresence>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-8 flex items-center gap-6"
-      >
-        <CryptoBadge type="btc" label="BTC" />
-        <CryptoBadge type="eth" label="ETH" />
-        <CryptoBadge type="usdt" label="USDT" />
-      </motion.div>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-4 text-xs text-muted-foreground text-center"
-      >
-        Собирай крипто-шарики для бонусных Beads!
-      </motion.p>
-    </div>
-  );
-}
-
-interface CryptoBadgeProps {
-  type: 'btc' | 'eth' | 'usdt';
-  label: string;
-}
-
-function CryptoBadge({ type, label }: CryptoBadgeProps) {
-  const config = {
-    btc: { symbol: '₿', color: 'bg-crypto-btc', textColor: 'text-crypto-btc', points: '+500' },
-    eth: { symbol: 'Ξ', color: 'bg-crypto-eth', textColor: 'text-crypto-eth', points: '+300' },
-    usdt: { symbol: '₮', color: 'bg-crypto-usdt', textColor: 'text-crypto-usdt', points: '+200' },
-  };
-
-  const { symbol, color, textColor, points } = config[type];
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div 
-        className={`w-10 h-10 rounded-full ${color} flex items-center justify-center shadow-lg`}
-        style={{ boxShadow: `0 0 15px ${type === 'btc' ? '#f7931a' : type === 'eth' ? '#627eea' : '#26a17b'}40` }}
-      >
-        <span className="text-white font-bold text-lg">{symbol}</span>
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-border safe-area-inset-bottom">
+        <div className="flex justify-around py-2 px-4 max-w-sm mx-auto">
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            onClick={onLeaderboard}
+            data-testid="nav-rankings"
+          >
+            <Trophy className="w-5 h-5" />
+            <span className="text-xs">Rankings</span>
+          </button>
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            data-testid="nav-leagues"
+          >
+            <Award className="w-5 h-5" />
+            <span className="text-xs">Leagues</span>
+          </button>
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            data-testid="nav-achievements"
+          >
+            <Target className="w-5 h-5" />
+            <span className="text-xs">Quests</span>
+          </button>
+          <button 
+            className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
+            data-testid="nav-settings"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-xs">Settings</span>
+          </button>
+        </div>
       </div>
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-semibold text-primary">{points}</span>
     </div>
   );
 }
