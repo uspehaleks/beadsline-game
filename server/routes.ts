@@ -1502,6 +1502,41 @@ export async function registerRoutes(
     }
   });
 
+  // Maintenance mode endpoints
+  app.get("/api/maintenance", async (req, res) => {
+    try {
+      const config = await storage.getGameConfig("maintenance_mode");
+      if (!config) {
+        return res.json({ enabled: false, endTime: null, message: null });
+      }
+      const data = config.value as { enabled: boolean; endTime: string | null; message: string | null };
+      res.json(data);
+    } catch (error) {
+      console.error("Get maintenance mode error:", error);
+      res.json({ enabled: false, endTime: null, message: null });
+    }
+  });
+
+  app.put("/api/admin/maintenance", requireAdmin, async (req, res) => {
+    try {
+      const { enabled, endTime, message } = req.body;
+      
+      const config = await storage.setGameConfig({
+        key: "maintenance_mode",
+        value: {
+          enabled: Boolean(enabled),
+          endTime: endTime || null,
+          message: message || null
+        }
+      });
+      
+      res.json(config.value);
+    } catch (error) {
+      console.error("Set maintenance mode error:", error);
+      res.status(500).json({ error: "Failed to set maintenance mode" });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

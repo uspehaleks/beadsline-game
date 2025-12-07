@@ -172,6 +172,33 @@ Additional fields for daily limits tracking:
 | `/api/referral/config` | GET | Get referral system config (public) |
 | `/api/admin/referral/config` | PUT | Update referral config (admin only) |
 | `/api/admin/referral/stats` | GET | Get all users' referral stats (admin only) |
+| `/api/maintenance` | GET | Get maintenance mode status (public) |
+| `/api/admin/maintenance` | PUT | Set maintenance mode (admin only) |
+
+## Maintenance Mode
+Admin can enable maintenance mode for site updates and development.
+
+**Features:**
+- Toggle switch in Admin Panel → Обслуживание tab
+- Date/time picker for expected end time
+- Custom message for users
+- Countdown timer on maintenance page
+- Auto-reload when maintenance ends
+
+**Configuration (stored in game_config as 'maintenance_mode'):**
+```typescript
+MaintenanceConfig: {
+  enabled: boolean,     // Whether maintenance mode is active
+  endTime: string|null, // ISO datetime when maintenance ends
+  message: string|null  // Custom message for users
+}
+```
+
+**Behavior:**
+- When enabled, non-admin users see a maintenance page with countdown
+- Admin users can still access all pages normally
+- Page auto-reloads when countdown expires or maintenance is disabled
+- Polls server every 10-15 seconds for status changes
 
 ## Referral System (2-Level)
 A 2-level referral system via Telegram bot with Beads-only rewards.

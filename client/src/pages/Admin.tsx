@@ -41,7 +41,10 @@ import {
   Activity,
   UserPlus,
   Coins,
-  Target
+  Target,
+  Wrench,
+  Clock,
+  Power
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -472,6 +475,10 @@ export default function Admin() {
                 <Users2 className="w-4 h-4 mr-1.5" />
                 Рефералы
               </TabsTrigger>
+              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="flex-shrink-0">
+                <Wrench className="w-4 h-4 mr-1.5" />
+                Обслуживание
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -509,6 +516,10 @@ export default function Admin() {
 
           <TabsContent value="referrals">
             <ReferralsTab />
+          </TabsContent>
+
+          <TabsContent value="maintenance">
+            <MaintenanceTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -2699,6 +2710,231 @@ function ReferralsTab() {
             <li>Бонус начисляется автоматически при каждой игре реферала</li>
             <li>Реф-бонусы увеличивают только виртуальные Beads, не USDT</li>
             <li>Лимиты "в день" — мягкие ограничения для защиты от злоупотреблений</li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface MaintenanceConfig {
+  enabled: boolean;
+  endTime: string | null;
+  message: string | null;
+}
+
+function MaintenanceTab() {
+  const { toast } = useToast();
+  const [enabled, setEnabled] = useState(false);
+  const [endTime, setEndTime] = useState("");
+  const [message, setMessage] = useState("");
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const { data: maintenanceConfig, isLoading } = useQuery<MaintenanceConfig>({
+    queryKey: ["/api/maintenance"],
+  });
+
+  useEffect(() => {
+    if (maintenanceConfig) {
+      setEnabled(maintenanceConfig.enabled);
+      if (maintenanceConfig.endTime) {
+        const date = new Date(maintenanceConfig.endTime);
+        const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        setEndTime(localDateTime);
+      } else {
+        setEndTime("");
+      }
+      setMessage(maintenanceConfig.message || "");
+      setHasChanges(false);
+    }
+  }, [maintenanceConfig]);
+
+  const updateMaintenanceMutation = useMutation({
+    mutationFn: async (config: { enabled: boolean; endTime: string | null; message: string | null }) => {
+      return apiRequest("PUT", "/api/admin/maintenance", config);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      setHasChanges(false);
+      toast({
+        title: enabled ? "Режим обслуживания включён" : "Режим обслуживания выключен",
+        description: enabled 
+          ? "Пользователи увидят страницу ожидания"
+          : "Приложение доступно для всех"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить настройки",
+        variant: "destructive"
+      });
+    },
+  });
+
+  const handleSave = () => {
+    let isoEndTime: string | null = null;
+    if (endTime) {
+      try {
+        const date = new Date(endTime);
+        if (!isNaN(date.getTime())) {
+          isoEndTime = date.toISOString();
+        }
+      } catch {
+      }
+    }
+    
+    updateMaintenanceMutation.mutate({
+      enabled,
+      endTime: isoEndTime,
+      message: message.trim() || null
+    });
+  };
+
+  const handleToggle = (checked: boolean) => {
+    setEnabled(checked);
+    setHasChanges(true);
+  };
+
+  const handleReset = () => {
+    if (maintenanceConfig) {
+      setEnabled(maintenanceConfig.enabled);
+      if (maintenanceConfig.endTime) {
+        const date = new Date(maintenanceConfig.endTime);
+        const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        setEndTime(localDateTime);
+      } else {
+        setEndTime("");
+      }
+      setMessage(maintenanceConfig.message || "");
+      setHasChanges(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Power className="w-5 h-5" />
+            Режим обслуживания
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Включите режим обслуживания для проведения технических работ. 
+            Пользователи увидят страницу ожидания с таймером.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Wrench className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <div className="font-medium">Статус приложения</div>
+                <div className="text-sm text-muted-foreground">
+                  {enabled ? "Технические работы" : "Работает нормально"}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={enabled}
+                onCheckedChange={handleToggle}
+                data-testid="switch-maintenance"
+              />
+              <Badge variant={enabled ? "destructive" : "default"}>
+                {enabled ? "ВЫКЛ для пользователей" : "ВКЛЮЧЕНО"}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Время окончания работ
+              </Label>
+              <Input
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => {
+                  setEndTime(e.target.value);
+                  setHasChanges(true);
+                }}
+                className="max-w-xs"
+                data-testid="input-maintenance-end-time"
+              />
+              <p className="text-xs text-muted-foreground">
+                Укажите дату и время, когда приложение снова заработает. 
+                Пользователи увидят обратный отсчёт.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Сообщение для пользователей (необязательно)</Label>
+              <Input
+                type="text"
+                value={message}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setHasChanges(true);
+                }}
+                placeholder="Мы обновляем приложение..."
+                data-testid="input-maintenance-message"
+              />
+              <p className="text-xs text-muted-foreground">
+                Кастомное сообщение для страницы ожидания
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleSave}
+              disabled={updateMaintenanceMutation.isPending || !hasChanges}
+              data-testid="button-save-maintenance"
+            >
+              {updateMaintenanceMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Сохранить
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={handleReset}
+              disabled={!hasChanges}
+              data-testid="button-reset-maintenance"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Сбросить
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Подсказка</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+            <li>При включении режима все пользователи (кроме админов) увидят страницу ожидания</li>
+            <li>Укажите время окончания работ, чтобы показать таймер обратного отсчёта</li>
+            <li>После истечения таймера страница автоматически обновится</li>
+            <li>Не забудьте выключить режим обслуживания после завершения работ</li>
           </ul>
         </CardContent>
       </Card>
