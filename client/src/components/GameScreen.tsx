@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import type { GameState } from '@shared/schema';
+import type { GameState, LivesConfig } from '@shared/schema';
 import { GameCanvas } from './GameCanvas';
 import { GameHUD } from './GameHUD';
 import { NextBallPreview } from './NextBallPreview';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useUser } from '@/contexts/UserContext';
+import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 interface GameScreenProps {
   onGameEnd: (state: GameState) => void;
@@ -20,7 +22,13 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sessionIdRef = useRef<string | null>(null);
-  const { user } = useUser();
+  const [isBuyingLife, setIsBuyingLife] = useState(false);
+  const { user, refreshUser } = useUser();
+  const { toast } = useToast();
+
+  const { data: livesConfig } = useQuery<LivesConfig>({
+    queryKey: ["/api/lives-config"],
+  });
 
   const startSession = useCallback(async () => {
     try {
@@ -85,6 +93,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     startGame: originalStartGame,
     shoot,
     updateAim,
+    addExtraLife,
   } = useGameState({
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
@@ -111,6 +120,49 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     startGame();
   }, [startGame]);
 
+  const handleBuyLife = useCallback(async () => {
+    if (!livesConfig || isBuyingLife) return;
+    if (!user || user.totalPoints < livesConfig.extraLifeCost) {
+      toast({
+        title: "Недостаточно Beads",
+        description: `Нужно ${livesConfig.extraLifeCost} Beads для покупки жизни`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (gameState.extraLivesBought >= livesConfig.maxExtraLives) {
+      toast({
+        title: "Лимит достигнут",
+        description: `Максимум ${livesConfig.maxExtraLives} дополнительных жизней за игру`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsBuyingLife(true);
+    try {
+      const res = await apiRequest('POST', '/api/buy-life', {});
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to buy life');
+      }
+      addExtraLife(livesConfig.extraLifeSeconds);
+      await refreshUser();
+      toast({
+        title: "+1 Жизнь!",
+        description: "Шарики сброшены в начало",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Ошибка покупки",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsBuyingLife(false);
+    }
+  }, [livesConfig, isBuyingLife, user, gameState.extraLivesBought, addExtraLife, refreshUser, toast]);
+
   return (
     <div 
       ref={containerRef}
@@ -124,6 +176,11 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
           ballsOnScreen={ballsOnScreen}
           ballsRemaining={ballsRemaining}
           totalBalls={totalBalls}
+          userBeads={user?.totalPoints || 0}
+          lifeCost={livesConfig?.extraLifeCost || 50}
+          maxExtraLives={livesConfig?.maxExtraLives || 5}
+          onBuyLife={handleBuyLife}
+          isBuyingLife={isBuyingLife}
         />
       )}
 

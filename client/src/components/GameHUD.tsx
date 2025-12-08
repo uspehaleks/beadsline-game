@@ -1,6 +1,7 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Circle, Heart } from 'lucide-react';
+import { Clock, Zap, Circle, Heart, Plus, Loader2 } from 'lucide-react';
 import { getEconomyConfig } from '@/lib/gameEngine';
+import { Button } from '@/components/ui/button';
 
 interface GameHUDProps {
   gameState: GameState;
@@ -8,10 +9,27 @@ interface GameHUDProps {
   ballsOnScreen: number;
   ballsRemaining: number;
   totalBalls: number;
+  userBeads: number;
+  lifeCost: number;
+  maxExtraLives: number;
+  onBuyLife: () => void;
+  isBuyingLife: boolean;
 }
 
-export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining, totalBalls }: GameHUDProps) {
-  const { score, combo, cryptoCollected } = gameState;
+export function GameHUD({ 
+  gameState, 
+  elapsedTime, 
+  ballsOnScreen, 
+  ballsRemaining, 
+  totalBalls,
+  userBeads,
+  lifeCost,
+  maxExtraLives,
+  onBuyLife,
+  isBuyingLife,
+}: GameHUDProps) {
+  const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
+  const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
   
   const economy = getEconomyConfig();
   const SATS_PER_BTC = 100_000_000;
@@ -37,13 +55,33 @@ export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining,
               {formatTime(elapsedTime)}
             </span>
           </div>
-          <div className="flex items-center gap-0.5" data-testid="lives-display">
+          <div className="flex items-center gap-1" data-testid="lives-display">
             {[...Array(3)].map((_, i) => (
               <Heart
                 key={i}
-                className={`w-4 h-4 ${i < gameState.lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
+                className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
               />
             ))}
+            {extraLivesBought > 0 && (
+              <span className="text-xs text-green-500 font-bold">+{extraLivesBought}</span>
+            )}
+            <Button
+              size="sm"
+              variant={canBuyLife ? "default" : "outline"}
+              onClick={onBuyLife}
+              disabled={!canBuyLife || isBuyingLife}
+              className={`h-6 px-2 ml-1 text-xs ${!canBuyLife ? 'opacity-50' : ''}`}
+              data-testid="button-buy-life"
+            >
+              {isBuyingLife ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="w-3 h-3 mr-0.5" />
+                  {lifeCost}
+                </>
+              )}
+            </Button>
           </div>
         </div>
 

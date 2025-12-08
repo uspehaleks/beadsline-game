@@ -198,10 +198,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             return finalState;
           }
           
-          let respawnedBalls = newBalls.map(ball => ({
-            ...ball,
-            pathProgress: Math.max(0, ball.pathProgress * 0.5),
-          }));
+          const spacing = GAME_CONFIG.balls.spacing;
+          let respawnedBalls = newBalls.map((ball, index) => {
+            const baseProgress = ball.pathProgress * 0.5;
+            const newProgress = Math.max(0, baseProgress);
+            return { ...ball, pathProgress: newProgress };
+          });
+          respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+          for (let i = 1; i < respawnedBalls.length; i++) {
+            const minProgress = respawnedBalls[i - 1].pathProgress + spacing;
+            if (respawnedBalls[i].pathProgress < minProgress) {
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: minProgress };
+            }
+          }
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
@@ -380,9 +389,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
 
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
-      let resetBalls = prev.balls.map(ball => ({
+      const spacing = GAME_CONFIG.balls.spacing;
+      const sortedBalls = [...prev.balls].sort((a, b) => a.pathProgress - b.pathProgress);
+      let resetBalls = sortedBalls.map((ball, index) => ({
         ...ball,
-        pathProgress: 0,
+        pathProgress: index * spacing,
       }));
       resetBalls = updateBallPositions(resetBalls, pathRef.current);
       return {
