@@ -96,6 +96,10 @@ LivesConfig: {
 - All transactions go through House Account with full audit trail
 - Referral rewards only trigger on victory
 
+### Chain Rollback on Life Events
+- **Life lost**: All balls roll back to 50% of their current path position
+- **Life purchased**: All balls reset to the start of the path (position 0)
+
 ## Game Configuration
 
 ### Static Config (client/src/lib/gameConfig.ts)

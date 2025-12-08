@@ -198,12 +198,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             return finalState;
           }
           
-          const respawnedBalls = newBalls.map(ball => {
-            if (ball.pathProgress >= 1) {
-              return { ...ball, pathProgress: ball.pathProgress - 0.3 };
-            }
-            return ball;
-          });
+          let respawnedBalls = newBalls.map(ball => ({
+            ...ball,
+            pathProgress: Math.max(0, ball.pathProgress * 0.5),
+          }));
+          respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
           return { ...prev, balls: respawnedBalls, lives: newLives };
@@ -380,11 +379,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   }, [gameState.isPlaying, shooterPosition]);
 
   const addExtraLife = useCallback((extraSeconds: number) => {
-    setGameState(prev => ({
-      ...prev,
-      lives: prev.lives + 1,
-      extraLivesBought: prev.extraLivesBought + 1,
-    }));
+    setGameState(prev => {
+      let resetBalls = prev.balls.map(ball => ({
+        ...ball,
+        pathProgress: 0,
+      }));
+      resetBalls = updateBallPositions(resetBalls, pathRef.current);
+      return {
+        ...prev,
+        balls: resetBalls,
+        lives: prev.lives + 1,
+        extraLivesBought: prev.extraLivesBought + 1,
+      };
+    });
     hapticFeedback('success');
   }, []);
 
