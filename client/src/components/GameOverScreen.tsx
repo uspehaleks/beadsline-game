@@ -1,6 +1,17 @@
+import { useState } from 'react';
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2 } from 'lucide-react';
 import { SiEthereum } from 'react-icons/si';
 import { motion } from 'framer-motion';
@@ -28,6 +39,7 @@ export function GameOverScreen({
   maxExtraLives = 5,
   isBuyingLife = false,
 }: GameOverScreenProps) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
   
@@ -35,6 +47,17 @@ export function GameOverScreen({
     onContinue && 
     extraLivesBought < maxExtraLives && 
     (user?.totalPoints || 0) >= lifeCost;
+
+  const handleContinueClick = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmContinue = () => {
+    setShowConfirmDialog(false);
+    if (onContinue) {
+      onContinue();
+    }
+  };
   
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -150,7 +173,7 @@ export function GameOverScreen({
               <Button
                 size="lg"
                 className="w-full font-display text-lg bg-green-600 hover:bg-green-700"
-                onClick={onContinue}
+                onClick={handleContinueClick}
                 disabled={!canContinue || isBuyingLife}
                 data-testid="button-continue-game"
               >
@@ -201,6 +224,43 @@ export function GameOverScreen({
           </motion.div>
         </Card>
       </motion.div>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-green-500" />
+              Продолжить игру?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left space-y-2">
+              <p>С вашего баланса будет списано <span className="font-bold text-foreground">{lifeCost} Beads</span>.</p>
+              <p>Вы получите <span className="font-bold text-foreground">+1 жизнь</span> и сможете продолжить игру с начала трассы.</p>
+              <p className="text-xs text-muted-foreground">
+                Ваш текущий баланс: {user?.totalPoints?.toLocaleString() || 0} Beads
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel 
+              className="flex-1 mt-0"
+              data-testid="button-cancel-continue"
+            >
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={handleConfirmContinue}
+              disabled={isBuyingLife}
+              data-testid="button-confirm-continue"
+            >
+              {isBuyingLife ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Продолжить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }
