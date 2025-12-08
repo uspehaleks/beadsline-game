@@ -6,6 +6,7 @@ import {
   usdtFundSettings,
   realRewards,
   referralRewards,
+  beadsTransactions,
   type User, 
   type InsertUser,
   type GameScore,
@@ -29,6 +30,11 @@ import {
   type ReferralConfig,
   type ReferralInfo,
   type ReferralUserStats,
+  type BeadsTransaction,
+  type InsertBeadsTransaction,
+  type HouseAccountConfig,
+  type LivesConfig,
+  type TransactionType,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, gte, sum } from "drizzle-orm";
@@ -98,6 +104,16 @@ export interface IStorage {
   getTotalReferralBeads(userId: string): Promise<number>;
   
   getFundToggles(): Promise<{ cryptoFundEnabled: boolean; usdtFundEnabled: boolean }>;
+  
+  getHouseAccount(): Promise<HouseAccountConfig>;
+  updateHouseAccount(updates: Partial<HouseAccountConfig>): Promise<HouseAccountConfig>;
+  getLivesConfig(): Promise<LivesConfig>;
+  updateLivesConfig(config: Partial<LivesConfig>): Promise<LivesConfig>;
+  createBeadsTransaction(tx: InsertBeadsTransaction): Promise<BeadsTransaction>;
+  getBeadsTransactions(limit?: number, offset?: number): Promise<BeadsTransaction[]>;
+  getBeadsTransactionsCount(): Promise<number>;
+  awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
+  chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1239,6 +1255,216 @@ export class DatabaseStorage implements IStorage {
       cryptoFundEnabled: cryptoConfig?.value === true,
       usdtFundEnabled: usdtConfig?.value === true,
     };
+  }
+
+  private getDefaultHouseAccount(): HouseAccountConfig {
+    return {
+      balance: 1000000,
+      salesIncome: 0,
+      totalDistributed: 0,
+      lastUpdated: new Date().toISOString(),
+    };
+  }
+
+  async getHouseAccount(): Promise<HouseAccountConfig> {
+    const config = await this.getGameConfig('house_account');
+    if (!config) {
+      const defaultConfig = this.getDefaultHouseAccount();
+      await this.setGameConfig({
+        key: 'house_account',
+        value: defaultConfig,
+        description: 'House account balance for Beads distribution',
+      });
+      return defaultConfig;
+    }
+    
+    const stored = config.value as Partial<HouseAccountConfig>;
+    const defaults = this.getDefaultHouseAccount();
+    
+    return {
+      balance: stored.balance ?? defaults.balance,
+      salesIncome: stored.salesIncome ?? defaults.salesIncome,
+      totalDistributed: stored.totalDistributed ?? defaults.totalDistributed,
+      lastUpdated: stored.lastUpdated ?? defaults.lastUpdated,
+    };
+  }
+
+  async updateHouseAccount(updates: Partial<HouseAccountConfig>): Promise<HouseAccountConfig> {
+    const current = await this.getHouseAccount();
+    
+    const newConfig: HouseAccountConfig = {
+      balance: updates.balance ?? current.balance,
+      salesIncome: updates.salesIncome ?? current.salesIncome,
+      totalDistributed: updates.totalDistributed ?? current.totalDistributed,
+      lastUpdated: new Date().toISOString(),
+    };
+    
+    await this.setGameConfig({
+      key: 'house_account',
+      value: newConfig,
+      description: 'House account balance for Beads distribution',
+    });
+    
+    return newConfig;
+  }
+
+  private getDefaultLivesConfig(): LivesConfig {
+    return {
+      livesPerGame: 3,
+      extraLifeCost: 50,
+      extraLifeSeconds: 30,
+      maxExtraLives: 5,
+    };
+  }
+
+  async getLivesConfig(): Promise<LivesConfig> {
+    const config = await this.getGameConfig('lives_config');
+    if (!config) {
+      const defaultConfig = this.getDefaultLivesConfig();
+      await this.setGameConfig({
+        key: 'lives_config',
+        value: defaultConfig,
+        description: 'Lives system configuration',
+      });
+      return defaultConfig;
+    }
+    
+    const stored = config.value as Partial<LivesConfig>;
+    const defaults = this.getDefaultLivesConfig();
+    
+    return {
+      livesPerGame: stored.livesPerGame ?? defaults.livesPerGame,
+      extraLifeCost: stored.extraLifeCost ?? defaults.extraLifeCost,
+      extraLifeSeconds: stored.extraLifeSeconds ?? defaults.extraLifeSeconds,
+      maxExtraLives: stored.maxExtraLives ?? defaults.maxExtraLives,
+    };
+  }
+
+  async updateLivesConfig(updates: Partial<LivesConfig>): Promise<LivesConfig> {
+    const current = await this.getLivesConfig();
+    
+    const newConfig: LivesConfig = {
+      livesPerGame: updates.livesPerGame ?? current.livesPerGame,
+      extraLifeCost: updates.extraLifeCost ?? current.extraLifeCost,
+      extraLifeSeconds: updates.extraLifeSeconds ?? current.extraLifeSeconds,
+      maxExtraLives: updates.maxExtraLives ?? current.maxExtraLives,
+    };
+    
+    await this.setGameConfig({
+      key: 'lives_config',
+      value: newConfig,
+      description: 'Lives system configuration',
+    });
+    
+    return newConfig;
+  }
+
+  async createBeadsTransaction(tx: InsertBeadsTransaction): Promise<BeadsTransaction> {
+    const [created] = await db.insert(beadsTransactions).values(tx).returning();
+    return created;
+  }
+
+  async getBeadsTransactions(limit: number = 100, offset: number = 0): Promise<BeadsTransaction[]> {
+    return await db.select()
+      .from(beadsTransactions)
+      .orderBy(desc(beadsTransactions.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getBeadsTransactionsCount(): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(beadsTransactions);
+    return result[0]?.count || 0;
+  }
+
+  async awardBeadsWithHouse(
+    userId: string, 
+    amount: number, 
+    type: TransactionType, 
+    description: string, 
+    gameScoreId?: string
+  ): Promise<{ success: boolean; newBalance: number }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, newBalance: 0 };
+    
+    const house = await this.getHouseAccount();
+    
+    if (house.balance < amount) {
+      console.log(`House account insufficient: ${house.balance} < ${amount}`);
+      return { success: false, newBalance: user.totalPoints };
+    }
+    
+    const userBalanceBefore = user.totalPoints;
+    const userBalanceAfter = userBalanceBefore + amount;
+    const houseBalanceBefore = house.balance;
+    const houseBalanceAfter = houseBalanceBefore - amount;
+    
+    await db.update(users)
+      .set({ totalPoints: userBalanceAfter })
+      .where(eq(users.id, userId));
+    
+    await this.updateHouseAccount({
+      balance: houseBalanceAfter,
+      totalDistributed: house.totalDistributed + amount,
+    });
+    
+    await this.createBeadsTransaction({
+      userId,
+      type,
+      amount,
+      balanceBefore: userBalanceBefore,
+      balanceAfter: userBalanceAfter,
+      houseBalanceBefore,
+      houseBalanceAfter,
+      description,
+      gameScoreId,
+    });
+    
+    return { success: true, newBalance: userBalanceAfter };
+  }
+
+  async chargeBeadsToHouse(
+    userId: string, 
+    amount: number, 
+    type: TransactionType, 
+    description: string
+  ): Promise<{ success: boolean; newBalance: number }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, newBalance: 0 };
+    
+    if (user.totalPoints < amount) {
+      return { success: false, newBalance: user.totalPoints };
+    }
+    
+    const house = await this.getHouseAccount();
+    
+    const userBalanceBefore = user.totalPoints;
+    const userBalanceAfter = userBalanceBefore - amount;
+    const houseBalanceBefore = house.balance;
+    const houseBalanceAfter = houseBalanceBefore + amount;
+    
+    await db.update(users)
+      .set({ totalPoints: userBalanceAfter })
+      .where(eq(users.id, userId));
+    
+    await this.updateHouseAccount({
+      balance: houseBalanceAfter,
+      salesIncome: house.salesIncome + amount,
+    });
+    
+    await this.createBeadsTransaction({
+      userId,
+      type,
+      amount: -amount,
+      balanceBefore: userBalanceBefore,
+      balanceAfter: userBalanceAfter,
+      houseBalanceBefore,
+      houseBalanceAfter,
+      description,
+    });
+    
+    return { success: true, newBalance: userBalanceAfter };
   }
 }
 

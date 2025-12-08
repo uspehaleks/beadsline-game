@@ -133,6 +133,36 @@ export const referralRewardsRelations = relations(referralRewards, ({ one }) => 
   }),
 }));
 
+export const beadsTransactions = pgTable("beads_transactions", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).references(() => users.id),
+  type: varchar("type", { length: 50 }).notNull(),
+  amount: integer("amount").notNull(),
+  balanceBefore: integer("balance_before").notNull(),
+  balanceAfter: integer("balance_after").notNull(),
+  houseBalanceBefore: integer("house_balance_before"),
+  houseBalanceAfter: integer("house_balance_after"),
+  description: text("description"),
+  gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const beadsTransactionsRelations = relations(beadsTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [beadsTransactions.userId],
+    references: [users.id],
+  }),
+  gameScore: one(gameScores, {
+    fields: [beadsTransactions.gameScoreId],
+    references: [gameScores.id],
+  }),
+}));
+
+export const insertBeadsTransactionSchema = createInsertSchema(beadsTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   totalPoints: true,
@@ -186,6 +216,30 @@ export type InsertRealReward = z.infer<typeof insertRealRewardSchema>;
 export type RealReward = typeof realRewards.$inferSelect;
 export type InsertReferralReward = z.infer<typeof insertReferralRewardSchema>;
 export type ReferralReward = typeof referralRewards.$inferSelect;
+export type InsertBeadsTransaction = z.infer<typeof insertBeadsTransactionSchema>;
+export type BeadsTransaction = typeof beadsTransactions.$inferSelect;
+
+export type TransactionType = 
+  | 'game_win_reward'
+  | 'buy_extra_life'
+  | 'referral_reward'
+  | 'admin_adjustment'
+  | 'house_deposit'
+  | 'house_withdrawal';
+
+export interface HouseAccountConfig {
+  balance: number;
+  salesIncome: number;
+  totalDistributed: number;
+  lastUpdated: string;
+}
+
+export interface LivesConfig {
+  livesPerGame: number;
+  extraLifeCost: number;
+  extraLifeSeconds: number;
+  maxExtraLives: number;
+}
 
 export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple';
 export type CryptoType = 'btc' | 'eth' | 'usdt';
