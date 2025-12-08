@@ -518,6 +518,20 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         return { ...prev, balls: newBalls };
       });
       
+      setProjectile(prev => {
+        if (!prev || gameEndedRef.current) return prev;
+        
+        const dims = dimensionsRef.current;
+        const newX = prev.x + prev.vx;
+        const newY = prev.y + prev.vy;
+        
+        if (newX < 0 || newX > dims.width || newY < 0 || newY > dims.height) {
+          return null;
+        }
+        
+        return { ...prev, prevX: prev.x, prevY: prev.y, x: newX, y: newY };
+      });
+      
       gameLoopRef.current = requestAnimationFrame(runLoop);
     };
     
