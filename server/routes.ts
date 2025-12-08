@@ -656,10 +656,35 @@ export async function registerRoutes(
       };
       
       const validatedData = insertGameScoreSchema.parse(scoreData);
+      const isVictory = validatedData.won === true;
       
       const score = await storage.createGameScore(validatedData);
       
-      await storage.updateUserStats(userId, validatedData.score);
+      let beadsAwarded = 0;
+      
+      if (isVictory) {
+        const beadsToAward = validatedData.score;
+        const awardResult = await storage.awardBeadsWithHouse(
+          userId,
+          beadsToAward,
+          "game_win_reward",
+          `Награда за победу (очки: ${beadsToAward})`,
+          score.id
+        );
+        
+        if (awardResult.success) {
+          beadsAwarded = beadsToAward;
+        }
+      }
+      
+      const user = await storage.getUser(userId);
+      if (user) {
+        const currentBestScore = user.bestScore;
+        await storage.updateUser(userId, {
+          gamesPlayed: user.gamesPlayed + 1,
+          bestScore: Math.max(currentBestScore, validatedData.score),
+        });
+      }
       
       const cryptoRewards = await storage.processCryptoRewards(
         userId,
@@ -678,14 +703,18 @@ export async function registerRoutes(
         );
       }
       
-      try {
-        await storage.processReferralRewards(score.id, userId, validatedData.score);
-      } catch (refError) {
-        console.error("Referral reward processing error:", refError);
+      if (isVictory && beadsAwarded > 0) {
+        try {
+          await storage.processReferralRewards(score.id, userId, beadsAwarded);
+        } catch (refError) {
+          console.error("Referral reward processing error:", refError);
+        }
       }
       
       res.json({ 
         ...score, 
+        beadsAwarded,
+        isVictory,
         usdtAwarded: rewardResult.usdtAwarded,
         rewardId: rewardResult.rewardId,
         cryptoRewards,
@@ -1639,7 +1668,7 @@ export async function registerRoutes(
       const result = await storage.chargeBeadsToHouse(
         userId,
         cost,
-        "PURCHASE",
+        "buy_extra_life",
         `Покупка дополнительной жизни (+${livesConfig.extraLifeSeconds} сек)`
       );
 
