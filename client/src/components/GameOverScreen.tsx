@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,6 +40,7 @@ export function GameOverScreen({
   isBuyingLife = false,
 }: GameOverScreenProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [hasAutoShown, setHasAutoShown] = useState(false);
   const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
   
@@ -47,6 +48,16 @@ export function GameOverScreen({
     onContinue && 
     extraLivesBought < maxExtraLives && 
     (user?.totalPoints || 0) >= lifeCost;
+
+  useEffect(() => {
+    if (canContinue && !hasAutoShown) {
+      const timer = setTimeout(() => {
+        setShowConfirmDialog(true);
+        setHasAutoShown(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [canContinue, hasAutoShown]);
 
   const handleContinueClick = () => {
     setShowConfirmDialog(true);
@@ -226,37 +237,47 @@ export function GameOverScreen({
       </motion.div>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent className="max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Heart className="w-5 h-5 text-green-500" />
+        <AlertDialogContent className="max-w-md p-6">
+          <AlertDialogHeader className="space-y-4">
+            <AlertDialogTitle className="flex items-center justify-center gap-3 text-2xl">
+              <Heart className="w-8 h-8 text-green-500" />
               Продолжить игру?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-left space-y-2">
-              <p>С вашего баланса будет списано <span className="font-bold text-foreground">{lifeCost} Beads</span>.</p>
-              <p>Вы получите <span className="font-bold text-foreground">+1 жизнь</span> и сможете продолжить игру с начала трассы.</p>
-              <p className="text-xs text-muted-foreground">
-                Ваш текущий баланс: {user?.totalPoints?.toLocaleString() || 0} Beads
+            <AlertDialogDescription className="text-center space-y-4 text-base">
+              <p className="text-lg">
+                С вашего баланса будет списано{' '}
+                <span className="font-bold text-foreground text-xl">{lifeCost} Beads</span>
               </p>
+              <p className="text-lg">
+                Вы получите{' '}
+                <span className="font-bold text-green-500 text-xl">+1 жизнь</span>{' '}
+                и продолжите игру с начала трассы
+              </p>
+              <div className="pt-2 pb-1 px-4 rounded-lg bg-muted/50 inline-block">
+                <span className="text-muted-foreground">Ваш баланс: </span>
+                <span className="font-bold text-foreground text-lg">{user?.totalPoints?.toLocaleString() || 0} Beads</span>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-2">
+          <AlertDialogFooter className="flex-row gap-3 mt-6">
             <AlertDialogCancel 
-              className="flex-1 mt-0"
+              className="flex-1 mt-0 h-12 text-lg"
               data-testid="button-cancel-continue"
             >
-              Отмена
+              Нет
             </AlertDialogCancel>
             <AlertDialogAction
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-green-600 hover:bg-green-700 h-12 text-lg"
               onClick={handleConfirmContinue}
               disabled={isBuyingLife}
               data-testid="button-confirm-continue"
             >
               {isBuyingLife ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              Продолжить
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Heart className="w-5 h-5 mr-2" />
+              )}
+              Да
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
