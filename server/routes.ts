@@ -1547,6 +1547,117 @@ export async function registerRoutes(
     }
   });
 
+  // House Account API endpoints
+  app.get("/api/admin/house-account", requireAdmin, async (req, res) => {
+    try {
+      const house = await storage.getHouseAccount();
+      res.json(house);
+    } catch (error) {
+      console.error("Get house account error:", error);
+      res.status(500).json({ error: "Failed to get house account" });
+    }
+  });
+
+  app.put("/api/admin/house-account", requireAdmin, async (req, res) => {
+    try {
+      const { balance, salesIncome, totalDistributed } = req.body;
+      const house = await storage.updateHouseAccount({
+        balance: balance !== undefined ? Number(balance) : undefined,
+        salesIncome: salesIncome !== undefined ? Number(salesIncome) : undefined,
+        totalDistributed: totalDistributed !== undefined ? Number(totalDistributed) : undefined,
+      });
+      res.json(house);
+    } catch (error) {
+      console.error("Update house account error:", error);
+      res.status(500).json({ error: "Failed to update house account" });
+    }
+  });
+
+  // Lives Config API endpoints
+  app.get("/api/lives-config", async (req, res) => {
+    try {
+      const config = await storage.getLivesConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get lives config error:", error);
+      res.status(500).json({ error: "Failed to get lives config" });
+    }
+  });
+
+  app.put("/api/admin/lives-config", requireAdmin, async (req, res) => {
+    try {
+      const { livesPerGame, extraLifeCost, extraLifeSeconds, maxExtraLives } = req.body;
+      const config = await storage.updateLivesConfig({
+        livesPerGame: livesPerGame !== undefined ? Number(livesPerGame) : undefined,
+        extraLifeCost: extraLifeCost !== undefined ? Number(extraLifeCost) : undefined,
+        extraLifeSeconds: extraLifeSeconds !== undefined ? Number(extraLifeSeconds) : undefined,
+        maxExtraLives: maxExtraLives !== undefined ? Number(maxExtraLives) : undefined,
+      });
+      res.json(config);
+    } catch (error) {
+      console.error("Update lives config error:", error);
+      res.status(500).json({ error: "Failed to update lives config" });
+    }
+  });
+
+  // Beads Transactions Journal
+  app.get("/api/admin/transactions", requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const [transactions, total] = await Promise.all([
+        storage.getBeadsTransactions(limit, offset),
+        storage.getBeadsTransactionsCount(),
+      ]);
+      res.json({ transactions, total, limit, offset });
+    } catch (error) {
+      console.error("Get transactions error:", error);
+      res.status(500).json({ error: "Failed to get transactions" });
+    }
+  });
+
+  // Buy extra life endpoint
+  app.post("/api/buy-life", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const livesConfig = await storage.getLivesConfig();
+      const cost = livesConfig.extraLifeCost;
+
+      if (user.totalPoints < cost) {
+        return res.status(400).json({ 
+          error: "Insufficient Beads", 
+          required: cost, 
+          current: user.totalPoints 
+        });
+      }
+
+      const result = await storage.chargeBeadsToHouse(
+        userId,
+        cost,
+        "PURCHASE",
+        `Покупка дополнительной жизни (+${livesConfig.extraLifeSeconds} сек)`
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ error: "Failed to process purchase" });
+      }
+
+      res.json({
+        success: true,
+        newBalance: result.newBalance,
+        extraSeconds: livesConfig.extraLifeSeconds,
+      });
+    } catch (error) {
+      console.error("Buy life error:", error);
+      res.status(500).json({ error: "Failed to buy extra life" });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
