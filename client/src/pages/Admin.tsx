@@ -467,6 +467,10 @@ export default function Admin() {
                 <Bot className="w-4 h-4 mr-1.5" />
                 Бот
               </TabsTrigger>
+              <TabsTrigger value="beads-house" data-testid="tab-beads-house" className="flex-shrink-0">
+                <Coins className="w-4 h-4 mr-1.5" />
+                Beads
+              </TabsTrigger>
               <TabsTrigger value="economy" data-testid="tab-economy" className="flex-shrink-0">
                 <TrendingUp className="w-4 h-4 mr-1.5" />
                 Экономика
@@ -508,6 +512,10 @@ export default function Admin() {
 
           <TabsContent value="telegram">
             <TelegramTab />
+          </TabsContent>
+
+          <TabsContent value="beads-house">
+            <BeadsHouseTab />
           </TabsContent>
 
           <TabsContent value="economy">
@@ -1752,6 +1760,338 @@ function TelegramTab() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+interface HouseAccountData {
+  balance: number;
+  salesIncome: number;
+  totalDistributed: number;
+  lastUpdated: string;
+}
+
+interface LivesConfigData {
+  livesPerGame: number;
+  extraLifeCost: number;
+  extraLifeSeconds: number;
+  maxExtraLives: number;
+}
+
+interface TransactionData {
+  id: string;
+  userId: string | null;
+  type: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  houseBalanceBefore: number | null;
+  houseBalanceAfter: number | null;
+  description: string | null;
+  gameScoreId: string | null;
+  createdAt: string;
+}
+
+interface TransactionsResponse {
+  transactions: TransactionData[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+function BeadsHouseTab() {
+  const { toast } = useToast();
+
+  const { data: houseAccount, isLoading: houseLoading } = useQuery<HouseAccountData>({
+    queryKey: ["/api/admin/house-account"],
+  });
+
+  const { data: livesConfig, isLoading: livesLoading } = useQuery<LivesConfigData>({
+    queryKey: ["/api/lives-config"],
+  });
+
+  const { data: transactionsData, isLoading: txLoading } = useQuery<TransactionsResponse>({
+    queryKey: ["/api/admin/transactions"],
+  });
+
+  const [editHouse, setEditHouse] = useState({ balance: 1000000 });
+  const [editLives, setEditLives] = useState<LivesConfigData>({
+    livesPerGame: 3,
+    extraLifeCost: 50,
+    extraLifeSeconds: 30,
+    maxExtraLives: 5,
+  });
+
+  useEffect(() => {
+    if (houseAccount) {
+      setEditHouse({ balance: houseAccount.balance });
+    }
+  }, [houseAccount]);
+
+  useEffect(() => {
+    if (livesConfig) {
+      setEditLives(livesConfig);
+    }
+  }, [livesConfig]);
+
+  const updateHouseMutation = useMutation({
+    mutationFn: async (data: { balance: number }) => {
+      return apiRequest("PUT", "/api/admin/house-account", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/house-account"] });
+      toast({ title: "House Account обновлён" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить House Account", variant: "destructive" });
+    },
+  });
+
+  const updateLivesMutation = useMutation({
+    mutationFn: async (data: Partial<LivesConfigData>) => {
+      return apiRequest("PUT", "/api/admin/lives-config", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lives-config"] });
+      toast({ title: "Настройки жизней сохранены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось сохранить настройки", variant: "destructive" });
+    },
+  });
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, { label: string; color: string }> = {
+      game_win_reward: { label: "Победа", color: "bg-green-500/20 text-green-500" },
+      buy_extra_life: { label: "Покупка жизни", color: "bg-blue-500/20 text-blue-500" },
+      referral_reward: { label: "Реферал", color: "bg-purple-500/20 text-purple-500" },
+      admin_adjustment: { label: "Админ", color: "bg-amber-500/20 text-amber-500" },
+      house_deposit: { label: "Пополнение", color: "bg-cyan-500/20 text-cyan-500" },
+    };
+    return labels[type] || { label: type, color: "bg-muted text-muted-foreground" };
+  };
+
+  if (houseLoading || livesLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex justify-center">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Coins className="w-4 h-4" />
+              House Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-primary" data-testid="text-house-balance">
+              {houseAccount?.balance.toLocaleString() || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Beads в фонде</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Доход от продаж
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-500" data-testid="text-sales-income">
+              +{houseAccount?.salesIncome.toLocaleString() || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Beads от покупок</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Выдано игрокам
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-amber-500" data-testid="text-total-distributed">
+              {houseAccount?.totalDistributed.toLocaleString() || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Beads наград</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="w-5 h-5" />
+            Управление House Account
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4 items-end">
+            <div className="space-y-2 flex-1">
+              <Label>Баланс Beads</Label>
+              <Input
+                type="number"
+                value={editHouse.balance}
+                onChange={(e) => setEditHouse({ balance: parseInt(e.target.value) || 0 })}
+                data-testid="input-house-balance"
+              />
+            </div>
+            <Button
+              onClick={() => updateHouseMutation.mutate(editHouse)}
+              disabled={updateHouseMutation.isPending}
+              data-testid="button-save-house"
+            >
+              {updateHouseMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            House Account - центральный фонд Beads. Награды за победы дебетуются из него, покупки - кредитуются.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Система жизней
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Игроки начинают с {editLives.livesPerGame} жизнями. При потере всех жизней - game over.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label>Жизней в игре</Label>
+              <Input
+                type="number"
+                value={editLives.livesPerGame}
+                onChange={(e) => setEditLives({ ...editLives, livesPerGame: parseInt(e.target.value) || 3 })}
+                data-testid="input-lives-per-game"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Цена жизни (Beads)</Label>
+              <Input
+                type="number"
+                value={editLives.extraLifeCost}
+                onChange={(e) => setEditLives({ ...editLives, extraLifeCost: parseInt(e.target.value) || 50 })}
+                data-testid="input-extra-life-cost"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Секунд за жизнь</Label>
+              <Input
+                type="number"
+                value={editLives.extraLifeSeconds}
+                onChange={(e) => setEditLives({ ...editLives, extraLifeSeconds: parseInt(e.target.value) || 30 })}
+                data-testid="input-extra-life-seconds"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Макс. покупок</Label>
+              <Input
+                type="number"
+                value={editLives.maxExtraLives}
+                onChange={(e) => setEditLives({ ...editLives, maxExtraLives: parseInt(e.target.value) || 5 })}
+                data-testid="input-max-extra-lives"
+              />
+            </div>
+          </div>
+          <Button
+            onClick={() => updateLivesMutation.mutate(editLives)}
+            disabled={updateLivesMutation.isPending}
+            data-testid="button-save-lives"
+          >
+            {updateLivesMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Сохранить настройки жизней
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            Журнал транзакций
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Последние {transactionsData?.transactions.length || 0} из {transactionsData?.total || 0} транзакций
+          </p>
+        </CardHeader>
+        <CardContent>
+          {txLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : transactionsData?.transactions.length === 0 ? (
+            <p className="text-center py-6 text-muted-foreground">Нет транзакций</p>
+          ) : (
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-2">
+                {transactionsData?.transactions.map((tx) => {
+                  const typeInfo = getTypeLabel(tx.type);
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
+                      data-testid={`tx-row-${tx.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
+                        <div>
+                          <p className="text-sm font-medium">{tx.description || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold ${tx.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {tx.amount >= 0 ? "+" : ""}{tx.amount.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {tx.balanceBefore.toLocaleString()} → {tx.balanceAfter.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

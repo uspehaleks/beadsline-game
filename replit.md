@@ -55,12 +55,46 @@ The application is a fully functional MVP with:
 ## Game Mechanics
 - **Objective**: Match 3+ same-colored balls before they reach the finish line
 - **Controls**: Touch/click to aim, release to shoot
-- **Scoring**: 100 Beads per ball, combo multipliers (1.5x per consecutive match)
+- **Scoring**: Points calculated during game, Beads ONLY awarded on victory
 - **Crypto Balls**: Special balls with bonus Beads (spawn at 8% rate)
-- **Win Condition**: Score 5000+ Beads OR clear all balls
-- **Game Over**: When any ball reaches the finish line
+- **Win Condition**: Clear all balls
+- **Lives System**: Start with 3 lives, lose one when ball reaches finish
+- **Game Over**: When all lives are lost
 - **Ball Colors**: Red, Blue, Green, Yellow, Purple
 - **Dynamic Speed**: Constant base speed with light acceleration in last 20% of path
+
+## Beads Economic System
+
+### House Account
+Central Beads pool managed via Admin Panel → Beads:
+- **balance**: Current Beads available for distribution
+- **salesIncome**: Total Beads received from player purchases
+- **totalDistributed**: Total Beads awarded to players
+- All transactions are logged in beads_transactions table
+
+### Transaction Types
+- `game_win_reward`: Beads awarded for game victory
+- `buy_extra_life`: Player purchases extra life during game
+- `referral_reward`: Referral commission earned
+- `admin_adjustment`: Manual admin balance adjustment
+- `house_deposit`: House account top-up
+
+### Lives Configuration (Admin Panel → Beads)
+```typescript
+LivesConfig: {
+  livesPerGame: 3,        // Starting lives
+  extraLifeCost: 50,      // Beads to buy extra life
+  extraLifeSeconds: 30,   // Bonus time per life (currently unused)
+  maxExtraLives: 5        // Max lives that can be purchased per game
+}
+```
+
+### Key Rules
+- Beads are ONLY awarded on victory (full board clear)
+- Lost games give 0 Beads (score displayed but not added)
+- Extra lives can be purchased during game for Beads
+- All transactions go through House Account with full audit trail
+- Referral rewards only trigger on victory
 
 ## Game Configuration
 
