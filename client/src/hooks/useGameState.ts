@@ -199,18 +199,32 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           }
           
           const spacing = GAME_CONFIG.balls.spacing;
-          let respawnedBalls = newBalls.map((ball, index) => {
-            const baseProgress = ball.pathProgress * 0.5;
-            const newProgress = Math.max(0, baseProgress);
-            return { ...ball, pathProgress: newProgress };
-          });
+          
+          let respawnedBalls = newBalls.map(ball => ({
+            ...ball,
+            pathProgress: ball.pathProgress * 0.5,
+          }));
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
-          for (let i = 1; i < respawnedBalls.length; i++) {
-            const minProgress = respawnedBalls[i - 1].pathProgress + spacing;
-            if (respawnedBalls[i].pathProgress < minProgress) {
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: minProgress };
+          
+          const n = respawnedBalls.length;
+          if (n > 1) {
+            for (let i = 1; i < n; i++) {
+              const minPos = respawnedBalls[i - 1].pathProgress + spacing;
+              if (respawnedBalls[i].pathProgress < minPos) {
+                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: minPos };
+              }
+            }
+            
+            const maxProgress = respawnedBalls[n - 1].pathProgress;
+            if (maxProgress > 0.9) {
+              const shift = maxProgress - 0.9;
+              respawnedBalls = respawnedBalls.map(ball => ({
+                ...ball,
+                pathProgress: Math.max(0, ball.pathProgress - shift),
+              }));
             }
           }
+          
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
