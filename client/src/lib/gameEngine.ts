@@ -240,6 +240,8 @@ export function createInitialGameState(): GameState {
     won: false,
     shotsTotal: 0,
     shotsHit: 0,
+    lives: 3,
+    extraLivesBought: 0,
   };
 }
 

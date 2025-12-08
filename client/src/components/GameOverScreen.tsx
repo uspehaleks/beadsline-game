@@ -72,7 +72,7 @@ export function GameOverScreen({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="text-muted-foreground mb-6"
+            className="text-muted-foreground mb-4"
           >
             {won ? 'Отличный результат!' : 'Повезёт в следующий раз!'}
           </motion.p>
@@ -81,10 +81,20 @@ export function GameOverScreen({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4 }}
-            className="font-display text-5xl font-bold text-primary mb-8 tabular-nums"
-            data-testid="text-final-score"
+            className="mb-6"
           >
-            {score.toLocaleString()}
+            <div className="font-display text-5xl font-bold text-primary tabular-nums mb-2" data-testid="text-final-score">
+              {score.toLocaleString()}
+            </div>
+            {won ? (
+              <div className="text-sm text-green-500 font-medium">
+                +{score.toLocaleString()} Beads начислено!
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Beads начисляются только при победе
+              </div>
+            )}
           </motion.div>
 
           <motion.div

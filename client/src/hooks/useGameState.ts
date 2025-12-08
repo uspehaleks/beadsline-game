@@ -184,15 +184,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         }
         
         if (checkGameOver(newBalls)) {
-          gameEndedRef.current = true;
-          stopAllTimers();
-          const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
-          setTimeout(() => {
-            onGameEndRef.current?.(finalState);
-            hapticFeedback('error');
-          }, 0);
-          return finalState;
+          const newLives = prev.lives - 1;
+          
+          if (newLives <= 0) {
+            gameEndedRef.current = true;
+            stopAllTimers();
+            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const finalState = { ...prev, balls: newBalls, lives: 0, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
+            setTimeout(() => {
+              onGameEndRef.current?.(finalState);
+              hapticFeedback('error');
+            }, 0);
+            return finalState;
+          }
+          
+          const respawnedBalls = newBalls.map(ball => {
+            if (ball.pathProgress >= 1) {
+              return { ...ball, pathProgress: ball.pathProgress - 0.3 };
+            }
+            return ball;
+          });
+          
+          hapticFeedback('warning');
+          return { ...prev, balls: respawnedBalls, lives: newLives };
         }
         
         return { ...prev, balls: newBalls };
@@ -365,6 +379,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setShooterAngle(angle);
   }, [gameState.isPlaying, shooterPosition]);
 
+  const addExtraLife = useCallback((extraSeconds: number) => {
+    setGameState(prev => ({
+      ...prev,
+      lives: prev.lives + 1,
+      extraLivesBought: prev.extraLivesBought + 1,
+    }));
+    hapticFeedback('success');
+  }, []);
+
   const ballsOnScreen = gameState.balls.length;
   const totalBalls = GAME_CONFIG.gameplay.maxTotalBalls;
   const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
@@ -382,5 +405,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     startGame,
     shoot,
     updateAim,
+    addExtraLife,
   };
 }

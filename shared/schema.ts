@@ -274,6 +274,8 @@ export interface GameState {
   won: boolean;
   shotsTotal: number;
   shotsHit: number;
+  lives: number;
+  extraLivesBought: number;
 }
 
 export interface LeaderboardEntry {

@@ -1,5 +1,5 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Circle } from 'lucide-react';
+import { Clock, Zap, Circle, Heart } from 'lucide-react';
 import { getEconomyConfig } from '@/lib/gameEngine';
 
 interface GameHUDProps {
@@ -30,12 +30,20 @@ export function GameHUD({ gameState, elapsedTime, ballsOnScreen, ballsRemaining,
   return (
     <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3">
       <div className="flex items-center justify-between gap-4 backdrop-blur-md bg-background/80 rounded-lg px-4 py-3 border border-border/50">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Clock className="w-4 h-4" />
             <span className="font-display font-bold text-lg tabular-nums" data-testid="text-timer">
               {formatTime(elapsedTime)}
             </span>
+          </div>
+          <div className="flex items-center gap-0.5" data-testid="lives-display">
+            {[...Array(3)].map((_, i) => (
+              <Heart
+                key={i}
+                className={`w-4 h-4 ${i < gameState.lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
+              />
+            ))}
           </div>
         </div>
 
