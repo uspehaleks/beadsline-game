@@ -94,6 +94,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     shoot,
     updateAim,
     addExtraLife,
+    resumeGame,
   } = useGameState({
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
@@ -163,6 +164,49 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     }
   }, [livesConfig, isBuyingLife, user, gameState.extraLivesBought, addExtraLife, refreshUser, toast]);
 
+  const handleContinue = useCallback(async () => {
+    if (!livesConfig || isBuyingLife) return;
+    if (!user || user.totalPoints < livesConfig.extraLifeCost) {
+      toast({
+        title: "Недостаточно Beads",
+        description: `Нужно ${livesConfig.extraLifeCost} Beads для продолжения`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (gameState.extraLivesBought >= livesConfig.maxExtraLives) {
+      toast({
+        title: "Лимит достигнут",
+        description: `Максимум ${livesConfig.maxExtraLives} дополнительных жизней за игру`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsBuyingLife(true);
+    try {
+      const res = await apiRequest('POST', '/api/buy-life', {});
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to buy life');
+      }
+      resumeGame();
+      await refreshUser();
+      toast({
+        title: "+1 Жизнь!",
+        description: "Игра продолжается, шарики сброшены в начало",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Ошибка покупки",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsBuyingLife(false);
+    }
+  }, [livesConfig, isBuyingLife, user, gameState.extraLivesBought, resumeGame, refreshUser, toast]);
+
   return (
     <div 
       ref={containerRef}
@@ -225,7 +269,11 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
           onPlayAgain={handlePlayAgain}
           onViewLeaderboard={onViewLeaderboard}
           onMainMenu={onMainMenu}
+          onContinue={handleContinue}
           user={user}
+          lifeCost={livesConfig?.extraLifeCost || 50}
+          maxExtraLives={livesConfig?.maxExtraLives || 5}
+          isBuyingLife={isBuyingLife}
         />
       )}
     </div>

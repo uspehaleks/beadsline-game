@@ -199,32 +199,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           }
           
           const spacing = GAME_CONFIG.balls.spacing;
+          const targetHeadPosition = 0.5;
           
-          let respawnedBalls = newBalls.map(ball => ({
-            ...ball,
-            pathProgress: ball.pathProgress * 0.5,
-          }));
-          respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+          let respawnedBalls = [...newBalls];
+          respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
           const n = respawnedBalls.length;
-          if (n > 1) {
-            for (let i = 1; i < n; i++) {
-              const minPos = respawnedBalls[i - 1].pathProgress + spacing;
-              if (respawnedBalls[i].pathProgress < minPos) {
-                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: minPos };
-              }
+          if (n > 0) {
+            const chainLength = (n - 1) * spacing;
+            let headPos = targetHeadPosition;
+            
+            if (headPos - chainLength < 0) {
+              headPos = chainLength;
+            }
+            if (headPos > 0.85) {
+              headPos = 0.85;
             }
             
-            const maxProgress = respawnedBalls[n - 1].pathProgress;
-            if (maxProgress > 0.9) {
-              const shift = maxProgress - 0.9;
-              respawnedBalls = respawnedBalls.map(ball => ({
-                ...ball,
-                pathProgress: Math.max(0, ball.pathProgress - shift),
-              }));
+            for (let i = 0; i < n; i++) {
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
             }
           }
           
+          respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
@@ -420,6 +417,120 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     hapticFeedback('success');
   }, []);
 
+  const resumeGame = useCallback(() => {
+    stopAllTimers();
+    gameEndedRef.current = false;
+    lastTimeRef.current = 0;
+    spawnAccumRef.current = 0;
+    
+    setGameState(prev => {
+      const spacing = GAME_CONFIG.balls.spacing;
+      const sortedBalls = [...prev.balls].sort((a, b) => a.pathProgress - b.pathProgress);
+      let resetBalls = sortedBalls.map((ball, index) => ({
+        ...ball,
+        pathProgress: index * spacing,
+      }));
+      resetBalls = updateBallPositions(resetBalls, pathRef.current);
+      
+      return {
+        ...prev,
+        balls: resetBalls,
+        lives: 1,
+        isPlaying: true,
+        isGameOver: false,
+        won: false,
+        extraLivesBought: prev.extraLivesBought + 1,
+      };
+    });
+    
+    const currentPath = pathRef.current;
+    
+    const runLoop = (timestamp: number) => {
+      if (gameEndedRef.current) return;
+      
+      const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
+      lastTimeRef.current = timestamp;
+      
+      setGameState(prev => {
+        if (!prev.isPlaying || gameEndedRef.current) return prev;
+        
+        let newBalls = moveBallsForward(prev.balls, deltaTime);
+        newBalls = processRollback(newBalls, deltaTime);
+        newBalls = updateBallPositions(newBalls, currentPath);
+        
+        if (spawnFinishedRef.current && checkWin(newBalls)) {
+          gameEndedRef.current = true;
+          stopAllTimers();
+          const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: true, timeLeft: duration };
+          setTimeout(() => {
+            onGameEndRef.current?.(finalState);
+            hapticFeedback('success');
+          }, 0);
+          return finalState;
+        }
+        
+        if (checkGameOver(newBalls)) {
+          const newLives = prev.lives - 1;
+          
+          if (newLives <= 0) {
+            gameEndedRef.current = true;
+            stopAllTimers();
+            const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
+            const finalState = { ...prev, balls: newBalls, lives: 0, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
+            setTimeout(() => {
+              onGameEndRef.current?.(finalState);
+              hapticFeedback('error');
+            }, 0);
+            return finalState;
+          }
+          
+          const spacing = GAME_CONFIG.balls.spacing;
+          const targetHeadPosition = 0.5;
+          
+          let respawnedBalls = [...newBalls];
+          respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
+          
+          const n = respawnedBalls.length;
+          if (n > 0) {
+            const chainLength = (n - 1) * spacing;
+            let headPos = targetHeadPosition;
+            
+            if (headPos - chainLength < 0) {
+              headPos = chainLength;
+            }
+            if (headPos > 0.85) {
+              headPos = 0.85;
+            }
+            
+            for (let i = 0; i < n; i++) {
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+            }
+          }
+          
+          respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+          respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
+          
+          hapticFeedback('warning');
+          return { ...prev, balls: respawnedBalls, lives: newLives };
+        }
+        
+        return { ...prev, balls: newBalls };
+      });
+      
+      gameLoopRef.current = requestAnimationFrame(runLoop);
+    };
+    
+    gameLoopRef.current = requestAnimationFrame(runLoop);
+    
+    timeTrackerRef.current = setInterval(() => {
+      if (gameEndedRef.current) return;
+      setElapsedTime(Math.floor((Date.now() - gameStartTimeRef.current) / 1000));
+    }, 1000);
+    
+    hapticFeedback('success');
+  }, [stopAllTimers]);
+
   const ballsOnScreen = gameState.balls.length;
   const totalBalls = GAME_CONFIG.gameplay.maxTotalBalls;
   const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
@@ -438,5 +549,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     shoot,
     updateAim,
     addExtraLife,
+    resumeGame,
   };
 }

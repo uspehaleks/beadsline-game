@@ -97,8 +97,9 @@ LivesConfig: {
 - Referral rewards only trigger on victory
 
 ### Chain Rollback on Life Events
-- **Life lost**: All balls roll back to 50% of their current path position
-- **Life purchased**: All balls reset to the start of the path (position 0)
+- **Life lost**: All balls roll back to fixed 0.5 position (head ball at 0.5 from start)
+- **Life purchased during game**: All balls reset to the start of the path (position 0)
+- **Continue after game over**: Player can pay 50 Beads to continue with 1 life, balls reset to start
 
 ## Game Configuration
 

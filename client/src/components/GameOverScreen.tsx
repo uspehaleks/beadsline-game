@@ -1,7 +1,7 @@
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet } from 'lucide-react';
+import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2 } from 'lucide-react';
 import { SiEthereum } from 'react-icons/si';
 import { motion } from 'framer-motion';
 
@@ -10,7 +10,11 @@ interface GameOverScreenProps {
   onPlayAgain: () => void;
   onViewLeaderboard: () => void;
   onMainMenu: () => void;
+  onContinue?: () => void;
   user: User | null;
+  lifeCost?: number;
+  maxExtraLives?: number;
+  isBuyingLife?: boolean;
 }
 
 export function GameOverScreen({
@@ -18,10 +22,19 @@ export function GameOverScreen({
   onPlayAgain,
   onViewLeaderboard,
   onMainMenu,
+  onContinue,
   user,
+  lifeCost = 50,
+  maxExtraLives = 5,
+  isBuyingLife = false,
 }: GameOverScreenProps) {
-  const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft } = gameState;
+  const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
+  
+  const canContinue = !won && 
+    onContinue && 
+    extraLivesBought < maxExtraLives && 
+    (user?.totalPoints || 0) >= lifeCost;
   
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -133,6 +146,32 @@ export function GameOverScreen({
             transition={{ delay: 0.6 }}
             className="flex flex-col gap-3"
           >
+            {!won && onContinue && (
+              <Button
+                size="lg"
+                className="w-full font-display text-lg bg-green-600 hover:bg-green-700"
+                onClick={onContinue}
+                disabled={!canContinue || isBuyingLife}
+                data-testid="button-continue-game"
+              >
+                {isBuyingLife ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <Heart className="w-5 h-5 mr-2" />
+                )}
+                Продолжить за {lifeCost} Beads
+              </Button>
+            )}
+            {!won && onContinue && extraLivesBought >= maxExtraLives && (
+              <div className="text-xs text-muted-foreground">
+                Достигнут лимит покупок ({maxExtraLives})
+              </div>
+            )}
+            {!won && onContinue && (user?.totalPoints || 0) < lifeCost && extraLivesBought < maxExtraLives && (
+              <div className="text-xs text-muted-foreground">
+                Недостаточно Beads (нужно {lifeCost})
+              </div>
+            )}
             <Button
               size="lg"
               className="w-full font-display text-lg"
