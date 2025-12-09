@@ -59,8 +59,18 @@ interface ReferralListItem {
   joinedAt: string;
 }
 
+interface Level2ReferralItem {
+  id: string;
+  username: string;
+  gamesPlayed: number;
+  earnedFromRef: number;
+  invitedBy: string;
+  joinedAt: string;
+}
+
 interface ReferralListResponse {
   referrals: ReferralListItem[];
+  level2Referrals: Level2ReferralItem[];
   level2Count: number;
 }
 
@@ -886,14 +896,14 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-4">
-                  {/* Список рефералов */}
+                  {/* Список рефералов 1-го уровня */}
                   {referralList?.referrals && referralList.referrals.length > 0 && (
                     <div>
                       <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                         <UserPlus className="w-4 h-4" style={{ color: '#00ff88' }} />
-                        Мои рефералы
+                        Уровень 1 ({referralList.referrals.length})
                       </h4>
-                      <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                      <div className="space-y-2 max-h-[120px] overflow-y-auto">
                         {referralList.referrals.map((ref) => (
                           <div
                             key={ref.id}
@@ -902,7 +912,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="w-8 h-8">
-                                <AvatarFallback className="text-xs">
+                                <AvatarFallback className="text-xs" style={{ backgroundColor: 'rgba(0, 255, 136, 0.2)', color: '#00ff88' }}>
                                   {ref.username.substring(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -915,6 +925,44 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                             </div>
                             <div className="text-right">
                               <div className="text-sm font-bold" style={{ color: '#00ff88' }}>
+                                +{ref.earnedFromRef}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Список рефералов 2-го уровня */}
+                  {referralList?.level2Referrals && referralList.level2Referrals.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <Users className="w-4 h-4" style={{ color: '#8b5cf6' }} />
+                        Уровень 2 ({referralList.level2Referrals.length})
+                      </h4>
+                      <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                        {referralList.level2Referrals.map((ref) => (
+                          <div
+                            key={ref.id}
+                            className="flex items-center justify-between bg-muted/20 rounded-lg p-2"
+                            data-testid={`referral-l2-item-${ref.id}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-8 h-8">
+                                <AvatarFallback className="text-xs" style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6' }}>
+                                  {ref.username.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="text-sm font-medium">{ref.username}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  от {ref.invitedBy} • {ref.gamesPlayed} игр
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
                                 +{ref.earnedFromRef}
                               </div>
                             </div>
@@ -973,6 +1021,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                   )}
 
                   {(!referralList?.referrals || referralList.referrals.length === 0) && 
+                   (!referralList?.level2Referrals || referralList.level2Referrals.length === 0) &&
                    (!referralRewards?.rewards || referralRewards.rewards.length === 0) && (
                     <div className="text-center py-8 text-muted-foreground">
                       <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-30" />

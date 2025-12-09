@@ -1176,7 +1176,7 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       
       if (!user?.referralCode) {
-        return res.json({ referrals: [], level2Count: 0 });
+        return res.json({ referrals: [], level2Referrals: [], level2Count: 0 });
       }
       
       // Получаем всех пользователей, которых пригласил текущий пользователь
@@ -1184,31 +1184,59 @@ export async function registerRoutes(
       const directReferrals = allUsers.filter(u => u.referredBy === user.referralCode && !u.deletedAt);
       
       // Для каждого прямого реферала подсчитываем сколько Beads заработано от него
-      const referralsWithStats = await Promise.all(
-        directReferrals.map(async (ref) => {
-          const rewards = await storage.getUserReferralRewards(userId);
-          const earnedFromRef = rewards
-            .filter(r => r.refUserId === ref.id && r.level === 1)
-            .reduce((sum, r) => sum + r.beadsAmount, 0);
-          
-          return {
-            id: ref.id,
-            username: ref.username || ref.firstName || 'Игрок',
-            gamesPlayed: ref.gamesPlayed,
-            earnedFromRef,
-            joinedAt: ref.createdAt,
-          };
-        })
-      );
+      const rewards = await storage.getUserReferralRewards(userId);
+      const referralsWithStats = directReferrals.map((ref) => {
+        const earnedFromRef = rewards
+          .filter(r => r.refUserId === ref.id && r.level === 1)
+          .reduce((sum, r) => sum + r.beadsAmount, 0);
+        
+        return {
+          id: ref.id,
+          username: ref.username || ref.firstName || 'Игрок',
+          gamesPlayed: ref.gamesPlayed,
+          earnedFromRef,
+          joinedAt: ref.createdAt,
+        };
+      });
       
-      // Подсчёт рефералов второго уровня
-      const level2Count = await storage.getLevel2ReferralsCount(userId);
+      // Получаем рефералов второго уровня (рефералы наших рефералов)
+      const level2Referrals: Array<{
+        id: string;
+        username: string;
+        gamesPlayed: number;
+        earnedFromRef: number;
+        invitedBy: string;
+        joinedAt: Date;
+      }> = [];
+      
+      for (const directRef of directReferrals) {
+        if (directRef.referralCode) {
+          const theirReferrals = allUsers.filter(u => u.referredBy === directRef.referralCode && !u.deletedAt);
+          for (const ref2 of theirReferrals) {
+            const earnedFromRef = rewards
+              .filter(r => r.refUserId === ref2.id && r.level === 2)
+              .reduce((sum, r) => sum + r.beadsAmount, 0);
+            
+            level2Referrals.push({
+              id: ref2.id,
+              username: ref2.username || ref2.firstName || 'Игрок',
+              gamesPlayed: ref2.gamesPlayed,
+              earnedFromRef,
+              invitedBy: directRef.username || directRef.firstName || 'Реферал',
+              joinedAt: ref2.createdAt,
+            });
+          }
+        }
+      }
       
       res.json({ 
         referrals: referralsWithStats.sort((a, b) => 
           new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()
         ),
-        level2Count 
+        level2Referrals: level2Referrals.sort((a, b) =>
+          new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()
+        ),
+        level2Count: level2Referrals.length
       });
     } catch (error) {
       console.error("Get referral list error:", error);
