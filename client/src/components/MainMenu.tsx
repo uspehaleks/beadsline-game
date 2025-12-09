@@ -621,7 +621,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             
             <Card 
               className="p-3 border-muted/30 hover-elevate cursor-pointer"
-              style={{ minWidth: '90px' }}
+              style={{ minWidth: '110px' }}
               onClick={() => setShowReferral(!showReferral)}
             >
               <div className="flex items-center justify-between gap-2">
@@ -630,8 +630,13 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                     <Users className="w-3 h-3" style={{ color: '#8b5cf6' }} />
                     <span className="text-xs text-muted-foreground uppercase tracking-wide">Друзья</span>
                   </div>
-                  <div className="text-lg font-bold" style={{ color: '#00ff88' }}>
-                    {referralInfo?.directReferralsCount || 0}
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-lg font-bold" style={{ color: '#00ff88' }}>
+                      {referralInfo?.directReferralsCount || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      / <span style={{ color: '#00d4ff' }}>{(referralInfo?.referralsTotalBeads || 0).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
