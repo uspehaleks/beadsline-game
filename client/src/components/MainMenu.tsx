@@ -652,24 +652,33 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             
             <Card 
               className="p-3 border-muted/30 hover-elevate cursor-pointer"
-              style={{ minWidth: '120px' }}
+              style={{ minWidth: '140px' }}
               onClick={() => setShowReferral(!showReferral)}
             >
               <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1 mb-1">
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-2">
                     <Users className="w-3 h-3" style={{ color: '#8b5cf6' }} />
                     <span className="text-xs text-muted-foreground uppercase tracking-wide">Друзья</span>
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <div className="text-lg font-bold" style={{ color: '#00ff88' }}>
-                      {referralInfo?.directReferralsCount || 0}
+                  <div className="grid grid-cols-3 gap-1 text-center">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground">Ур.1</div>
+                      <div className="text-sm font-bold" style={{ color: '#00ff88' }}>
+                        {referralInfo?.directReferralsCount || 0}
+                      </div>
                     </div>
-                    <div className="text-xs" style={{ color: '#8b5cf6' }}>
-                      +{referralInfo?.level2ReferralsCount || 0}
+                    <div>
+                      <div className="text-[10px] text-muted-foreground">Ур.2</div>
+                      <div className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
+                        {referralInfo?.level2ReferralsCount || 0}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      / <span style={{ color: '#00d4ff' }}>{(referralInfo?.referralsTotalBeads || 0).toLocaleString()}</span>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground">Beads</div>
+                      <div className="text-sm font-bold" style={{ color: '#00d4ff' }}>
+                        {(referralInfo?.totalEarnedBeads || 0).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 </div>
