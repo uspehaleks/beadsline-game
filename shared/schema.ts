@@ -381,6 +381,7 @@ export interface ReferralInfo {
   referralLink: string;
   directReferralsCount: number;
   totalEarnedBeads: number;
+  referralsTotalBeads: number;
 }
 
 export interface ReferralUserStats {

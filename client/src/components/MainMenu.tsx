@@ -24,6 +24,7 @@ interface ReferralInfo {
   referralLink: string;
   directReferralsCount: number;
   totalEarnedBeads: number;
+  referralsTotalBeads: number;
 }
 
 interface ReferralConfig {
@@ -733,17 +734,23 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-muted/30 rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">Рефералов</div>
+                    <div className="text-xs text-muted-foreground">Друзей</div>
                     <div className="font-display font-bold text-lg" data-testid="text-referrals-count">
                       {referralInfo.directReferralsCount}
                     </div>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">Заработано</div>
+                    <div className="text-xs text-muted-foreground">Мой %</div>
                     <div className="font-display font-bold text-lg" style={{ color: '#00ff88' }} data-testid="text-referral-rewards">
                       {referralInfo.totalEarnedBeads.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">Их Beads</div>
+                    <div className="font-display font-bold text-lg" style={{ color: '#00d4ff' }} data-testid="text-referrals-total-beads">
+                      {referralInfo.referralsTotalBeads.toLocaleString()}
                     </div>
                   </div>
                 </div>

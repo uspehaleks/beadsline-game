@@ -1061,11 +1061,19 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     const totalEarnedBeads = await this.getTotalReferralBeads(userId);
     
+    // Сумма Beads, заработанных всеми рефералами пользователя
+    const referrals = await db.select({ totalPoints: users.totalPoints })
+      .from(users)
+      .where(eq(users.referredBy, referralCode));
+    
+    const referralsTotalBeads = referrals.reduce((sum, r) => sum + (r.totalPoints || 0), 0);
+    
     return {
       referralCode,
       referralLink: `https://t.me/${botUsername}?start=${referralCode}`,
       directReferralsCount: user?.directReferralsCount ?? 0,
       totalEarnedBeads,
+      referralsTotalBeads,
     };
   }
 
