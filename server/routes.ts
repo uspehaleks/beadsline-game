@@ -1632,13 +1632,24 @@ export async function registerRoutes(
   // Beads Transactions Journal
   app.get("/api/admin/transactions", requireAdmin, async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 100;
+      const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
-      const [transactions, total] = await Promise.all([
-        storage.getBeadsTransactions(limit, offset),
-        storage.getBeadsTransactionsCount(),
-      ]);
-      res.json({ transactions, total, limit, offset });
+      const type = req.query.type as string | undefined;
+      const search = req.query.search as string | undefined;
+      
+      const result = await storage.getBeadsTransactionsWithUsers({
+        limit,
+        offset,
+        type,
+        search,
+      });
+      
+      res.json({ 
+        transactions: result.transactions, 
+        total: result.total, 
+        limit, 
+        offset 
+      });
     } catch (error) {
       console.error("Get transactions error:", error);
       res.status(500).json({ error: "Failed to get transactions" });

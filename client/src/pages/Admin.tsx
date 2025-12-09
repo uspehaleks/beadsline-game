@@ -44,7 +44,10 @@ import {
   Target,
   Wrench,
   Clock,
-  Power
+  Power,
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -54,6 +57,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AdminStats {
   totalUsers: number;
@@ -1789,6 +1799,7 @@ interface TransactionData {
   description: string | null;
   gameScoreId: string | null;
   createdAt: string;
+  username?: string;
 }
 
 interface TransactionsResponse {
@@ -1798,8 +1809,22 @@ interface TransactionsResponse {
   offset: number;
 }
 
+const TRANSACTION_TYPES = [
+  { value: "all", label: "Все типы" },
+  { value: "game_win_reward", label: "Победа" },
+  { value: "buy_extra_life", label: "Покупка жизни" },
+  { value: "referral_reward", label: "Реферал" },
+  { value: "admin_adjustment", label: "Админ" },
+  { value: "house_deposit", label: "Пополнение" },
+];
+
 function BeadsHouseTab() {
   const { toast } = useToast();
+  const [txPage, setTxPage] = useState(0);
+  const [txSearch, setTxSearch] = useState("");
+  const [txSearchInput, setTxSearchInput] = useState("");
+  const [txType, setTxType] = useState("all");
+  const txPerPage = 15;
 
   const { data: houseAccount, isLoading: houseLoading } = useQuery<HouseAccountData>({
     queryKey: ["/api/admin/house-account"],
@@ -1810,8 +1835,30 @@ function BeadsHouseTab() {
   });
 
   const { data: transactionsData, isLoading: txLoading } = useQuery<TransactionsResponse>({
-    queryKey: ["/api/admin/transactions"],
+    queryKey: ["/api/admin/transactions", txPage, txType, txSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: txPerPage.toString(),
+        offset: (txPage * txPerPage).toString(),
+      });
+      if (txType !== "all") params.set("type", txType);
+      if (txSearch) params.set("search", txSearch);
+      const res = await fetch(`/api/admin/transactions?${params}`);
+      return res.json();
+    },
   });
+
+  const handleSearch = () => {
+    setTxSearch(txSearchInput);
+    setTxPage(0);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setTxType(value);
+    setTxPage(0);
+  };
+
+  const totalPages = transactionsData ? Math.ceil(transactionsData.total / txPerPage) : 0;
 
   const [editHouse, setEditHouse] = useState({ balance: 1000000 });
   const [editLives, setEditLives] = useState<LivesConfigData>({
@@ -2047,10 +2094,38 @@ function BeadsHouseTab() {
             Журнал транзакций
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Последние {transactionsData?.transactions.length || 0} из {transactionsData?.total || 0} транзакций
+            Показано {transactionsData?.transactions.length || 0} из {transactionsData?.total || 0} транзакций
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex gap-2 flex-1">
+              <Input
+                placeholder="Поиск по описанию или ID..."
+                value={txSearchInput}
+                onChange={(e) => setTxSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="flex-1"
+                data-testid="input-tx-search"
+              />
+              <Button variant="outline" onClick={handleSearch} data-testid="button-tx-search">
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
+            <Select value={txType} onValueChange={handleTypeChange}>
+              <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-tx-type">
+                <SelectValue placeholder="Тип транзакции" />
+              </SelectTrigger>
+              <SelectContent>
+                {TRANSACTION_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {txLoading ? (
             <div className="flex justify-center py-6">
               <Loader2 className="w-6 h-6 animate-spin" />
@@ -2058,7 +2133,7 @@ function BeadsHouseTab() {
           ) : transactionsData?.transactions.length === 0 ? (
             <p className="text-center py-6 text-muted-foreground">Нет транзакций</p>
           ) : (
-            <ScrollArea className="h-[300px]">
+            <ScrollArea className="h-[400px]">
               <div className="space-y-2">
                 {transactionsData?.transactions.map((tx) => {
                   const typeInfo = getTypeLabel(tx.type);
@@ -2068,14 +2143,21 @@ function BeadsHouseTab() {
                       className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
                       data-testid={`tx-row-${tx.id}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
-                        <div>
-                          <p className="text-sm font-medium">{tx.description || "—"}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {tx.description || "—"}
+                            {tx.username && (
+                              <span className="text-muted-foreground ml-2">
+                                ({tx.username})
+                              </span>
+                            )}
+                          </p>
                           <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0 ml-2">
                         <p className={`font-bold ${tx.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
                           {tx.amount >= 0 ? "+" : ""}{tx.amount.toLocaleString()}
                         </p>
@@ -2088,6 +2170,36 @@ function BeadsHouseTab() {
                 })}
               </div>
             </ScrollArea>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                Страница {txPage + 1} из {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxPage(Math.max(0, txPage - 1))}
+                  disabled={txPage === 0}
+                  data-testid="button-tx-prev"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Назад
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTxPage(Math.min(totalPages - 1, txPage + 1))}
+                  disabled={txPage >= totalPages - 1}
+                  data-testid="button-tx-next"
+                >
+                  Вперёд
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

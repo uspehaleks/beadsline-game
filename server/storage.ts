@@ -37,7 +37,7 @@ import {
   type TransactionType,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, isNull, and, gte, sum } from "drizzle-orm";
+import { eq, desc, sql, isNull, and, or, gte, sum, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -112,6 +112,12 @@ export interface IStorage {
   createBeadsTransaction(tx: InsertBeadsTransaction): Promise<BeadsTransaction>;
   getBeadsTransactions(limit?: number, offset?: number): Promise<BeadsTransaction[]>;
   getBeadsTransactionsCount(): Promise<number>;
+  getBeadsTransactionsWithUsers(options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+    search?: string;
+  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }>;
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
 }
@@ -1376,6 +1382,67 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select({ count: sql<number>`count(*)::int` })
       .from(beadsTransactions);
     return result[0]?.count || 0;
+  }
+
+  async getBeadsTransactionsWithUsers(options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+    search?: string;
+  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }> {
+    const { limit = 20, offset = 0, type, search } = options;
+    
+    const conditions: any[] = [];
+    
+    if (type && type !== 'all') {
+      conditions.push(eq(beadsTransactions.type, type));
+    }
+    
+    if (search) {
+      conditions.push(
+        or(
+          ilike(beadsTransactions.description, `%${search}%`),
+          sql`${beadsTransactions.userId}::text ILIKE ${'%' + search + '%'}`
+        )
+      );
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    const [transactionsResult, countResult] = await Promise.all([
+      db.select({
+        id: beadsTransactions.id,
+        userId: beadsTransactions.userId,
+        type: beadsTransactions.type,
+        amount: beadsTransactions.amount,
+        balanceBefore: beadsTransactions.balanceBefore,
+        balanceAfter: beadsTransactions.balanceAfter,
+        houseBalanceBefore: beadsTransactions.houseBalanceBefore,
+        houseBalanceAfter: beadsTransactions.houseBalanceAfter,
+        description: beadsTransactions.description,
+        gameScoreId: beadsTransactions.gameScoreId,
+        createdAt: beadsTransactions.createdAt,
+        username: users.username,
+      })
+        .from(beadsTransactions)
+        .leftJoin(users, eq(beadsTransactions.userId, users.id))
+        .where(whereClause)
+        .orderBy(desc(beadsTransactions.createdAt))
+        .limit(limit)
+        .offset(offset),
+      
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(beadsTransactions)
+        .where(whereClause),
+    ]);
+    
+    return {
+      transactions: transactionsResult.map(tx => ({
+        ...tx,
+        username: tx.username ?? undefined,
+      })),
+      total: countResult[0]?.count || 0,
+    };
   }
 
   async awardBeadsWithHouse(
