@@ -30,6 +30,35 @@ interface ReferralConfig {
   title: string;
   description: string;
   level1RewardPercent: number;
+  level2RewardPercent: number;
+}
+
+interface ReferralRewardWithUser {
+  id: string;
+  userId: string;
+  refUserId: string;
+  refUsername: string;
+  level: number;
+  beadsAmount: number;
+  createdAt: string;
+}
+
+interface ReferralRewardsResponse {
+  rewards: ReferralRewardWithUser[];
+  total: number;
+}
+
+interface ReferralListItem {
+  id: string;
+  username: string;
+  gamesPlayed: number;
+  earnedFromRef: number;
+  joinedAt: string;
+}
+
+interface ReferralListResponse {
+  referrals: ReferralListItem[];
+  level2Count: number;
 }
 
 function getRankInfo(totalPoints: number): { name: string; level: number; progress: number; nextRankLabel: string; pointsToNext: number; isMaxLevel: boolean } {
@@ -298,9 +327,11 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
 
 export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
   const [showReferral, setShowReferral] = useState(false);
+  const [showReferralStats, setShowReferralStats] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [lastSeenRewardCount, setLastSeenRewardCount] = useState<number>(0);
   const { toast } = useToast();
 
   const { data: activePlayers } = useQuery<{ count: number }>({
@@ -316,6 +347,31 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
   const { data: referralConfig } = useQuery<ReferralConfig>({
     queryKey: ["/api/referral/config"],
   });
+
+  const { data: referralRewards } = useQuery<ReferralRewardsResponse>({
+    queryKey: ["/api/referral/rewards"],
+    enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
+  });
+
+  const { data: referralList } = useQuery<ReferralListResponse>({
+    queryKey: ["/api/referral/list"],
+    enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
+  });
+
+  // Уведомления о новых реферальных наградах
+  useEffect(() => {
+    if (referralRewards?.rewards && referralRewards.rewards.length > lastSeenRewardCount) {
+      const newRewardsCount = referralRewards.rewards.length - lastSeenRewardCount;
+      if (lastSeenRewardCount > 0 && newRewardsCount > 0) {
+        const latestReward = referralRewards.rewards[0];
+        toast({
+          title: "Реферальная награда!",
+          description: `+${latestReward.beadsAmount} Beads от ${latestReward.refUsername}`,
+        });
+      }
+      setLastSeenRewardCount(referralRewards.rewards.length);
+    }
+  }, [referralRewards?.rewards?.length, lastSeenRewardCount, toast]);
 
   useEffect(() => {
     if (showQRModal && referralInfo?.referralLink) {
@@ -691,8 +747,187 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                     </div>
                   </div>
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => setShowReferralStats(true)}
+                  data-testid="button-referral-stats"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Подробная статистика
+                </Button>
               </div>
             </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReferralStats && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+            onClick={() => setShowReferralStats(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md max-h-[80vh] overflow-hidden"
+            >
+              <Card 
+                className="p-4 border-primary/30 flex flex-col max-h-[80vh]"
+                style={{ 
+                  background: 'linear-gradient(180deg, #1a1a2e 0%, #16161a 100%)',
+                  boxShadow: '0 0 40px hsl(155 100% 50% / 0.2)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display font-bold text-xl flex items-center gap-2">
+                    <Users className="w-5 h-5" style={{ color: '#00ff88' }} />
+                    Статистика рефералов
+                  </h3>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowReferralStats(false)}
+                    data-testid="button-close-referral-stats"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Уровень 1</div>
+                    <div className="font-display font-bold text-lg" style={{ color: '#00ff88' }}>
+                      {referralInfo?.directReferralsCount || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      +{referralConfig?.level1RewardPercent || 10}%
+                    </div>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Уровень 2</div>
+                    <div className="font-display font-bold text-lg" style={{ color: '#8b5cf6' }}>
+                      {referralList?.level2Count || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      +{referralConfig?.level2RewardPercent || 3}%
+                    </div>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3 text-center">
+                    <div className="text-xs text-muted-foreground">Всего Beads</div>
+                    <div className="font-display font-bold text-lg" style={{ color: '#00d4ff' }}>
+                      {referralInfo?.totalEarnedBeads?.toLocaleString() || 0}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4">
+                  {/* Список рефералов */}
+                  {referralList?.referrals && referralList.referrals.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <UserPlus className="w-4 h-4" style={{ color: '#00ff88' }} />
+                        Мои рефералы
+                      </h4>
+                      <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                        {referralList.referrals.map((ref) => (
+                          <div
+                            key={ref.id}
+                            className="flex items-center justify-between bg-muted/20 rounded-lg p-2"
+                            data-testid={`referral-item-${ref.id}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-8 h-8">
+                                <AvatarFallback className="text-xs">
+                                  {ref.username.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="text-sm font-medium">{ref.username}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {ref.gamesPlayed} игр
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold" style={{ color: '#00ff88' }}>
+                                +{ref.earnedFromRef}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* История наград */}
+                  {referralRewards?.rewards && referralRewards.rewards.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <Gift className="w-4 h-4" style={{ color: '#8b5cf6' }} />
+                        История наград
+                      </h4>
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {referralRewards.rewards.slice(0, 20).map((reward) => (
+                          <div
+                            key={reward.id}
+                            className="flex items-center justify-between bg-muted/20 rounded-lg p-2"
+                            data-testid={`reward-item-${reward.id}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                                style={{ 
+                                  backgroundColor: reward.level === 1 ? 'rgba(0, 255, 136, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+                                  color: reward.level === 1 ? '#00ff88' : '#8b5cf6'
+                                }}
+                              >
+                                L{reward.level}
+                              </div>
+                              <div>
+                                <div className="text-sm">{reward.refUsername}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(reward.createdAt).toLocaleDateString('ru-RU', { 
+                                    day: 'numeric', 
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                            <div 
+                              className="font-bold"
+                              style={{ color: '#00ff88' }}
+                            >
+                              +{reward.beadsAmount}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(!referralList?.referrals || referralList.referrals.length === 0) && 
+                   (!referralRewards?.rewards || referralRewards.rewards.length === 0) && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>У вас пока нет рефералов</p>
+                      <p className="text-sm mt-1">Поделитесь ссылкой с друзьями!</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

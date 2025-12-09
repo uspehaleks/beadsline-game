@@ -1150,10 +1150,69 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const rewards = await storage.getUserReferralRewards(userId);
       const total = await storage.getTotalReferralBeads(userId);
-      res.json({ rewards, total });
+      
+      // Получаем имена пользователей для каждой награды
+      const rewardsWithUsernames = await Promise.all(
+        rewards.map(async (reward) => {
+          const refUser = await storage.getUser(reward.refUserId);
+          return {
+            ...reward,
+            refUsername: refUser?.username || refUser?.firstName || 'Игрок',
+          };
+        })
+      );
+      
+      res.json({ rewards: rewardsWithUsernames, total });
     } catch (error) {
       console.error("Get referral rewards error:", error);
       res.status(500).json({ error: "Failed to get referral rewards" });
+    }
+  });
+
+  // Получить список прямых рефералов пользователя
+  app.get("/api/referral/list", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.referralCode) {
+        return res.json({ referrals: [], level2Count: 0 });
+      }
+      
+      // Получаем всех пользователей, которых пригласил текущий пользователь
+      const allUsers = await storage.getAllUsers();
+      const directReferrals = allUsers.filter(u => u.referredBy === user.referralCode && !u.deletedAt);
+      
+      // Для каждого прямого реферала подсчитываем сколько Beads заработано от него
+      const referralsWithStats = await Promise.all(
+        directReferrals.map(async (ref) => {
+          const rewards = await storage.getUserReferralRewards(userId);
+          const earnedFromRef = rewards
+            .filter(r => r.refUserId === ref.id && r.level === 1)
+            .reduce((sum, r) => sum + r.beadsAmount, 0);
+          
+          return {
+            id: ref.id,
+            username: ref.username || ref.firstName || 'Игрок',
+            gamesPlayed: ref.gamesPlayed,
+            earnedFromRef,
+            joinedAt: ref.createdAt,
+          };
+        })
+      );
+      
+      // Подсчёт рефералов второго уровня
+      const level2Count = await storage.getLevel2ReferralsCount(userId);
+      
+      res.json({ 
+        referrals: referralsWithStats.sort((a, b) => 
+          new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()
+        ),
+        level2Count 
+      });
+    } catch (error) {
+      console.error("Get referral list error:", error);
+      res.status(500).json({ error: "Failed to get referral list" });
     }
   });
 
