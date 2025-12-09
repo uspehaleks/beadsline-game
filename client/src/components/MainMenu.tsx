@@ -23,8 +23,10 @@ interface ReferralInfo {
   referralCode: string;
   referralLink: string;
   directReferralsCount: number;
+  level2ReferralsCount: number;
   totalEarnedBeads: number;
   referralsTotalBeads: number;
+  lastRewardId?: string;
 }
 
 interface ReferralConfig {
@@ -332,7 +334,8 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [lastSeenRewardCount, setLastSeenRewardCount] = useState<number>(0);
+  const [lastSeenRewardId, setLastSeenRewardId] = useState<string | null>(null);
+  const [pendingNotifications, setPendingNotifications] = useState<ReferralRewardWithUser[]>([]);
   const { toast } = useToast();
 
   const { data: activePlayers } = useQuery<{ count: number }>({
@@ -343,15 +346,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
   const { data: referralInfo } = useQuery<ReferralInfo>({
     queryKey: ["/api/referral"],
     enabled: !!user && !user.username?.startsWith('guest_'),
+    refetchInterval: 30000,
   });
 
   const { data: referralConfig } = useQuery<ReferralConfig>({
     queryKey: ["/api/referral/config"],
   });
 
-  const { data: referralRewards } = useQuery<ReferralRewardsResponse>({
+  const { data: referralRewards, refetch: refetchRewards } = useQuery<ReferralRewardsResponse>({
     queryKey: ["/api/referral/rewards"],
-    enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
+    enabled: !!user && !user.username?.startsWith('guest_'),
+    refetchInterval: 30000,
   });
 
   const { data: referralList } = useQuery<ReferralListResponse>({
@@ -359,20 +364,46 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
     enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
   });
 
-  // Уведомления о новых реферальных наградах
+  // Проверка новых реферальных наград
   useEffect(() => {
-    if (referralRewards?.rewards && referralRewards.rewards.length > lastSeenRewardCount) {
-      const newRewardsCount = referralRewards.rewards.length - lastSeenRewardCount;
-      if (lastSeenRewardCount > 0 && newRewardsCount > 0) {
-        const latestReward = referralRewards.rewards[0];
-        toast({
-          title: "Реферальная награда!",
-          description: `+${latestReward.beadsAmount} Beads от ${latestReward.refUsername}`,
-        });
-      }
-      setLastSeenRewardCount(referralRewards.rewards.length);
+    if (referralInfo?.lastRewardId && lastSeenRewardId === null) {
+      setLastSeenRewardId(referralInfo.lastRewardId);
+    } else if (referralInfo?.lastRewardId && lastSeenRewardId && referralInfo.lastRewardId !== lastSeenRewardId) {
+      refetchRewards();
+      setLastSeenRewardId(referralInfo.lastRewardId);
     }
-  }, [referralRewards?.rewards?.length, lastSeenRewardCount, toast]);
+  }, [referralInfo?.lastRewardId, lastSeenRewardId, refetchRewards]);
+
+  // Показ уведомлений о новых наградах
+  useEffect(() => {
+    if (referralRewards?.rewards && referralRewards.rewards.length > 0) {
+      const newRewards = referralRewards.rewards.filter(
+        r => !pendingNotifications.some(p => p.id === r.id) && r.id !== lastSeenRewardId
+      );
+      
+      if (newRewards.length > 0 && lastSeenRewardId) {
+        newRewards.slice(0, 3).forEach((reward, idx) => {
+          setTimeout(() => {
+            toast({
+              title: "Реферальная награда!",
+              description: `+${reward.beadsAmount} Beads от ${reward.refUsername} (Ур.${reward.level})`,
+            });
+          }, idx * 1500);
+        });
+        
+        if (newRewards.length > 3) {
+          setTimeout(() => {
+            toast({
+              title: "И ещё награды!",
+              description: `+${newRewards.length - 3} реферальных наград`,
+            });
+          }, 4500);
+        }
+        
+        setPendingNotifications(prev => [...prev, ...newRewards]);
+      }
+    }
+  }, [referralRewards?.rewards, lastSeenRewardId, pendingNotifications, toast]);
 
   useEffect(() => {
     if (showQRModal && referralInfo?.referralLink) {
@@ -621,7 +652,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             
             <Card 
               className="p-3 border-muted/30 hover-elevate cursor-pointer"
-              style={{ minWidth: '110px' }}
+              style={{ minWidth: '120px' }}
               onClick={() => setShowReferral(!showReferral)}
             >
               <div className="flex items-center justify-between gap-2">
@@ -630,9 +661,12 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
                     <Users className="w-3 h-3" style={{ color: '#8b5cf6' }} />
                     <span className="text-xs text-muted-foreground uppercase tracking-wide">Друзья</span>
                   </div>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-1">
                     <div className="text-lg font-bold" style={{ color: '#00ff88' }}>
                       {referralInfo?.directReferralsCount || 0}
+                    </div>
+                    <div className="text-xs" style={{ color: '#8b5cf6' }}>
+                      +{referralInfo?.level2ReferralsCount || 0}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       / <span style={{ color: '#00d4ff' }}>{(referralInfo?.referralsTotalBeads || 0).toLocaleString()}</span>

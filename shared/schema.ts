@@ -380,8 +380,10 @@ export interface ReferralInfo {
   referralCode: string;
   referralLink: string;
   directReferralsCount: number;
+  level2ReferralsCount: number;
   totalEarnedBeads: number;
   referralsTotalBeads: number;
+  lastRewardId?: string;
 }
 
 export interface ReferralUserStats {

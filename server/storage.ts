@@ -37,7 +37,7 @@ import {
   type TransactionType,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, isNull, and, or, gte, sum, ilike } from "drizzle-orm";
+import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -1061,19 +1061,44 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     const totalEarnedBeads = await this.getTotalReferralBeads(userId);
     
-    // Сумма Beads, заработанных всеми рефералами пользователя
-    const referrals = await db.select({ totalPoints: users.totalPoints })
+    // Прямые рефералы (уровень 1)
+    const level1Referrals = await db.select({ 
+      totalPoints: users.totalPoints,
+      referralCode: users.referralCode 
+    })
       .from(users)
       .where(eq(users.referredBy, referralCode));
     
-    const referralsTotalBeads = referrals.reduce((sum, r) => sum + (r.totalPoints || 0), 0);
+    const referralsTotalBeads = level1Referrals.reduce((sum, r) => sum + (r.totalPoints || 0), 0);
+    
+    // Рефералы 2-го уровня (рефералы рефералов)
+    const level1Codes = level1Referrals
+      .map(r => r.referralCode)
+      .filter((code): code is string => code !== null);
+    
+    let level2ReferralsCount = 0;
+    if (level1Codes.length > 0) {
+      const level2Result = await db.select({ count: count() })
+        .from(users)
+        .where(inArray(users.referredBy, level1Codes));
+      level2ReferralsCount = Number(level2Result[0]?.count) || 0;
+    }
+    
+    // Последняя награда для уведомлений
+    const lastReward = await db.select({ id: referralRewards.id })
+      .from(referralRewards)
+      .where(eq(referralRewards.userId, userId))
+      .orderBy(desc(referralRewards.createdAt))
+      .limit(1);
     
     return {
       referralCode,
       referralLink: `https://t.me/${botUsername}?start=${referralCode}`,
       directReferralsCount: user?.directReferralsCount ?? 0,
+      level2ReferralsCount,
       totalEarnedBeads,
       referralsTotalBeads,
+      lastRewardId: lastReward[0]?.id,
     };
   }
 
