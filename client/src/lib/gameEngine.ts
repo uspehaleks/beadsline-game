@@ -1,6 +1,14 @@
 import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig, GameplayConfig } from "@shared/schema";
 import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
+export const DEBUG_GAME_LOGIC = true;
+
+function debugLog(...args: unknown[]) {
+  if (DEBUG_GAME_LOGIC) {
+    console.log('[GAME]', ...args);
+  }
+}
+
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
 const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
 const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
@@ -405,35 +413,48 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
 
 function ballsMatch(ball1: Ball, ball2: Ball): boolean {
   if (ball1.crypto && ball2.crypto) {
-    return ball1.crypto === ball2.crypto;
+    const result = ball1.crypto === ball2.crypto;
+    debugLog(`ballsMatch crypto: ${ball1.crypto} vs ${ball2.crypto} = ${result}`);
+    return result;
   }
   if (!ball1.crypto && !ball2.crypto) {
-    return ball1.color === ball2.color;
+    const result = ball1.color === ball2.color;
+    debugLog(`ballsMatch color: ${ball1.color} vs ${ball2.color} = ${result}`);
+    return result;
   }
+  debugLog(`ballsMatch mixed: ball1.crypto=${ball1.crypto} ball2.crypto=${ball2.crypto} = false`);
   return false;
 }
 
 export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBall: Ball): number[] {
   if (insertIndex < 0 || insertIndex >= balls.length) {
+    debugLog(`findMatchingBalls: invalid index ${insertIndex}, balls.length=${balls.length}`);
     return [];
   }
   
   const matches: number[] = [insertIndex];
   const targetBall = balls[insertIndex];
   
+  debugLog(`findMatchingBalls START: insertIndex=${insertIndex}, targetBall.id=${targetBall.id}, color=${targetBall.color}, crypto=${targetBall.crypto}`);
+  
   let left = insertIndex - 1;
   while (left >= 0 && ballsMatch(balls[left], targetBall)) {
+    debugLog(`  LEFT match at ${left}: id=${balls[left].id}, color=${balls[left].color}, crypto=${balls[left].crypto}`);
     matches.unshift(left);
     left--;
   }
   
   let right = insertIndex + 1;
   while (right < balls.length && ballsMatch(balls[right], targetBall)) {
+    debugLog(`  RIGHT match at ${right}: id=${balls[right].id}, color=${balls[right].color}, crypto=${balls[right].crypto}`);
     matches.push(right);
     right++;
   }
   
-  return matches.length >= 3 ? matches : [];
+  const result = matches.length >= 3 ? matches : [];
+  debugLog(`findMatchingBalls END: found ${matches.length} matches, indices=[${matches.join(',')}], returning ${result.length >= 3 ? 'MATCH' : 'NO MATCH'}`);
+  
+  return result;
 }
 
 export function calculatePoints(matchedBalls: Ball[], combo: number): {
@@ -469,6 +490,8 @@ export function insertBallInChain(
   shooterBall: Ball,
   insertIndex: number
 ): Ball[] {
+  debugLog(`insertBallInChain: shooterBall.color=${shooterBall.color}, crypto=${shooterBall.crypto}, insertIndex=${insertIndex}, chainLength=${balls.length}`);
+  
   const newBalls = [...balls];
   const spacing = GAME_CONFIG.balls.spacing;
   
@@ -482,6 +505,8 @@ export function insertBallInChain(
     pathProgress: insertProgress,
   };
   
+  debugLog(`  Created insertedBall: id=${insertedBall.id}, color=${insertedBall.color}, crypto=${insertedBall.crypto}`);
+  
   for (let i = insertIndex; i < newBalls.length; i++) {
     newBalls[i] = {
       ...newBalls[i],
@@ -491,12 +516,21 @@ export function insertBallInChain(
   
   newBalls.splice(insertIndex, 0, insertedBall);
   
+  debugLog(`  Chain after insert: [${newBalls.slice(Math.max(0, insertIndex-2), insertIndex+3).map(b => `${b.color}${b.crypto ? '('+b.crypto+')' : ''}`).join(', ')}]`);
+  
   return newBalls;
 }
 
 export function removeBalls(balls: Ball[], indices: number[]): Ball[] {
   const sortedIndices = [...indices].sort((a, b) => b - a);
   const newBalls = [...balls];
+  
+  debugLog(`removeBalls: removing ${indices.length} balls at indices [${indices.join(',')}]`);
+  const removedInfo = indices.map(i => {
+    const b = balls[i];
+    return `idx${i}:${b?.color}${b?.crypto ? '('+b.crypto+')' : ''}`;
+  });
+  debugLog(`  Balls being removed: [${removedInfo.join(', ')}]`);
   
   for (const index of sortedIndices) {
     newBalls.splice(index, 1);
