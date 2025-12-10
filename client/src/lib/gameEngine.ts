@@ -6,6 +6,11 @@ const MAX_DEBUG_LOGS = 200;
 
 export const debugLogs: string[] = [];
 let pendingLogs: string[] = [];
+let operationCounter = 0;
+
+export function getNextOperationId(): number {
+  return ++operationCounter;
+}
 let flushTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function flushLogsToServer() {
@@ -465,15 +470,20 @@ function ballsMatch(ball1: Ball, ball2: Ball): boolean {
 }
 
 export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBall: Ball): number[] {
+  const opId = getNextOperationId();
+  
   if (insertIndex < 0 || insertIndex >= balls.length) {
-    debugLog(`findMatchingBalls: invalid index ${insertIndex}, balls.length=${balls.length}`);
+    debugLog(`[OP${opId}] findMatchingBalls: invalid index ${insertIndex}, balls.length=${balls.length}`);
     return [];
   }
   
   const matches: number[] = [insertIndex];
   const targetBall = balls[insertIndex];
   
-  debugLog(`findMatchingBalls START: insertIndex=${insertIndex}, targetBall.id=${targetBall.id}, color=${targetBall.color}, crypto=${targetBall.crypto}`);
+  debugLog(`[OP${opId}] findMatchingBalls START: insertIndex=${insertIndex}, targetBall.id=${targetBall.id}, color=${targetBall.color}, crypto=${targetBall.crypto}`);
+  
+  const chainSnapshot = balls.slice(0, Math.min(15, balls.length)).map((b, i) => `${i}:${b.color?.slice(0,2)}[${b.id?.slice(-6)}]`).join(' ');
+  debugLog(`[OP${opId}] Chain snapshot (first 15): ${chainSnapshot}`);
   
   let left = insertIndex - 1;
   while (left >= 0 && ballsMatch(balls[left], targetBall)) {
@@ -490,7 +500,8 @@ export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBa
   }
   
   const result = matches.length >= 3 ? matches : [];
-  debugLog(`findMatchingBalls END: found ${matches.length} matches, indices=[${matches.join(',')}], returning ${result.length >= 3 ? 'MATCH' : 'NO MATCH'}`);
+  const matchedIds = matches.map(i => balls[i]?.id?.slice(-8) || '?').join(',');
+  debugLog(`[OP${opId}] findMatchingBalls END: found ${matches.length} matches, indices=[${matches.join(',')}], ids=[${matchedIds}], returning ${result.length >= 3 ? 'MATCH' : 'NO MATCH'}`);
   
   return result;
 }
@@ -560,20 +571,23 @@ export function insertBallInChain(
 }
 
 export function removeBalls(balls: Ball[], indices: number[]): Ball[] {
+  const opId = getNextOperationId();
   const sortedIndices = [...indices].sort((a, b) => b - a);
   const newBalls = [...balls];
   
-  debugLog(`removeBalls: removing ${indices.length} balls at indices [${indices.join(',')}]`);
+  debugLog(`[OP${opId}] removeBalls: removing ${indices.length} balls at indices [${indices.join(',')}]`);
   const removedInfo = indices.map(i => {
     const b = balls[i];
-    return `idx${i}:${b?.color}${b?.crypto ? '('+b.crypto+')' : ''}`;
+    const shortId = b?.id?.slice(-8) || '?';
+    return `idx${i}:${b?.color}${b?.crypto ? '('+b.crypto+')' : ''}[${shortId}]`;
   });
-  debugLog(`  Balls being removed: [${removedInfo.join(', ')}]`);
+  debugLog(`[OP${opId}] Balls being removed: [${removedInfo.join(', ')}]`);
   
   for (const index of sortedIndices) {
     newBalls.splice(index, 1);
   }
   
+  debugLog(`[OP${opId}] Chain after removal: length=${newBalls.length}`);
   return newBalls;
 }
 
