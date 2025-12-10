@@ -21,6 +21,8 @@ import {
   setAvailableCrypto,
   setUsdtFundEnabled,
   setEconomyConfig,
+  setGameplayConfig,
+  getGameplayConfig,
   resetCryptoSpawnedCount,
   SHOOTER_BALL_SPEED,
   type PathPoint,
@@ -78,6 +80,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const totalSpawnedRef = useRef<number>(0);
   const spawnFinishedRef = useRef<boolean>(false);
   const gapContextRef = useRef<GapContext | null>(null);
+  const maxTotalBallsRef = useRef<number>(100);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -111,15 +114,25 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     }
     
     try {
-      const response = await fetch('/api/game-economy');
-      if (response.ok) {
-        const economyData = await response.json();
+      const [economyRes, gameplayRes] = await Promise.all([
+        fetch('/api/game-economy'),
+        fetch('/api/gameplay-config'),
+      ]);
+      
+      if (economyRes.ok) {
+        const economyData = await economyRes.json();
         setEconomyConfig(economyData);
         setAvailableCrypto(economyData.cryptoAvailable || { btc: true, eth: true, usdt: true });
         setUsdtFundEnabled(economyData.usdtFundEnabled === true);
       }
+      
+      if (gameplayRes.ok) {
+        const gameplayData = await gameplayRes.json();
+        setGameplayConfig(gameplayData);
+        maxTotalBallsRef.current = gameplayData.balls?.maxTotalBalls || 100;
+      }
     } catch (error) {
-      console.error('Failed to fetch game economy:', error);
+      console.error('Failed to fetch game config:', error);
       setAvailableCrypto({ btc: true, eth: true, usdt: true });
       setUsdtFundEnabled(false);
     }
@@ -149,7 +162,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setShooterAngle(-Math.PI / 2);
     lastTimeRef.current = 0;
     spawnAccumRef.current = 0;
-    totalSpawnedRef.current = GAME_CONFIG.balls.initialCount;
+    totalSpawnedRef.current = getGameplayConfig().balls.initialCount;
     spawnFinishedRef.current = false;
     gapContextRef.current = null;
     
@@ -316,9 +329,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           }
         }
         
-        const { period, buffer } = GAME_CONFIG.spawn;
-        const { targetCount } = GAME_CONFIG.balls;
-        const { maxTotalBalls } = GAME_CONFIG.gameplay;
+        const gameplayConfig = getGameplayConfig();
+        const { period } = gameplayConfig.spawn;
+        const buffer = GAME_CONFIG.spawn.buffer;
+        const { targetCount, maxTotalBalls } = gameplayConfig.balls;
         
         spawnAccumRef.current += deltaTime;
         
@@ -745,7 +759,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   }, [stopAllTimers]);
 
   const ballsOnScreen = gameState.balls.length;
-  const totalBalls = GAME_CONFIG.gameplay.maxTotalBalls;
+  const totalBalls = maxTotalBallsRef.current;
   const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
 
   return {

@@ -1,12 +1,53 @@
-import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig } from "@shared/schema";
+import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig, GameplayConfig } from "@shared/schema";
 import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
 const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
 const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
 
-const BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
+const ALL_BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
+
+const DEFAULT_GAMEPLAY: GameplayConfig = {
+  balls: { initialCount: 5, targetCount: 50, maxTotalBalls: 60 },
+  spawn: { period: 1800, resumeThreshold: 35 },
+  speed: { base: 0.010, max: 0.016, accelerationStart: 0.8 },
+  colors: { count: 5 },
+};
+
+let currentGameplay: GameplayConfig = DEFAULT_GAMEPLAY;
+
+export function setGameplayConfig(config: Partial<GameplayConfig>) {
+  const defaults = DEFAULT_GAMEPLAY;
+  currentGameplay = {
+    balls: {
+      initialCount: config.balls?.initialCount ?? defaults.balls.initialCount,
+      targetCount: config.balls?.targetCount ?? defaults.balls.targetCount,
+      maxTotalBalls: config.balls?.maxTotalBalls ?? defaults.balls.maxTotalBalls,
+    },
+    spawn: {
+      period: config.spawn?.period ?? defaults.spawn.period,
+      resumeThreshold: config.spawn?.resumeThreshold ?? defaults.spawn.resumeThreshold,
+    },
+    speed: {
+      base: config.speed?.base ?? defaults.speed.base,
+      max: config.speed?.max ?? defaults.speed.max,
+      accelerationStart: config.speed?.accelerationStart ?? defaults.speed.accelerationStart,
+    },
+    colors: {
+      count: config.colors?.count ?? defaults.colors.count,
+    },
+  };
+}
+
+export function getGameplayConfig(): GameplayConfig {
+  return currentGameplay;
+}
+
+function getActiveBallColors(): BallColor[] {
+  const count = Math.max(2, Math.min(5, currentGameplay.colors.count));
+  return ALL_BALL_COLORS.slice(0, count);
+}
 
 const DEFAULT_ECONOMY: GameEconomyConfig = {
   points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
@@ -171,10 +212,11 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
     .filter(b => !b.crypto && !b.isUsdtFund)
     .map(b => b.color);
   
-  const uniqueColors = Array.from(new Set(chainColors));
+  const activeColors = getActiveBallColors();
+  const uniqueColors = Array.from(new Set(chainColors)).filter(c => activeColors.includes(c));
   const color = uniqueColors.length > 0 
     ? uniqueColors[Math.floor(Math.random() * uniqueColors.length)]
-    : BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+    : activeColors[Math.floor(Math.random() * activeColors.length)];
   
   return {
     id,
@@ -187,7 +229,8 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
 }
 
 export function createRandomBall(id: string, pathProgress: number = 0): Ball {
-  const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+  const activeColors = getActiveBallColors();
+  const color = activeColors[Math.floor(Math.random() * activeColors.length)];
   
   const spawnChance = currentEconomy.crypto.spawnChance;
   const limits = currentEconomy.perGameLimits;
@@ -245,7 +288,7 @@ export function createInitialBalls(count: number): Ball[] {
 }
 
 export function createInitialGameState(): GameState {
-  const balls = createInitialBalls(GAME_CONFIG.balls.initialCount);
+  const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
     shooterBall: createBallFromChain('shooter', balls),

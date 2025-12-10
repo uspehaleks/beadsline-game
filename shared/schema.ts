@@ -396,3 +396,23 @@ export interface ReferralUserStats {
   level2ReferralsCount: number;
   totalReferralBeads: number;
 }
+
+export interface GameplayConfig {
+  balls: {
+    initialCount: number;
+    targetCount: number;
+    maxTotalBalls: number;
+  };
+  spawn: {
+    period: number;
+    resumeThreshold: number;
+  };
+  speed: {
+    base: number;
+    max: number;
+    accelerationStart: number;
+  };
+  colors: {
+    count: number;
+  };
+}

@@ -493,6 +493,10 @@ export default function Admin() {
                 <Wrench className="w-4 h-4 mr-1.5" />
                 Обслуживание
               </TabsTrigger>
+              <TabsTrigger value="gameplay" data-testid="tab-gameplay" className="flex-shrink-0">
+                <Gamepad2 className="w-4 h-4 mr-1.5" />
+                Геймплей
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -538,6 +542,10 @@ export default function Admin() {
 
           <TabsContent value="maintenance">
             <MaintenanceTab />
+          </TabsContent>
+
+          <TabsContent value="gameplay">
+            <GameplayTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -3423,6 +3431,291 @@ function MaintenanceTab() {
             <li>После истечения таймера страница автоматически обновится</li>
             <li>Не забудьте выключить режим обслуживания после завершения работ</li>
           </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface GameplayConfigType {
+  balls: {
+    initialCount: number;
+    targetCount: number;
+    maxTotalBalls: number;
+  };
+  spawn: {
+    period: number;
+    resumeThreshold: number;
+  };
+  speed: {
+    base: number;
+    max: number;
+    accelerationStart: number;
+  };
+  colors: {
+    count: number;
+  };
+}
+
+function GameplayTab() {
+  const { toast } = useToast();
+  const [editConfig, setEditConfig] = useState<GameplayConfigType | null>(null);
+  const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
+
+  const { data: config, isLoading } = useQuery<GameplayConfigType>({
+    queryKey: ["/api/admin/gameplay-config"],
+  });
+
+  useEffect(() => {
+    if (config && !editConfig) {
+      setEditConfig(config);
+    }
+  }, [config, editConfig]);
+
+  const updateConfigMutation = useMutation({
+    mutationFn: async (newConfig: GameplayConfigType) => {
+      return apiRequest("PUT", "/api/admin/gameplay-config", newConfig);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/gameplay-config"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gameplay-config"] });
+      toast({ title: "Сохранено", description: "Настройки геймплея обновлены" });
+      setRawInputs({});
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить настройки", variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    if (!editConfig) return;
+    updateConfigMutation.mutate(editConfig);
+  };
+
+  const handleReset = () => {
+    if (config) {
+      setEditConfig(config);
+      setRawInputs({});
+    }
+  };
+
+  const handleInputChange = (key: string, value: string, setter: (val: number) => void) => {
+    setRawInputs(prev => ({ ...prev, [key]: value }));
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+      setter(num);
+    }
+  };
+
+  if (isLoading || !editConfig) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasChanges = JSON.stringify(editConfig) !== JSON.stringify(config);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gamepad2 className="w-5 h-5" />
+            Настройки геймплея
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Управление сложностью игры: количество шариков, скорость, спавн
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="font-medium">Шарики</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Начальное количество</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={rawInputs['initialCount'] ?? String(editConfig.balls.initialCount)}
+                  onChange={(e) => handleInputChange('initialCount', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, balls: { ...prev.balls, initialCount: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-initial-count"
+                />
+                <p className="text-xs text-muted-foreground">Шариков при старте игры</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Целевое количество</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={rawInputs['targetCount'] ?? String(editConfig.balls.targetCount)}
+                  onChange={(e) => handleInputChange('targetCount', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, balls: { ...prev.balls, targetCount: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-target-count"
+                />
+                <p className="text-xs text-muted-foreground">Спавн продолжается до этого числа</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Максимум шариков</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={rawInputs['maxTotalBalls'] ?? String(editConfig.balls.maxTotalBalls)}
+                  onChange={(e) => handleInputChange('maxTotalBalls', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, balls: { ...prev.balls, maxTotalBalls: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-max-balls"
+                />
+                <p className="text-xs text-muted-foreground">Абсолютный лимит шариков</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Спавн</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Период спавна (мс)</Label>
+                <Input
+                  type="number"
+                  min={100}
+                  max={10000}
+                  value={rawInputs['spawnPeriod'] ?? String(editConfig.spawn.period)}
+                  onChange={(e) => handleInputChange('spawnPeriod', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, spawn: { ...prev.spawn, period: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-spawn-period"
+                />
+                <p className="text-xs text-muted-foreground">Интервал между спавном новых шариков</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Порог возобновления</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={rawInputs['resumeThreshold'] ?? String(editConfig.spawn.resumeThreshold)}
+                  onChange={(e) => handleInputChange('resumeThreshold', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, spawn: { ...prev.spawn, resumeThreshold: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-resume-threshold"
+                />
+                <p className="text-xs text-muted-foreground">Спавн возобновляется если шариков меньше</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Скорость</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Базовая скорость</Label>
+                <Input
+                  type="number"
+                  step={0.001}
+                  min={0.001}
+                  max={0.1}
+                  value={rawInputs['speedBase'] ?? String(editConfig.speed.base)}
+                  onChange={(e) => handleInputChange('speedBase', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, speed: { ...prev.speed, base: num } } : null)
+                  )}
+                  data-testid="input-speed-base"
+                />
+                <p className="text-xs text-muted-foreground">Начальная скорость движения</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Максимальная скорость</Label>
+                <Input
+                  type="number"
+                  step={0.001}
+                  min={0.001}
+                  max={0.1}
+                  value={rawInputs['speedMax'] ?? String(editConfig.speed.max)}
+                  onChange={(e) => handleInputChange('speedMax', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, speed: { ...prev.speed, max: num } } : null)
+                  )}
+                  data-testid="input-speed-max"
+                />
+                <p className="text-xs text-muted-foreground">Скорость в конце пути</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Точка ускорения (0-1)</Label>
+                <Input
+                  type="number"
+                  step={0.1}
+                  min={0}
+                  max={1}
+                  value={rawInputs['accelerationStart'] ?? String(editConfig.speed.accelerationStart)}
+                  onChange={(e) => handleInputChange('accelerationStart', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, speed: { ...prev.speed, accelerationStart: num } } : null)
+                  )}
+                  data-testid="input-acceleration-start"
+                />
+                <p className="text-xs text-muted-foreground">Где начинается ускорение (0.8 = 80% пути)</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Цвета</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Количество цветов (2-5)</Label>
+                <Input
+                  type="number"
+                  min={2}
+                  max={5}
+                  value={rawInputs['colorCount'] ?? String(editConfig.colors.count)}
+                  onChange={(e) => handleInputChange('colorCount', e.target.value, (num) => 
+                    setEditConfig(prev => prev ? { ...prev, colors: { count: Math.floor(num) } } : null)
+                  )}
+                  data-testid="input-color-count"
+                />
+                <p className="text-xs text-muted-foreground">Меньше цветов = проще игра</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              onClick={handleSave}
+              disabled={updateConfigMutation.isPending || !hasChanges}
+              data-testid="button-save-gameplay"
+            >
+              {updateConfigMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Сохранить
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={handleReset}
+              disabled={!hasChanges}
+              data-testid="button-reset-gameplay"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Сбросить
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

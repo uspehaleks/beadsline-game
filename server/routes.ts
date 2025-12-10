@@ -1502,6 +1502,68 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/gameplay-config", async (req, res) => {
+    try {
+      const config = await storage.getGameplayConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get gameplay config error:", error);
+      res.status(500).json({ error: "Failed to get gameplay config" });
+    }
+  });
+
+  app.get("/api/admin/gameplay-config", requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.getGameplayConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get admin gameplay config error:", error);
+      res.status(500).json({ error: "Failed to get gameplay config" });
+    }
+  });
+
+  app.put("/api/admin/gameplay-config", requireAdmin, async (req, res) => {
+    try {
+      const { balls, spawn, speed, colors } = req.body;
+      const updates: any = {};
+      
+      if (balls) {
+        updates.balls = {
+          initialCount: balls.initialCount !== undefined ? Math.max(1, Math.floor(parseFloat(String(balls.initialCount)))) : undefined,
+          targetCount: balls.targetCount !== undefined ? Math.max(1, Math.floor(parseFloat(String(balls.targetCount)))) : undefined,
+          maxTotalBalls: balls.maxTotalBalls !== undefined ? Math.max(1, Math.floor(parseFloat(String(balls.maxTotalBalls)))) : undefined,
+        };
+      }
+      
+      if (spawn) {
+        updates.spawn = {
+          period: spawn.period !== undefined ? Math.max(100, Math.floor(parseFloat(String(spawn.period)))) : undefined,
+          resumeThreshold: spawn.resumeThreshold !== undefined ? Math.max(1, Math.floor(parseFloat(String(spawn.resumeThreshold)))) : undefined,
+        };
+      }
+      
+      if (speed) {
+        updates.speed = {
+          base: speed.base !== undefined ? Math.max(0.001, parseFloat(String(speed.base))) : undefined,
+          max: speed.max !== undefined ? Math.max(0.001, parseFloat(String(speed.max))) : undefined,
+          accelerationStart: speed.accelerationStart !== undefined ? Math.max(0, Math.min(1, parseFloat(String(speed.accelerationStart)))) : undefined,
+        };
+      }
+      
+      if (colors) {
+        updates.colors = {
+          count: colors.count !== undefined ? Math.max(2, Math.min(5, Math.floor(parseFloat(String(colors.count))))) : undefined,
+        };
+      }
+      
+      const config = await storage.updateGameplayConfig(updates);
+      res.json(config);
+    } catch (error) {
+      console.error("Update admin gameplay config error:", error);
+      res.status(500).json({ error: "Failed to update gameplay config" });
+    }
+  });
+
   app.get("/api/admin/configs", requireAdmin, async (req, res) => {
     try {
       const configs = await storage.getAllGameConfigs();

@@ -35,6 +35,7 @@ import {
   type HouseAccountConfig,
   type LivesConfig,
   type TransactionType,
+  type GameplayConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -707,6 +708,96 @@ export class DatabaseStorage implements IStorage {
       key: 'game_economy',
       value: newConfig,
       description: 'Game economy configuration (points, combo, crypto spawn)',
+    });
+    
+    return newConfig;
+  }
+
+  private getDefaultGameplayConfig(): GameplayConfig {
+    return {
+      balls: {
+        initialCount: 5,
+        targetCount: 50,
+        maxTotalBalls: 60,
+      },
+      spawn: {
+        period: 1800,
+        resumeThreshold: 35,
+      },
+      speed: {
+        base: 0.010,
+        max: 0.016,
+        accelerationStart: 0.8,
+      },
+      colors: {
+        count: 5,
+      },
+    };
+  }
+
+  async getGameplayConfig(): Promise<GameplayConfig> {
+    const config = await this.getGameConfig('gameplay_config');
+    if (!config) {
+      const defaultConfig = this.getDefaultGameplayConfig();
+      await this.setGameConfig({
+        key: 'gameplay_config',
+        value: defaultConfig,
+        description: 'Gameplay configuration (balls, spawn, speed, colors)',
+      });
+      return defaultConfig;
+    }
+    
+    const stored = config.value as GameplayConfig;
+    const defaults = this.getDefaultGameplayConfig();
+    
+    return {
+      balls: {
+        initialCount: stored.balls?.initialCount ?? defaults.balls.initialCount,
+        targetCount: stored.balls?.targetCount ?? defaults.balls.targetCount,
+        maxTotalBalls: stored.balls?.maxTotalBalls ?? defaults.balls.maxTotalBalls,
+      },
+      spawn: {
+        period: stored.spawn?.period ?? defaults.spawn.period,
+        resumeThreshold: stored.spawn?.resumeThreshold ?? defaults.spawn.resumeThreshold,
+      },
+      speed: {
+        base: stored.speed?.base ?? defaults.speed.base,
+        max: stored.speed?.max ?? defaults.speed.max,
+        accelerationStart: stored.speed?.accelerationStart ?? defaults.speed.accelerationStart,
+      },
+      colors: {
+        count: stored.colors?.count ?? defaults.colors.count,
+      },
+    };
+  }
+
+  async updateGameplayConfig(updates: Partial<GameplayConfig>): Promise<GameplayConfig> {
+    const current = await this.getGameplayConfig();
+    
+    const newConfig: GameplayConfig = {
+      balls: {
+        initialCount: updates.balls?.initialCount ?? current.balls.initialCount,
+        targetCount: updates.balls?.targetCount ?? current.balls.targetCount,
+        maxTotalBalls: updates.balls?.maxTotalBalls ?? current.balls.maxTotalBalls,
+      },
+      spawn: {
+        period: updates.spawn?.period ?? current.spawn.period,
+        resumeThreshold: updates.spawn?.resumeThreshold ?? current.spawn.resumeThreshold,
+      },
+      speed: {
+        base: updates.speed?.base ?? current.speed.base,
+        max: updates.speed?.max ?? current.speed.max,
+        accelerationStart: updates.speed?.accelerationStart ?? current.speed.accelerationStart,
+      },
+      colors: {
+        count: updates.colors?.count ?? current.colors.count,
+      },
+    };
+    
+    await this.setGameConfig({
+      key: 'gameplay_config',
+      value: newConfig,
+      description: 'Gameplay configuration (balls, spawn, speed, colors)',
     });
     
     return newConfig;
