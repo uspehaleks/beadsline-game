@@ -10,6 +10,7 @@ import {
   moveBallsForward,
   processRollback,
   findMatchingBalls,
+  findAllMatches,
   calculatePoints,
   insertBallInChain,
   removeBalls,
@@ -53,6 +54,11 @@ interface Projectile {
   ball: Ball;
 }
 
+interface GapContext {
+  leftBallId: string | null;
+  rightBallId: string | null;
+}
+
 export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameStateProps) {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [path, setPath] = useState<PathPoint[]>([]);
@@ -71,6 +77,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
   const spawnAccumRef = useRef<number>(0);
   const totalSpawnedRef = useRef<number>(0);
   const spawnFinishedRef = useRef<boolean>(false);
+  const gapContextRef = useRef<GapContext | null>(null);
   
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
@@ -144,6 +151,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     spawnAccumRef.current = 0;
     totalSpawnedRef.current = GAME_CONFIG.balls.initialCount;
     spawnFinishedRef.current = false;
+    gapContextRef.current = null;
     
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
@@ -158,6 +166,155 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         let newBalls = moveBallsForward(prev.balls, deltaTime);
         
         newBalls = processRollback(newBalls, deltaTime);
+        
+        let updatedState = prev;
+        
+        const gap = gapContextRef.current;
+        if (gap && newBalls.length >= 3) {
+          const leftIdx = gap.leftBallId ? newBalls.findIndex(b => b.id === gap.leftBallId) : -1;
+          const rightIdx = gap.rightBallId ? newBalls.findIndex(b => b.id === gap.rightBallId) : -1;
+          
+          let foundMatch = false;
+          
+          if (leftIdx >= 0 && rightIdx >= 0 && rightIdx === leftIdx + 1) {
+            const leftBall = newBalls[leftIdx];
+            const rightBall = newBalls[rightIdx];
+            
+            if (leftBall.color === rightBall.color) {
+              const matches = findMatchingBalls(newBalls, leftIdx, leftBall);
+              
+              if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
+                foundMatch = true;
+                const matchedBalls = matches.map(i => newBalls[i]);
+                const newCombo = prev.combo + 1;
+                const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+                
+                const minIdx = matches[0];
+                const maxIdx = matches[matches.length - 1];
+                const newLeftBall = minIdx > 0 ? newBalls[minIdx - 1] : null;
+                const newRightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
+                
+                newBalls = removeBalls(newBalls, matches);
+                
+                if (newLeftBall || newRightBall) {
+                  gapContextRef.current = { 
+                    leftBallId: newLeftBall?.id || null, 
+                    rightBallId: newRightBall?.id || null 
+                  };
+                } else {
+                  gapContextRef.current = null;
+                }
+                
+                hapticFeedback('medium');
+                
+                const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
+                if (hasCrypto) {
+                  playCryptoMatchSound();
+                } else {
+                  playMatchSound(newCombo);
+                }
+                if (newCombo > 1) {
+                  playComboSound(newCombo);
+                }
+                
+                updatedState = {
+                  ...prev,
+                  score: prev.score + points,
+                  combo: newCombo,
+                  maxCombo: Math.max(prev.maxCombo, newCombo),
+                  cryptoCollected: {
+                    btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+                    eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+                    usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+                  },
+                  usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+                };
+              }
+            }
+          } else if (leftIdx >= 0 && rightIdx < 0) {
+            const matches = findMatchingBalls(newBalls, leftIdx, newBalls[leftIdx]);
+            if (matches.length >= 3 && matches.includes(leftIdx)) {
+              foundMatch = true;
+              const matchedBalls = matches.map(i => newBalls[i]);
+              const newCombo = prev.combo + 1;
+              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+              
+              const minIdx = matches[0];
+              const maxIdx = matches[matches.length - 1];
+              const newLeftBall = minIdx > 0 ? newBalls[minIdx - 1] : null;
+              const newRightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
+              
+              newBalls = removeBalls(newBalls, matches);
+              
+              if (newLeftBall || newRightBall) {
+                gapContextRef.current = { leftBallId: newLeftBall?.id || null, rightBallId: newRightBall?.id || null };
+              } else {
+                gapContextRef.current = null;
+              }
+              
+              hapticFeedback('medium');
+              const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
+              if (hasCrypto) playCryptoMatchSound(); else playMatchSound(newCombo);
+              if (newCombo > 1) playComboSound(newCombo);
+              
+              updatedState = {
+                ...prev,
+                score: prev.score + points,
+                combo: newCombo,
+                maxCombo: Math.max(prev.maxCombo, newCombo),
+                cryptoCollected: {
+                  btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+                  eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+                  usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+                },
+                usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+              };
+            }
+          } else if (rightIdx >= 0 && leftIdx < 0) {
+            const matches = findMatchingBalls(newBalls, rightIdx, newBalls[rightIdx]);
+            if (matches.length >= 3 && matches.includes(rightIdx)) {
+              foundMatch = true;
+              const matchedBalls = matches.map(i => newBalls[i]);
+              const newCombo = prev.combo + 1;
+              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+              
+              const minIdx = matches[0];
+              const maxIdx = matches[matches.length - 1];
+              const newLeftBall = minIdx > 0 ? newBalls[minIdx - 1] : null;
+              const newRightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
+              
+              newBalls = removeBalls(newBalls, matches);
+              
+              if (newLeftBall || newRightBall) {
+                gapContextRef.current = { leftBallId: newLeftBall?.id || null, rightBallId: newRightBall?.id || null };
+              } else {
+                gapContextRef.current = null;
+              }
+              
+              hapticFeedback('medium');
+              const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
+              if (hasCrypto) playCryptoMatchSound(); else playMatchSound(newCombo);
+              if (newCombo > 1) playComboSound(newCombo);
+              
+              updatedState = {
+                ...prev,
+                score: prev.score + points,
+                combo: newCombo,
+                maxCombo: Math.max(prev.maxCombo, newCombo),
+                cryptoCollected: {
+                  btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+                  eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+                  usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+                },
+                usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+              };
+            }
+          }
+          
+          if (!foundMatch) {
+            gapContextRef.current = null;
+          }
+        }
         
         const { period, buffer } = GAME_CONFIG.spawn;
         const { targetCount } = GAME_CONFIG.balls;
@@ -186,7 +343,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-          const finalState = { ...prev, balls: newBalls, isPlaying: false, isGameOver: true, won: true, timeLeft: duration };
+          const finalState = { ...updatedState, balls: newBalls, isPlaying: false, isGameOver: true, won: true, timeLeft: duration };
           setTimeout(() => {
             onGameEndRef.current?.(finalState);
             hapticFeedback('success');
@@ -196,13 +353,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         }
         
         if (checkGameOver(newBalls)) {
-          const newLives = prev.lives - 1;
+          const newLives = updatedState.lives - 1;
           
           if (newLives <= 0) {
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
-            const finalState = { ...prev, balls: newBalls, lives: 0, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
+            const finalState = { ...updatedState, balls: newBalls, lives: 0, isPlaying: false, isGameOver: true, won: false, timeLeft: duration };
             setTimeout(() => {
               onGameEndRef.current?.(finalState);
               hapticFeedback('error');
@@ -237,12 +394,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
+          gapContextRef.current = null;
+          
           hapticFeedback('warning');
           playLifeLostSound();
-          return { ...prev, balls: respawnedBalls, lives: newLives };
+          return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
         }
         
-        return { ...prev, balls: newBalls };
+        return { ...updatedState, balls: newBalls };
       });
       
       setProjectile(prev => {
@@ -302,7 +461,18 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           const matchedBalls = matches.map(i => newBalls[i]);
           const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, prev.combo + 1);
           
+          const minIdx = matches[0];
+          const maxIdx = matches[matches.length - 1];
+          const leftBall = minIdx > 0 ? newBalls[minIdx - 1] : null;
+          const rightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
+          
           newBalls = removeBalls(newBalls, matches);
+          
+          if (leftBall || rightBall) {
+            gapContextRef.current = { leftBallId: leftBall?.id || null, rightBallId: rightBall?.id || null };
+          } else {
+            gapContextRef.current = null;
+          }
           
           hapticFeedback('medium');
           
@@ -366,6 +536,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           };
         } else {
           setProjectile(null);
+          gapContextRef.current = null;
           
           return {
             ...prev,

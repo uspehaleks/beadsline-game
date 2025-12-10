@@ -101,6 +101,15 @@ LivesConfig: {
 - **Life purchased during game**: All balls reset to the start of the path (position 0)
 - **Continue after game over**: Player can pay 50 Beads to continue with 1 life, balls reset to start
 
+### Rollback Combo System
+When player matches and removes balls, the remaining chain compresses:
+- **Gap Tracking**: After removal, the game tracks left and right neighbor ball IDs
+- **Adjacency Check**: When neighbors become adjacent, checks for new matches
+- **Chain Reaction**: If same-color balls connect and form 3+, triggers combo with sounds
+- **Requirements**: Match must include both boundary balls (prevents pre-existing triples)
+- **Sound Effects**: playMatchSound/playCryptoMatchSound + playComboSound for combos > 1
+- **State Management**: gapContext cleared on: no match, life loss, no-match shot, game start
+
 ## Game Configuration
 
 ### Static Config (client/src/lib/gameConfig.ts)

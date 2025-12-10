@@ -413,6 +413,36 @@ export function removeBalls(balls: Ball[], indices: number[]): Ball[] {
   return newBalls;
 }
 
+export function findAllMatches(balls: Ball[]): { indices: number[]; matchedBalls: Ball[] }[] {
+  if (balls.length < 3) return [];
+  
+  const allMatches: { indices: number[]; matchedBalls: Ball[] }[] = [];
+  const processed = new Set<number>();
+  
+  for (let i = 0; i < balls.length; i++) {
+    if (processed.has(i)) continue;
+    
+    const currentBall = balls[i];
+    const group: number[] = [i];
+    
+    let j = i + 1;
+    while (j < balls.length && ballsMatch(balls[j], currentBall)) {
+      group.push(j);
+      j++;
+    }
+    
+    if (group.length >= 3) {
+      group.forEach(idx => processed.add(idx));
+      allMatches.push({
+        indices: group,
+        matchedBalls: group.map(idx => balls[idx])
+      });
+    }
+  }
+  
+  return allMatches;
+}
+
 export function checkCollision(
   projectileX: number,
   projectileY: number,
