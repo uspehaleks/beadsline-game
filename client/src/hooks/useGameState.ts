@@ -3,6 +3,7 @@ import type { GameState, Ball } from '@shared/schema';
 import {
   createInitialGameState,
   createRandomBall,
+  createBallFromChain,
   generatePath,
   getShooterPosition,
   updateBallPositions,
@@ -25,6 +26,16 @@ import {
 } from '@/lib/gameEngine';
 import { GAME_CONFIG } from '@/lib/gameConfig';
 import { hapticFeedback } from '@/lib/telegram';
+import { 
+  playShootSound, 
+  playMatchSound, 
+  playCryptoMatchSound, 
+  playComboSound,
+  playLifeLostSound,
+  playWinSound,
+  playGameOverSound,
+  initSounds
+} from '@/lib/sounds';
 
 interface UseGameStateProps {
   canvasWidth: number;
@@ -160,7 +171,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         if (spawnAccumRef.current >= period && canSpawn) {
           spawnAccumRef.current = 0;
-          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -buffer);
+          const newBall = createBallFromChain(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, newBalls, -buffer);
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
           
@@ -179,6 +190,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           setTimeout(() => {
             onGameEndRef.current?.(finalState);
             hapticFeedback('success');
+            playWinSound();
           }, 0);
           return finalState;
         }
@@ -194,6 +206,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             setTimeout(() => {
               onGameEndRef.current?.(finalState);
               hapticFeedback('error');
+              playGameOverSound();
             }, 0);
             return finalState;
           }
@@ -225,6 +238,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
+          playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives };
         }
         
@@ -293,6 +307,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           hapticFeedback('medium');
           
           const newCombo = prev.combo + 1;
+          
+          const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
+          if (hasCrypto) {
+            playCryptoMatchSound();
+          } else {
+            playMatchSound(newCombo);
+          }
+          if (newCombo > 1) {
+            playComboSound(newCombo);
+          }
           const newScore = prev.score + points;
           
           setProjectile(null);
@@ -381,11 +405,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setGameState(prev => ({
       ...prev,
       shooterBall: prev.nextBall,
-      nextBall: createRandomBall('next-' + Date.now()),
+      nextBall: createBallFromChain('next-' + Date.now(), prev.balls),
       shotsTotal: prev.shotsTotal + 1,
     }));
     
     hapticFeedback('light');
+    playShootSound();
   }, [gameState.isPlaying, gameState.shooterBall, projectile, shooterPosition]);
 
   const updateAim = useCallback((targetX: number, targetY: number) => {
@@ -466,6 +491,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           setTimeout(() => {
             onGameEndRef.current?.(finalState);
             hapticFeedback('success');
+            playWinSound();
           }, 0);
           return finalState;
         }
@@ -481,6 +507,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             setTimeout(() => {
               onGameEndRef.current?.(finalState);
               hapticFeedback('error');
+              playGameOverSound();
             }, 0);
             return finalState;
           }
@@ -512,6 +539,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           hapticFeedback('warning');
+          playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives };
         }
         

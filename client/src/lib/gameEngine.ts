@@ -166,6 +166,26 @@ export function getCryptoSpawnedCount() {
   return { ...cryptoSpawnedThisGame };
 }
 
+export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress: number = 0): Ball {
+  const chainColors = chainBalls
+    .filter(b => !b.crypto && !b.isUsdtFund)
+    .map(b => b.color);
+  
+  const uniqueColors = Array.from(new Set(chainColors));
+  const color = uniqueColors.length > 0 
+    ? uniqueColors[Math.floor(Math.random() * uniqueColors.length)]
+    : BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+  
+  return {
+    id,
+    x: 0,
+    y: 0,
+    color,
+    radius: BALL_RADIUS,
+    pathProgress,
+  };
+}
+
 export function createRandomBall(id: string, pathProgress: number = 0): Ball {
   const color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
   
@@ -225,10 +245,11 @@ export function createInitialBalls(count: number): Ball[] {
 }
 
 export function createInitialGameState(): GameState {
+  const balls = createInitialBalls(GAME_CONFIG.balls.initialCount);
   return {
-    balls: createInitialBalls(GAME_CONFIG.balls.initialCount),
-    shooterBall: createRandomBall('shooter'),
-    nextBall: createRandomBall('next'),
+    balls,
+    shooterBall: createBallFromChain('shooter', balls),
+    nextBall: createBallFromChain('next', balls),
     score: 0,
     combo: 0,
     maxCombo: 0,

@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
+import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
 
 interface MainMenuProps {
   user: User | null;
@@ -346,7 +347,20 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
   const [copied, setCopied] = useState(false);
   const [lastSeenRewardId, setLastSeenRewardId] = useState<string | null>(null);
   const [pendingNotifications, setPendingNotifications] = useState<ReferralRewardWithUser[]>([]);
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const { toast } = useToast();
+  
+  const toggleSound = () => {
+    initSounds();
+    const newValue = !soundOn;
+    setSoundOn(newValue);
+    setSoundEnabled(newValue);
+  };
+  
+  const handlePlay = () => {
+    initSounds();
+    onPlay();
+  };
 
   const { data: activePlayers } = useQuery<{ count: number }>({
     queryKey: ["/api/active-players"],
@@ -705,20 +719,35 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
         transition={{ delay: 0.3 }}
         className="w-full max-w-sm"
       >
-        <Button
-          size="lg"
-          className="w-full h-14 font-display text-xl font-bold border-0"
-          onClick={onPlay}
-          disabled={isLoading}
-          data-testid="button-play"
-          style={{
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #00d4ff 100%)',
-            boxShadow: '0 0 30px hsl(270 60% 55% / 0.4), 0 0 60px hsl(195 100% 50% / 0.2)',
-          }}
-        >
-          <Play className="w-6 h-6 mr-2" />
-          ИГРАТЬ
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="lg"
+            className="flex-1 h-14 font-display text-xl font-bold border-0"
+            onClick={handlePlay}
+            disabled={isLoading}
+            data-testid="button-play"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #00d4ff 100%)',
+              boxShadow: '0 0 30px hsl(270 60% 55% / 0.4), 0 0 60px hsl(195 100% 50% / 0.2)',
+            }}
+          >
+            <Play className="w-6 h-6 mr-2" />
+            ИГРАТЬ
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-14 w-14 p-0"
+            onClick={toggleSound}
+            data-testid="button-toggle-sound"
+          >
+            {soundOn ? (
+              <Volume2 className="w-6 h-6" />
+            ) : (
+              <VolumeX className="w-6 h-6 text-muted-foreground" />
+            )}
+          </Button>
+        </div>
 
         {user?.isAdmin && (
           <Link href="/admin">

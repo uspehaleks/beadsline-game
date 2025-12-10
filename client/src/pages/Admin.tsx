@@ -965,15 +965,15 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                     <div className="flex items-center gap-2 mt-1">
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
                         <Bitcoin className="w-3 h-3" />
-                        {(user as User & { btcBalance?: number }).btcBalance?.toFixed(4) || "0.0000"}
+                        {((user as User & { btcBalanceSats?: number }).btcBalanceSats ?? 0).toLocaleString()} sat
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                         <SiEthereum className="w-3 h-3" />
-                        {(user as User & { ethBalance?: number }).ethBalance?.toFixed(4) || "0.0000"}
+                        {((user as User & { ethBalanceWei?: number }).ethBalanceWei ?? 0).toLocaleString()} gwei
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">
                         <SiTether className="w-3 h-3" />
-                        {(user as User & { usdtBalance?: number }).usdtBalance?.toFixed(2) || "0.00"}
+                        ${Number((user as User & { usdtBalance?: number }).usdtBalance ?? 0).toFixed(2)}
                       </span>
                     </div>
                   </div>
