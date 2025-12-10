@@ -414,16 +414,21 @@ function ballsMatch(ball1: Ball, ball2: Ball): boolean {
 }
 
 export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBall: Ball): number[] {
+  if (insertIndex < 0 || insertIndex >= balls.length) {
+    return [];
+  }
+  
   const matches: number[] = [insertIndex];
+  const targetBall = balls[insertIndex];
   
   let left = insertIndex - 1;
-  while (left >= 0 && ballsMatch(balls[left], insertedBall)) {
+  while (left >= 0 && ballsMatch(balls[left], targetBall)) {
     matches.unshift(left);
     left--;
   }
   
   let right = insertIndex + 1;
-  while (right < balls.length && ballsMatch(balls[right], insertedBall)) {
+  while (right < balls.length && ballsMatch(balls[right], targetBall)) {
     matches.push(right);
     right++;
   }
