@@ -26,6 +26,17 @@ function formatNumbersInObject(obj: any): any {
   return obj;
 }
 
+// Debug Logs Storage (in-memory, for game debugging)
+const MAX_DEBUG_LOGS = 200;
+const serverDebugLogs: string[] = [];
+
+function addDebugLog(log: string) {
+  serverDebugLogs.push(log);
+  if (serverDebugLogs.length > MAX_DEBUG_LOGS) {
+    serverDebugLogs.shift();
+  }
+}
+
 // Telegram Bot Types
 interface TelegramUser {
   id: number;
@@ -1936,6 +1947,32 @@ export async function registerRoutes(
       console.error("Get bot info error:", error);
       res.status(500).json({ error: "Failed to get bot info" });
     }
+  });
+
+  // Debug logs API - for game debugging
+  app.post("/api/debug-logs", async (req, res) => {
+    try {
+      const { logs } = req.body;
+      if (Array.isArray(logs)) {
+        for (const log of logs) {
+          if (typeof log === 'string') {
+            addDebugLog(log);
+          }
+        }
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add logs" });
+    }
+  });
+
+  app.get("/api/admin/debug-logs", requireAdmin, async (req, res) => {
+    res.json({ logs: [...serverDebugLogs] });
+  });
+
+  app.delete("/api/admin/debug-logs", requireAdmin, async (req, res) => {
+    serverDebugLogs.length = 0;
+    res.json({ success: true });
   });
 
   return httpServer;

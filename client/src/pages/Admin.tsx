@@ -51,7 +51,6 @@ import {
   FileText
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
-import { getDebugLogs, clearDebugLogs } from "@/lib/gameEngine";
 import {
   Dialog,
   DialogContent,
@@ -3735,22 +3734,30 @@ function DebugLogsTab() {
   const [logs, setLogs] = useState<string[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  const fetchLogs = async () => {
+    try {
+      const res = await fetch('/api/admin/debug-logs', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.logs || []);
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
-    const fetchLogs = () => {
-      setLogs(getDebugLogs());
-    };
-    
     fetchLogs();
     
     if (autoRefresh) {
-      const interval = setInterval(fetchLogs, 500);
+      const interval = setInterval(fetchLogs, 1000);
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
 
-  const handleClear = () => {
-    clearDebugLogs();
-    setLogs([]);
+  const handleClear = async () => {
+    try {
+      await fetch('/api/admin/debug-logs', { method: 'DELETE', credentials: 'include' });
+      setLogs([]);
+    } catch (e) {}
   };
 
   return (
@@ -3779,7 +3786,7 @@ function DebugLogsTab() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setLogs(getDebugLogs())}
+                onClick={fetchLogs}
                 data-testid="button-refresh-logs"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />

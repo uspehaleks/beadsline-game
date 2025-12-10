@@ -5,6 +5,21 @@ export const DEBUG_GAME_LOGIC = true;
 const MAX_DEBUG_LOGS = 200;
 
 export const debugLogs: string[] = [];
+let pendingLogs: string[] = [];
+let flushTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function flushLogsToServer() {
+  if (pendingLogs.length === 0) return;
+  
+  const logsToSend = [...pendingLogs];
+  pendingLogs = [];
+  
+  fetch('/api/debug-logs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ logs: logsToSend }),
+  }).catch(() => {});
+}
 
 function debugLog(...args: unknown[]) {
   if (DEBUG_GAME_LOGIC) {
@@ -13,6 +28,12 @@ function debugLog(...args: unknown[]) {
     if (debugLogs.length > MAX_DEBUG_LOGS) {
       debugLogs.shift();
     }
+    
+    pendingLogs.push(msg);
+    
+    if (flushTimeout) clearTimeout(flushTimeout);
+    flushTimeout = setTimeout(flushLogsToServer, 100);
+    
     console.log('[GAME]', ...args);
   }
 }
