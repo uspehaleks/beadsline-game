@@ -1,0 +1,50 @@
+[19:28:41] === GAME STARTED === initialBalls: 5
+[19:28:50] insertBallInChain: shooterBall.color=yellow, crypto=undefined, insertIndex=3, chainLength=10
+[19:28:50] Created insertedBall: id=ball-1765391330990, color=yellow, crypto=undefined
+[19:28:50] Chain after insert: [green, green, yellow, yellow, blue]
+[19:28:50] findMatchingBalls START: insertIndex=3, targetBall.id=ball-1765391330990, color=yellow, crypto=undefined
+[19:28:50] ballsMatch color: green vs yellow = false
+[19:28:50] ballsMatch color: yellow vs yellow = true
+[19:28:50] RIGHT match at 4: id=spawn-1765391325428-byiplbvk6o, color=yellow, crypto=undefined
+[19:28:50] ballsMatch color: blue vs yellow = false
+[19:28:50] findMatchingBalls END: found 2 matches, indices=[3,4], returning NO MATCH
+[19:28:52] insertBallInChain: shooterBall.color=green, crypto=undefined, insertIndex=10, chainLength=11
+[19:28:52] Created insertedBall: id=ball-1765391332566, color=green, crypto=undefined
+[19:28:52] Chain after insert: [yellow, green, green, green]
+[19:28:52] findMatchingBalls START: insertIndex=10, targetBall.id=ball-1765391332566, color=green, crypto=undefined
+[19:28:52] ballsMatch color: green vs green = true
+[19:28:52] LEFT match at 9: id=ball-3, color=green, crypto=undefined
+[19:28:52] ballsMatch color: yellow vs green = false
+[19:28:52] ballsMatch color: green vs green = true
+[19:28:52] RIGHT match at 11: id=ball-4, color=green, crypto=undefined
+[19:28:52] findMatchingBalls END: found 3 matches, indices=[9,10,11], returning MATCH
+[19:28:52] removeBalls: removing 3 balls at indices [9,10,11]
+[19:28:52] Balls being removed: [idx9:green, idx10:green, idx11:green]
+[19:28:52] findMatchingBalls START: insertIndex=8, targetBall.id=ball-2, color=yellow, crypto=undefined
+[19:28:52] ballsMatch color: red vs yellow = false
+[19:28:52] findMatchingBalls END: found 1 matches, indices=[8], returning NO MATCH
+[19:28:55] insertBallInChain: shooterBall.color=green, crypto=undefined, insertIndex=3, chainLength=11
+[19:28:55] Created insertedBall: id=ball-1765391335178, color=green, crypto=undefined
+[19:28:55] Chain after insert: [yellow, green, green, green, green]
+[19:28:55] findMatchingBalls START: insertIndex=3, targetBall.id=ball-1765391335178, color=green, crypto=undefined
+[19:28:55] ballsMatch color: green vs green = true
+[19:28:55] LEFT match at 2: id=spawn-1765391330838-udloyqhg21g, color=green, crypto=undefined
+[19:28:55] ballsMatch color: yellow vs green = false
+[19:28:55] ballsMatch color: green vs green = true
+[19:28:55] RIGHT match at 4: id=spawn-1765391329033-dijjdn9lp0g, color=green, crypto=undefined
+[19:28:55] ballsMatch color: green vs green = true
+[19:28:55] RIGHT match at 5: id=spawn-1765391327232-4d1kvcq2lyg, color=green, crypto=undefined
+[19:28:55] ballsMatch color: yellow vs green = false
+[19:28:55] findMatchingBalls END: found 4 matches, indices=[2,3,4,5], returning MATCH
+[19:28:55] removeBalls: removing 4 balls at indices [2,3,4,5]
+[19:28:55] Balls being removed: [idx2:green, idx3:green, idx4:green, idx5:green]
+[19:28:55] findMatchingBalls START: insertIndex=1, targetBall.id=spawn-1765391332640-nij89bj7w0b, color=yellow, crypto=undefined
+[19:28:55] ballsMatch color: green vs yellow = false
+[19:28:55] ballsMatch color: yellow vs yellow = true
+[19:28:55] RIGHT match at 2: id=ball-1765391330990, color=yellow, crypto=undefined
+[19:28:55] ballsMatch color: yellow vs yellow = true
+[19:28:55] RIGHT match at 3: id=spawn-1765391325428-byiplbvk6o, color=yellow, crypto=undefined
+[19:28:55] ballsMatch color: blue vs yellow = false
+[19:28:55] findMatchingBalls END: found 3 matches, indices=[1,2,3], returning MATCH
+[19:28:55] removeBalls: removing 3 balls at indices [1,2,3]
+[19:28:55] Balls being removed: [idx1:yellow, idx2:yellow, idx3:yellow]

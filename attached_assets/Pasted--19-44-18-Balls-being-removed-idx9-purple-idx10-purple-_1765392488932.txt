@@ -1,0 +1,27 @@
+[19:44:18] Balls being removed: [idx9:purple, idx10:purple, idx11:purple]
+[19:44:18] findMatchingBalls START: insertIndex=8, targetBall.id=spawn-1765392243511-janqc00wo1s, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 7: id=spawn-1765392245315-2obi5k7mmgm, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 6: id=spawn-1765392247118-b8c2ed5cwm4, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 5: id=spawn-1765392248924-3cz1hj7f9d, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 4: id=spawn-1765392250727-cmal9dn5zzl, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 3: id=spawn-1765392252530-nf8kwhnx67g, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 2: id=spawn-1765392254336-so4t0dbwk0l, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] LEFT match at 1: id=spawn-1765392256139-65v0t1jw1et, color=red, crypto=undefined
+[19:44:18] ballsMatch color: purple vs red = false
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] RIGHT match at 9: id=spawn-1765392229086-vcmbg7twhm, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] RIGHT match at 10: id=spawn-1765392227274-93nps6sedsl, color=red, crypto=undefined
+[19:44:18] ballsMatch color: red vs red = true
+[19:44:18] RIGHT match at 11: id=spawn-1765392225471-4saegfqoj8v, color=red, crypto=undefined
+[19:44:18] ballsMatch color: yellow vs red = false
+[19:44:18] findMatchingBalls END: found 11 matches, indices=[1,2,3,4,5,6,7,8,9,10,11], returning MATCH
+[19:44:18] removeBalls: removing 11 balls at indices [1,2,3,4,5,6,7,8,9,10,11]
+[19:44:18] Balls being removed: [idx1:red, idx2:red, idx3:red, idx4:red, idx5:red, idx6:red, idx7:red, idx8:red, idx9:red, idx10:red, idx11:red]
