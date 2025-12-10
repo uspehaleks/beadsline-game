@@ -1953,6 +1953,7 @@ export async function registerRoutes(
   app.post("/api/debug-logs", async (req, res) => {
     try {
       const { logs } = req.body;
+      console.log(`[DEBUG] Received ${logs?.length || 0} logs, current total: ${serverDebugLogs.length}`);
       if (Array.isArray(logs)) {
         for (const log of logs) {
           if (typeof log === 'string') {
@@ -1960,6 +1961,7 @@ export async function registerRoutes(
           }
         }
       }
+      console.log(`[DEBUG] After adding, total: ${serverDebugLogs.length}`);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to add logs" });
@@ -1967,6 +1969,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/debug-logs", requireAdmin, async (req, res) => {
+    console.log(`[DEBUG] GET logs, count: ${serverDebugLogs.length}`);
     res.json({ logs: [...serverDebugLogs] });
   });
 
