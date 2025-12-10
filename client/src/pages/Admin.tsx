@@ -47,9 +47,11 @@ import {
   Power,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
+import { getDebugLogs, clearDebugLogs } from "@/lib/gameEngine";
 import {
   Dialog,
   DialogContent,
@@ -497,6 +499,10 @@ export default function Admin() {
                 <Gamepad2 className="w-4 h-4 mr-1.5" />
                 Геймплей
               </TabsTrigger>
+              <TabsTrigger value="debug-logs" data-testid="tab-debug-logs" className="flex-shrink-0">
+                <FileText className="w-4 h-4 mr-1.5" />
+                Логи
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -546,6 +552,9 @@ export default function Admin() {
 
           <TabsContent value="gameplay">
             <GameplayTab />
+          </TabsContent>
+          <TabsContent value="debug-logs">
+            <DebugLogsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -3716,6 +3725,105 @@ function GameplayTab() {
               Сбросить
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function DebugLogsTab() {
+  const [logs, setLogs] = useState<string[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = () => {
+      setLogs(getDebugLogs());
+    };
+    
+    fetchLogs();
+    
+    if (autoRefresh) {
+      const interval = setInterval(fetchLogs, 500);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  const handleClear = () => {
+    clearDebugLogs();
+    setLogs([]);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Логи игровой механики
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Отладочные логи для анализа совпадений и удалений шаров
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={autoRefresh} 
+                onCheckedChange={setAutoRefresh}
+                data-testid="switch-auto-refresh"
+              />
+              <Label>Авто-обновление (0.5 сек)</Label>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setLogs(getDebugLogs())}
+                data-testid="button-refresh-logs"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Обновить
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleClear}
+                data-testid="button-clear-logs"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Очистить
+              </Button>
+            </div>
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            Записей: {logs.length} / 200
+          </div>
+
+          <ScrollArea className="h-[500px] border rounded-md p-3 bg-muted/30">
+            {logs.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                Логов пока нет. Начните игру, чтобы увидеть логи.
+              </div>
+            ) : (
+              <div className="space-y-1 font-mono text-xs">
+                {logs.map((log, index) => (
+                  <div 
+                    key={index} 
+                    className={`p-1 rounded ${
+                      log.includes('removeBalls') ? 'bg-red-500/20 text-red-300' :
+                      log.includes('MATCH') ? 'bg-green-500/20 text-green-300' :
+                      log.includes('insertBall') ? 'bg-blue-500/20 text-blue-300' :
+                      'text-foreground/80'
+                    }`}
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

@@ -2,11 +2,27 @@ import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig, Gamepla
 import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
 
 export const DEBUG_GAME_LOGIC = true;
+const MAX_DEBUG_LOGS = 200;
+
+export const debugLogs: string[] = [];
 
 function debugLog(...args: unknown[]) {
   if (DEBUG_GAME_LOGIC) {
+    const msg = `[${new Date().toLocaleTimeString()}] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+    debugLogs.push(msg);
+    if (debugLogs.length > MAX_DEBUG_LOGS) {
+      debugLogs.shift();
+    }
     console.log('[GAME]', ...args);
   }
+}
+
+export function clearDebugLogs() {
+  debugLogs.length = 0;
+}
+
+export function getDebugLogs(): string[] {
+  return [...debugLogs];
 }
 
 const BALL_RADIUS = GAME_CONFIG.balls.radius;
