@@ -207,16 +207,58 @@ export function getCryptoSpawnedCount() {
   return { ...cryptoSpawnedThisGame };
 }
 
-export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress: number = 0): Ball {
-  const chainColors = chainBalls
-    .filter(b => !b.crypto && !b.isUsdtFund)
-    .map(b => b.color);
-  
+function getColorCounts(balls: Ball[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const ball of balls) {
+    if (!ball.crypto && !ball.isUsdtFund) {
+      counts.set(ball.color, (counts.get(ball.color) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string {
   const activeColors = getActiveBallColors();
-  const uniqueColors = Array.from(new Set(chainColors)).filter(c => activeColors.includes(c));
-  const color = uniqueColors.length > 0 
-    ? uniqueColors[Math.floor(Math.random() * uniqueColors.length)]
-    : activeColors[Math.floor(Math.random() * activeColors.length)];
+  const colorCounts = getColorCounts(balls);
+  
+  const totalBalls = balls.filter(b => !b.crypto && !b.isUsdtFund).length;
+  const targetPerColor = Math.max(1, Math.floor(totalBalls / activeColors.length));
+  
+  const weights: { color: string; weight: number }[] = [];
+  
+  for (const color of activeColors) {
+    const count = colorCounts.get(color) || 0;
+    let weight: number;
+    
+    if (forShooter) {
+      weight = count > 0 ? Math.max(1, count) : 0.5;
+    } else {
+      const deficit = Math.max(0, targetPerColor - count);
+      weight = 1 + deficit * 2;
+      
+      if (count === 0 && totalBalls > 10) {
+        weight = 5;
+      }
+    }
+    
+    weights.push({ color, weight });
+  }
+  
+  const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (const { color, weight } of weights) {
+    random -= weight;
+    if (random <= 0) {
+      return color;
+    }
+  }
+  
+  return activeColors[0];
+}
+
+export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress: number = 0): Ball {
+  const color = selectBalancedColor(chainBalls, true) as BallColor;
   
   return {
     id,
@@ -228,9 +270,11 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
   };
 }
 
-export function createRandomBall(id: string, pathProgress: number = 0): Ball {
+export function createRandomBall(id: string, pathProgress: number = 0, chainBalls: Ball[] = []): Ball {
   const activeColors = getActiveBallColors();
-  const color = activeColors[Math.floor(Math.random() * activeColors.length)];
+  const color = (chainBalls.length > 0 
+    ? selectBalancedColor(chainBalls, false)
+    : activeColors[Math.floor(Math.random() * activeColors.length)]) as BallColor;
   
   const spawnChance = currentEconomy.crypto.spawnChance;
   const limits = currentEconomy.perGameLimits;
@@ -280,7 +324,7 @@ export function createInitialBalls(count: number): Ball[] {
   const startOffset = -GAME_CONFIG.spawn.buffer;
   
   for (let i = 0; i < count; i++) {
-    const ball = createRandomBall(`ball-${i}`, startOffset + i * spacing);
+    const ball = createRandomBall(`ball-${i}`, startOffset + i * spacing, balls);
     balls.push(ball);
   }
   
@@ -577,7 +621,7 @@ export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
     const lastProgress = newBalls.length > 0 
       ? newBalls[newBalls.length - 1].pathProgress 
       : 0;
-    const newBall = createRandomBall(`new-${Date.now()}-${i}`, lastProgress + spacing);
+    const newBall = createRandomBall(`new-${Date.now()}-${i}`, lastProgress + spacing, newBalls);
     newBalls.push(newBall);
   }
   
@@ -586,7 +630,7 @@ export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
 
 export function spawnBallAtStart(balls: Ball[]): Ball[] {
   const spacing = GAME_CONFIG.balls.spacing;
-  const newBall = createRandomBall(`spawn-${Date.now()}`, 0);
+  const newBall = createRandomBall(`spawn-${Date.now()}`, 0, balls);
   
   const shiftedBalls = balls.map(ball => ({
     ...ball,
