@@ -377,6 +377,7 @@ export function createInitialBalls(count: number): Ball[] {
 }
 
 export function createInitialGameState(): GameState {
+  debugLog('=== GAME STARTED ===', 'initialBalls:', currentGameplay.balls.initialCount);
   const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
