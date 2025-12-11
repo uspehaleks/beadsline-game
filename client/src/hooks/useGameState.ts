@@ -208,6 +208,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
       
+      // Debug: log every 60 frames to confirm loop is running
+      if (gapContextRef.current && Math.random() < 0.05) {
+        sendDebugLog(`[LOOP-RUN] ts:${Math.floor(timestamp)} gap:${!!gapContextRef.current} pending:${!!pendingChainReactionRef.current}`);
+      }
+      
       const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
       lastTimeRef.current = timestamp;
       const currentPath = pathRef.current;
