@@ -205,12 +205,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     spawnFinishedRef.current = false;
     gapContextRef.current = null;
     
+    // Track frame count for debug logging
+    let frameCount = 0;
+    
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
       
-      // Debug: log every 60 frames to confirm loop is running
-      if (gapContextRef.current && Math.random() < 0.05) {
-        sendDebugLog(`[LOOP-RUN] ts:${Math.floor(timestamp)} gap:${!!gapContextRef.current} pending:${!!pendingChainReactionRef.current}`);
+      frameCount++;
+      // Debug: log every 60 frames unconditionally
+      if (frameCount % 60 === 0) {
+        sendDebugLog(`[FRAME] #${frameCount} gap:${gapContextRef.current ? 'YES' : 'NO'} pending:${!!pendingChainReactionRef.current}`);
       }
       
       const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
