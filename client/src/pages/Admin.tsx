@@ -3870,6 +3870,12 @@ function DebugLogsTab() {
                   <div 
                     key={index} 
                     className={`p-1 rounded ${
+                      log.includes('[CHAIN-REACT]') ? 'bg-purple-500/30 text-purple-300 font-bold' :
+                      log.includes('[CHAIN-END]') ? 'bg-green-500/20 text-green-300' :
+                      log.includes('[CHAIN-NOMATCH]') ? 'bg-yellow-500/20 text-yellow-300' :
+                      log.includes('[CHAIN-BREAK]') ? 'bg-orange-500/20 text-orange-300' :
+                      log.includes('[CHAIN-SHORT]') ? 'bg-orange-500/20 text-orange-300' :
+                      log.includes('[RESET]') ? 'bg-red-500/20 text-red-300' :
                       log.includes('removeBalls') ? 'bg-red-500/20 text-red-300' :
                       log.includes('MATCH') ? 'bg-green-500/20 text-green-300' :
                       log.includes('insertBall') ? 'bg-blue-500/20 text-blue-300' :
