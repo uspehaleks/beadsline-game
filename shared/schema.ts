@@ -414,5 +414,6 @@ export interface GameplayConfig {
   };
   colors: {
     count: number;
+    activeColors?: string[];
   };
 }

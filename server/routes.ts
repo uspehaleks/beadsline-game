@@ -1562,8 +1562,20 @@ export async function registerRoutes(
       }
       
       if (colors) {
+        const validColors = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'magenta', 'amber', 'lime', 'violet'];
+        let activeColors: string[] | undefined;
+        
+        if (Array.isArray(colors.activeColors)) {
+          const filtered = colors.activeColors.filter((c: string) => validColors.includes(c)) as string[];
+          const unique = Array.from(new Set(filtered)) as string[];
+          if (unique.length >= 2 && unique.length <= 10) {
+            activeColors = unique;
+          }
+        }
+        
         updates.colors = {
-          count: colors.count !== undefined ? Math.max(2, Math.min(5, Math.floor(parseFloat(String(colors.count))))) : undefined,
+          count: activeColors ? activeColors.length : (colors.count !== undefined ? Math.max(2, Math.min(10, Math.floor(parseFloat(String(colors.count))))) : undefined),
+          activeColors: activeColors,
         };
       }
       

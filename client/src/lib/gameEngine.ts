@@ -86,6 +86,7 @@ export function setGameplayConfig(config: Partial<GameplayConfig>) {
     },
     colors: {
       count: config.colors?.count ?? defaults.colors.count,
+      activeColors: config.colors?.activeColors,
     },
   };
 }
@@ -95,6 +96,14 @@ export function getGameplayConfig(): GameplayConfig {
 }
 
 function getActiveBallColors(): BallColor[] {
+  if (currentGameplay.colors.activeColors && currentGameplay.colors.activeColors.length >= 2) {
+    const filtered = currentGameplay.colors.activeColors.filter(c => 
+      ALL_BALL_COLORS.includes(c as BallColor)
+    ) as BallColor[];
+    if (filtered.length >= 2) {
+      return filtered;
+    }
+  }
   const count = Math.max(2, Math.min(10, currentGameplay.colors.count));
   return ALL_BALL_COLORS.slice(0, count);
 }
@@ -449,7 +458,7 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   if (balls.length < 2) return balls;
   
   const spacing = GAME_CONFIG.balls.spacing;
-  const rollbackSpeed = 0.03;
+  const rollbackSpeed = 0.15;
   const rollbackAmount = rollbackSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];

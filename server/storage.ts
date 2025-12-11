@@ -731,6 +731,7 @@ export class DatabaseStorage implements IStorage {
       },
       colors: {
         count: 5,
+        activeColors: ['red', 'blue', 'green', 'yellow', 'purple'],
       },
     };
   }
@@ -749,6 +750,16 @@ export class DatabaseStorage implements IStorage {
     
     const stored = config.value as GameplayConfig;
     const defaults = this.getDefaultGameplayConfig();
+    const validColors = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'magenta', 'amber', 'lime', 'violet'];
+    
+    let activeColors = stored.colors?.activeColors;
+    if (activeColors && Array.isArray(activeColors)) {
+      activeColors = activeColors.filter((c: string) => validColors.includes(c));
+    }
+    if (!activeColors || activeColors.length < 2) {
+      const count = Math.max(2, Math.min(10, stored.colors?.count ?? defaults.colors.count));
+      activeColors = validColors.slice(0, count);
+    }
     
     return {
       balls: {
@@ -766,7 +777,8 @@ export class DatabaseStorage implements IStorage {
         accelerationStart: stored.speed?.accelerationStart ?? defaults.speed.accelerationStart,
       },
       colors: {
-        count: stored.colors?.count ?? defaults.colors.count,
+        count: activeColors.length,
+        activeColors: activeColors,
       },
     };
   }
@@ -789,9 +801,13 @@ export class DatabaseStorage implements IStorage {
         max: updates.speed?.max ?? current.speed.max,
         accelerationStart: updates.speed?.accelerationStart ?? current.speed.accelerationStart,
       },
-      colors: {
-        count: updates.colors?.count ?? current.colors.count,
-      },
+      colors: (() => {
+        const newActiveColors = updates.colors?.activeColors ?? current.colors.activeColors;
+        return {
+          count: newActiveColors ? newActiveColors.length : (updates.colors?.count ?? current.colors.count),
+          activeColors: newActiveColors,
+        };
+      })(),
     };
     
     await this.setGameConfig({

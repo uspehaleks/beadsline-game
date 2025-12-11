@@ -3462,6 +3462,7 @@ interface GameplayConfigType {
   };
   colors: {
     count: number;
+    activeColors?: string[];
   };
 }
 
@@ -3683,20 +3684,70 @@ function GameplayTab() {
 
           <div className="space-y-4">
             <h3 className="font-medium">Цвета</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Количество цветов (2-10)</Label>
-                <Input
-                  type="number"
-                  min={2}
-                  max={10}
-                  value={rawInputs['colorCount'] ?? String(editConfig.colors.count)}
-                  onChange={(e) => handleInputChange('colorCount', e.target.value, (num) => 
-                    setEditConfig(prev => prev ? { ...prev, colors: { count: Math.floor(num) } } : null)
-                  )}
-                  data-testid="input-color-count"
-                />
-                <p className="text-xs text-muted-foreground">Меньше цветов = проще игра</p>
+                <Label>Активные цвета (выберите 2-10)</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { id: 'red', name: 'Красный', color: '#ff4757' },
+                    { id: 'blue', name: 'Синий', color: '#3b82f6' },
+                    { id: 'green', name: 'Зелёный', color: '#22c55e' },
+                    { id: 'yellow', name: 'Жёлтый', color: '#eab308' },
+                    { id: 'purple', name: 'Пурпурный', color: '#8b5cf6' },
+                    { id: 'cyan', name: 'Голубой', color: '#00e5ff' },
+                    { id: 'magenta', name: 'Розовый', color: '#ff2bf2' },
+                    { id: 'amber', name: 'Янтарный', color: '#ffc400' },
+                    { id: 'lime', name: 'Лайм', color: '#b6ff00' },
+                    { id: 'violet', name: 'Фиолет', color: '#8c3bff' },
+                  ].map(({ id, name, color }) => {
+                    const allColorIds = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'magenta', 'amber', 'lime', 'violet'];
+                    const rawActiveColors = editConfig.colors.activeColors;
+                    const activeColors = (rawActiveColors && rawActiveColors.length >= 2) 
+                      ? rawActiveColors 
+                      : allColorIds.slice(0, Math.max(2, editConfig.colors.count));
+                    const isActive = activeColors.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          const current = (rawActiveColors && rawActiveColors.length >= 2) 
+                            ? rawActiveColors 
+                            : allColorIds.slice(0, Math.max(2, editConfig.colors.count));
+                          let newColors: string[];
+                          if (isActive) {
+                            if (current.length <= 2) return;
+                            newColors = current.filter((c: string) => c !== id);
+                          } else {
+                            if (current.length >= 10) return;
+                            newColors = [...current, id];
+                          }
+                          setEditConfig(prev => prev ? { 
+                            ...prev, 
+                            colors: { 
+                              ...prev.colors,
+                              count: newColors.length,
+                              activeColors: newColors 
+                            } 
+                          } : null);
+                        }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                          isActive ? 'border-primary bg-primary/10' : 'border-muted hover:border-muted-foreground/50'
+                        }`}
+                        data-testid={`button-color-${id}`}
+                      >
+                        <div 
+                          className="w-6 h-6 rounded-full shadow-lg"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span className="text-xs">{name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Активно: {editConfig.colors.activeColors?.length || editConfig.colors.count} цветов. Меньше цветов = проще игра
+                </p>
               </div>
             </div>
           </div>
