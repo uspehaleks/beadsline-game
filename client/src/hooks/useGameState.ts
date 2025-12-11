@@ -220,8 +220,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               ? leftBall.crypto === rightBall.crypto 
               : (!leftBall.crypto && !rightBall.crypto && leftBall.color === rightBall.color);
             
+            console.log('[GAP CHECK] leftBall:', leftBall.id.slice(-6), 'color:', leftBall.color, 'crypto:', leftBall.crypto,
+                        '| rightBall:', rightBall.id.slice(-6), 'color:', rightBall.color, 'crypto:', rightBall.crypto,
+                        '| ballsDoMatch:', ballsDoMatch);
+            
             if (ballsDoMatch) {
               const matches = findMatchingBalls(newBalls, leftIdx, leftBall);
+              console.log('[GAP CHECK] matches found:', matches.length, 'includes both:', matches.includes(leftIdx) && matches.includes(rightIdx));
               
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
                 foundMatch = true;
