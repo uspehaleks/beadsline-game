@@ -952,7 +952,7 @@ export async function registerRoutes(
   app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, totalPoints, gamesPlayed, bestScore, isAdmin, referredBy, btcBalance, ethBalance, usdtBalance } = req.body;
+      const { username, totalPoints, gamesPlayed, bestScore, isAdmin, referredBy, btcBalanceSats, ethBalanceWei, usdtBalance } = req.body;
       
       const updates: Record<string, unknown> = {};
       if (username !== undefined) updates.username = username;
@@ -960,8 +960,8 @@ export async function registerRoutes(
       if (gamesPlayed !== undefined) updates.gamesPlayed = Number(gamesPlayed);
       if (bestScore !== undefined) updates.bestScore = Number(bestScore);
       if (isAdmin !== undefined) updates.isAdmin = Boolean(isAdmin);
-      if (btcBalance !== undefined) updates.btcBalance = Number(btcBalance);
-      if (ethBalance !== undefined) updates.ethBalance = Number(ethBalance);
+      if (btcBalanceSats !== undefined) updates.btcBalanceSats = Number(btcBalanceSats);
+      if (ethBalanceWei !== undefined) updates.ethBalanceWei = Number(ethBalanceWei);
       if (usdtBalance !== undefined) updates.usdtBalance = Number(usdtBalance);
       
       // Handle referredBy (sponsor) update

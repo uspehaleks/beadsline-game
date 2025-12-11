@@ -879,8 +879,8 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     totalPoints: 0, 
     gamesPlayed: 0, 
     bestScore: 0,
-    btcBalance: 0,
-    ethBalance: 0,
+    btcBalanceSats: 0,
+    ethBalanceWei: 0,
     usdtBalance: 0,
     referredBy: "",
   });
@@ -939,8 +939,8 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
       totalPoints: user.totalPoints,
       gamesPlayed: user.gamesPlayed,
       bestScore: user.bestScore,
-      btcBalance: (user as User & { btcBalance?: number }).btcBalance || 0,
-      ethBalance: (user as User & { ethBalance?: number }).ethBalance || 0,
+      btcBalanceSats: (user as User & { btcBalanceSats?: number }).btcBalanceSats || 0,
+      ethBalanceWei: (user as User & { ethBalanceWei?: number }).ethBalanceWei || 0,
       usdtBalance: (user as User & { usdtBalance?: number }).usdtBalance || 0,
       referredBy: (user as User & { referredBy?: string | null }).referredBy || "",
     });
@@ -1096,28 +1096,28 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
               <div>
                 <Label htmlFor="edit-btc" className="flex items-center gap-1 text-xs">
                   <Bitcoin className="w-3 h-3 text-amber-500" />
-                  BTC
+                  BTC (sat)
                 </Label>
                 <Input
                   id="edit-btc"
                   type="number"
-                  step="0.0001"
-                  value={editForm.btcBalance}
-                  onChange={(e) => setEditForm({ ...editForm, btcBalance: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editForm.btcBalanceSats}
+                  onChange={(e) => setEditForm({ ...editForm, btcBalanceSats: parseInt(e.target.value) || 0 })}
                   data-testid="input-edit-btc"
                 />
               </div>
               <div>
                 <Label htmlFor="edit-eth" className="flex items-center gap-1 text-xs">
                   <SiEthereum className="w-3 h-3 text-blue-500" />
-                  ETH
+                  ETH (gwei)
                 </Label>
                 <Input
                   id="edit-eth"
                   type="number"
-                  step="0.001"
-                  value={editForm.ethBalance}
-                  onChange={(e) => setEditForm({ ...editForm, ethBalance: parseFloat(e.target.value) || 0 })}
+                  step="1"
+                  value={editForm.ethBalanceWei}
+                  onChange={(e) => setEditForm({ ...editForm, ethBalanceWei: parseInt(e.target.value) || 0 })}
                   data-testid="input-edit-eth"
                 />
               </div>
