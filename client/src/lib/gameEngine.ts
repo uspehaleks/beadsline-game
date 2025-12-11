@@ -551,12 +551,13 @@ export function calculatePoints(matchedBalls: Ball[], combo: number): {
   
   for (const ball of matchedBalls) {
     if (ball.isUsdtFund) {
-      points += economy.points.usdt;
+      // USDT fund balls: no points, only crypto reward
       usdtFundCollected++;
     } else if (ball.crypto) {
-      points += economy.points[ball.crypto];
+      // Crypto balls: no points, only crypto reward
       cryptoCollected[ball.crypto]++;
     } else {
+      // Regular balls: give points (Beads)
       points += economy.points.normal;
     }
   }
