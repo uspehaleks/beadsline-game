@@ -217,6 +217,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         return;
       }
       
+      // Log gap context state every 60 frames (roughly once per second)
+      if (gapContextRef.current && Math.random() < 0.02) {
+        sendDebugLog(`[LOOP] gap exists: L:${gapContextRef.current.leftBallId?.slice(-6)} R:${gapContextRef.current.rightBallId?.slice(-6)}`);
+      }
+      
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
@@ -613,6 +618,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           };
         } else {
           setProjectile(null);
+          if (gapContextRef.current) {
+            sendDebugLog(`[RESET] Gap context cleared by non-matching shot!`);
+          }
           gapContextRef.current = null;
           
           return {
