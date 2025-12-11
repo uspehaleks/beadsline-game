@@ -274,21 +274,39 @@ function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string
   const totalBalls = balls.filter(b => !b.crypto && !b.isUsdtFund).length;
   const targetPerColor = Math.max(1, Math.floor(totalBalls / activeColors.length));
   
+  if (forShooter) {
+    const colorsInChain = activeColors.filter(c => (colorCounts.get(c) || 0) > 0);
+    if (colorsInChain.length === 0) {
+      return activeColors[Math.floor(Math.random() * activeColors.length)];
+    }
+    
+    const weights: { color: string; weight: number }[] = [];
+    for (const color of colorsInChain) {
+      const count = colorCounts.get(color) || 1;
+      weights.push({ color, weight: count });
+    }
+    
+    const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (const { color, weight } of weights) {
+      random -= weight;
+      if (random <= 0) {
+        return color;
+      }
+    }
+    return colorsInChain[0];
+  }
+  
   const weights: { color: string; weight: number }[] = [];
   
   for (const color of activeColors) {
     const count = colorCounts.get(color) || 0;
-    let weight: number;
+    const deficit = Math.max(0, targetPerColor - count);
+    let weight = 1 + deficit * 2;
     
-    if (forShooter) {
-      weight = count > 0 ? Math.max(1, count) : 0.5;
-    } else {
-      const deficit = Math.max(0, targetPerColor - count);
-      weight = 1 + deficit * 2;
-      
-      if (count === 0 && totalBalls > 10) {
-        weight = 5;
-      }
+    if (count === 0 && totalBalls > 10) {
+      weight = 5;
     }
     
     weights.push({ color, weight });
