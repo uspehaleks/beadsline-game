@@ -570,25 +570,85 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           
           newBalls = removeBalls(newBalls, matches);
           
-          if (leftBall || rightBall) {
-            gapContextRef.current = { leftBallId: leftBall?.id || null, rightBallId: rightBall?.id || null };
-            sendDebugLog(`[SET] Removed ${matches.length} balls. L:${leftBall?.id.slice(-6) || 'none'} ${leftBall?.color || ''}/${leftBall?.crypto || 'reg'} R:${rightBall?.id.slice(-6) || 'none'} ${rightBall?.color || ''}/${rightBall?.crypto || 'reg'}`);
-          } else {
-            gapContextRef.current = null;
-            sendDebugLog(`[SET] Removed ${matches.length} balls. No neighbors (chain ends)`);
+          let totalPoints = points;
+          let totalCryptoCollected = { ...cryptoCollected };
+          let totalUsdtFundCollected = usdtFundCollected;
+          let currentCombo = 1;
+          let currentLeftBall = leftBall;
+          let currentRightBall = rightBall;
+          
+          // Check for immediate chain reaction (balls are already adjacent after removal)
+          while (currentLeftBall && currentRightBall && newBalls.length >= 3) {
+            const leftIdx = newBalls.findIndex(b => b.id === currentLeftBall!.id);
+            const rightIdx = newBalls.findIndex(b => b.id === currentRightBall!.id);
+            
+            if (leftIdx < 0 || rightIdx < 0 || rightIdx !== leftIdx + 1) {
+              sendDebugLog(`[CHAIN-BREAK] L:${leftIdx} R:${rightIdx} adj:${rightIdx === leftIdx + 1}`);
+              break;
+            }
+            
+            // Check if boundary balls match
+            const leftB = newBalls[leftIdx];
+            const rightB = newBalls[rightIdx];
+            const ballsDoMatch = (leftB.crypto && rightB.crypto) 
+              ? leftB.crypto === rightB.crypto 
+              : (!leftB.crypto && !rightB.crypto && leftB.color === rightB.color);
+            
+            if (!ballsDoMatch) {
+              sendDebugLog(`[CHAIN-NOMATCH] L:${leftB.color}/${leftB.crypto || 'reg'} R:${rightB.color}/${rightB.crypto || 'reg'}`);
+              break;
+            }
+            
+            // Find matching balls starting from left
+            const chainMatches = findMatchingBalls(newBalls, leftIdx, leftB);
+            
+            if (chainMatches.length < 3 || !chainMatches.includes(leftIdx) || !chainMatches.includes(rightIdx)) {
+              sendDebugLog(`[CHAIN-SHORT] found:${chainMatches.length} hasLeft:${chainMatches.includes(leftIdx)} hasRight:${chainMatches.includes(rightIdx)}`);
+              break;
+            }
+            
+            // Chain reaction found!
+            currentCombo++;
+            sendDebugLog(`[CHAIN-REACT] combo:${currentCombo} removing:${chainMatches.length} balls`);
+            
+            const chainMatchedBalls = chainMatches.map(i => newBalls[i]);
+            const chainResult = calculatePoints(chainMatchedBalls, currentCombo - 1);
+            totalPoints += chainResult.points;
+            totalCryptoCollected.btc += chainResult.cryptoCollected.btc;
+            totalCryptoCollected.eth += chainResult.cryptoCollected.eth;
+            totalCryptoCollected.usdt += chainResult.cryptoCollected.usdt;
+            totalUsdtFundCollected += chainResult.usdtFundCollected;
+            
+            // Get new boundary balls before removal
+            const newMinIdx = chainMatches[0];
+            const newMaxIdx = chainMatches[chainMatches.length - 1];
+            currentLeftBall = newMinIdx > 0 ? newBalls[newMinIdx - 1] : null;
+            currentRightBall = newMaxIdx < newBalls.length - 1 ? newBalls[newMaxIdx + 1] : null;
+            
+            newBalls = removeBalls(newBalls, chainMatches);
+            
+            // Play combo sound
+            const hasChainCrypto = chainMatchedBalls.some(b => b.crypto || b.isUsdtFund);
+            if (hasChainCrypto) {
+              playCryptoMatchSound();
+            }
+            playComboSound(currentCombo);
+            hapticFeedback('heavy');
           }
           
-          hapticFeedback('medium');
+          // Clear gap context since we processed chain reactions synchronously
+          gapContextRef.current = null;
+          sendDebugLog(`[CHAIN-END] combo:${currentCombo} points:${totalPoints}`);
           
-          const newCombo = 1;
+          hapticFeedback('medium');
           
           const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
           if (hasCrypto) {
             playCryptoMatchSound();
           } else {
-            playMatchSound(newCombo);
+            playMatchSound(currentCombo);
           }
-          const newScore = prev.score + points;
+          const newScore = prev.score + totalPoints;
           
           setProjectile(null);
           
@@ -600,14 +660,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               ...prev,
               balls: newBalls,
               score: newScore,
-              combo: newCombo,
-              maxCombo: Math.max(prev.maxCombo, newCombo),
+              combo: currentCombo,
+              maxCombo: Math.max(prev.maxCombo, currentCombo),
               cryptoCollected: {
-                btc: prev.cryptoCollected.btc + cryptoCollected.btc,
-                eth: prev.cryptoCollected.eth + cryptoCollected.eth,
-                usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+                btc: prev.cryptoCollected.btc + totalCryptoCollected.btc,
+                eth: prev.cryptoCollected.eth + totalCryptoCollected.eth,
+                usdt: prev.cryptoCollected.usdt + totalCryptoCollected.usdt,
               },
-              usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+              usdtFundCollected: prev.usdtFundCollected + totalUsdtFundCollected,
               shotsHit: prev.shotsHit + 1,
               isPlaying: false,
               isGameOver: true,
@@ -625,14 +685,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             ...prev,
             balls: newBalls,
             score: newScore,
-            combo: newCombo,
-            maxCombo: Math.max(prev.maxCombo, newCombo),
+            combo: currentCombo,
+            maxCombo: Math.max(prev.maxCombo, currentCombo),
             cryptoCollected: {
-              btc: prev.cryptoCollected.btc + cryptoCollected.btc,
-              eth: prev.cryptoCollected.eth + cryptoCollected.eth,
-              usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+              btc: prev.cryptoCollected.btc + totalCryptoCollected.btc,
+              eth: prev.cryptoCollected.eth + totalCryptoCollected.eth,
+              usdt: prev.cryptoCollected.usdt + totalCryptoCollected.usdt,
             },
-            usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+            usdtFundCollected: prev.usdtFundCollected + totalUsdtFundCollected,
             shotsHit: prev.shotsHit + 1,
           };
         } else {
