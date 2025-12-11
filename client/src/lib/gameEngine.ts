@@ -349,8 +349,9 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
 
 export function createRandomBall(id: string, pathProgress: number = 0, chainBalls: Ball[] = []): Ball {
   const activeColors = getActiveBallColors();
+  // Use forShooter=true to only select colors that exist in the chain
   const color = (chainBalls.length > 0 
-    ? selectBalancedColor(chainBalls, false)
+    ? selectBalancedColor(chainBalls, true)
     : activeColors[Math.floor(Math.random() * activeColors.length)]) as BallColor;
   
   const spawnChance = currentEconomy.crypto.spawnChance;

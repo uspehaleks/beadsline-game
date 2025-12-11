@@ -697,21 +697,26 @@ export async function registerRoutes(
         });
       }
       
-      const cryptoRewards = await storage.processCryptoRewards(
-        userId,
-        validatedData.cryptoBtc ?? 0,
-        validatedData.cryptoEth ?? 0,
-        validatedData.cryptoUsdt ?? 0
-      );
-      
+      // Only process crypto rewards if player won
+      let cryptoRewards = { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0, btcSatsAwarded: 0, ethWeiAwarded: 0 };
       let rewardResult: { usdtAwarded: number; rewardId?: string } = { usdtAwarded: 0 };
-      const usdtCollected = validatedData.cryptoUsdt ?? 0;
-      if (usdtCollected > 0) {
-        rewardResult = await storage.processUsdtReward(
-          userId, 
-          usdtCollected, 
-          score.id
+      
+      if (isVictory) {
+        cryptoRewards = await storage.processCryptoRewards(
+          userId,
+          validatedData.cryptoBtc ?? 0,
+          validatedData.cryptoEth ?? 0,
+          validatedData.cryptoUsdt ?? 0
         );
+        
+        const usdtCollected = validatedData.cryptoUsdt ?? 0;
+        if (usdtCollected > 0) {
+          rewardResult = await storage.processUsdtReward(
+            userId, 
+            usdtCollected, 
+            score.id
+          );
+        }
       }
       
       if (isVictory && beadsAwarded > 0) {
