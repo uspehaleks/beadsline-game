@@ -215,7 +215,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             const leftBall = newBalls[leftIdx];
             const rightBall = newBalls[rightIdx];
             
-            if (leftBall.color === rightBall.color) {
+            // Check if balls match: crypto balls match by crypto type, regular balls by color
+            const ballsDoMatch = (leftBall.crypto && rightBall.crypto) 
+              ? leftBall.crypto === rightBall.crypto 
+              : (!leftBall.crypto && !rightBall.crypto && leftBall.color === rightBall.color);
+            
+            if (ballsDoMatch) {
               const matches = findMatchingBalls(newBalls, leftIdx, leftBall);
               
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {

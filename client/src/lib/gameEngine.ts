@@ -266,10 +266,12 @@ export function getCryptoSpawnedCount() {
   return { ...cryptoSpawnedThisGame };
 }
 
-function getColorCounts(balls: Ball[]): Map<string, number> {
+function getColorCounts(balls: Ball[], includeAll: boolean = false): Map<string, number> {
   const counts = new Map<string, number>();
   for (const ball of balls) {
-    if (!ball.crypto && !ball.isUsdtFund) {
+    // For shooter color selection, count ALL balls' colors (including crypto)
+    // For chain spawning balance, only count regular balls
+    if (includeAll || (!ball.crypto && !ball.isUsdtFund)) {
       counts.set(ball.color, (counts.get(ball.color) || 0) + 1);
     }
   }
@@ -278,7 +280,9 @@ function getColorCounts(balls: Ball[]): Map<string, number> {
 
 function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string {
   const activeColors = getActiveBallColors();
-  const colorCounts = getColorCounts(balls);
+  // For shooter: count ALL colors (including crypto balls) to match what's visible on screen
+  // For chain spawning: only count regular balls for balance
+  const colorCounts = getColorCounts(balls, forShooter);
   
   const totalBalls = balls.filter(b => !b.crypto && !b.isUsdtFund).length;
   const targetPerColor = Math.max(1, Math.floor(totalBalls / activeColors.length));
