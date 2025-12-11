@@ -199,8 +199,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
                 foundMatch = true;
                 const matchedBalls = matches.map(i => newBalls[i]);
+                const chainCombo = prev.combo;
                 const newCombo = prev.combo + 1;
-                const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+                const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, chainCombo);
                 
                 const minIdx = matches[0];
                 const maxIdx = matches[matches.length - 1];
@@ -249,8 +250,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             if (matches.length >= 3 && matches.includes(leftIdx)) {
               foundMatch = true;
               const matchedBalls = matches.map(i => newBalls[i]);
+              const chainCombo = prev.combo;
               const newCombo = prev.combo + 1;
-              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, chainCombo);
               
               const minIdx = matches[0];
               const maxIdx = matches[matches.length - 1];
@@ -288,8 +290,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
             if (matches.length >= 3 && matches.includes(rightIdx)) {
               foundMatch = true;
               const matchedBalls = matches.map(i => newBalls[i]);
+              const chainCombo = prev.combo;
               const newCombo = prev.combo + 1;
-              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo);
+              const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, chainCombo);
               
               const minIdx = matches[0];
               const maxIdx = matches[matches.length - 1];
@@ -473,7 +476,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         if (matches.length >= 3) {
           const matchedBalls = matches.map(i => newBalls[i]);
-          const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, prev.combo + 1);
+          const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, 0);
           
           const minIdx = matches[0];
           const maxIdx = matches[matches.length - 1];
@@ -490,16 +493,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           
           hapticFeedback('medium');
           
-          const newCombo = prev.combo + 1;
+          const newCombo = 1;
           
           const hasCrypto = matchedBalls.some(b => b.crypto || b.isUsdtFund);
           if (hasCrypto) {
             playCryptoMatchSound();
           } else {
             playMatchSound(newCombo);
-          }
-          if (newCombo > 1) {
-            playComboSound(newCombo);
           }
           const newScore = prev.score + points;
           

@@ -332,6 +332,7 @@ export function createRandomBall(id: string, pathProgress: number = 0, chainBall
   const isUsdtFundBall = usdtFundEnabled && Math.random() < spawnChance;
   
   if (isUsdtFundBall) {
+    debugLog(`[CRYPTO] Spawning USDT Fund ball: ${id}`);
     return {
       id,
       x: 0,
@@ -349,12 +350,14 @@ export function createRandomBall(id: string, pathProgress: number = 0, chainBall
     return cryptoSpawnedThisGame[type] < limit;
   });
   const hasCryptoAvailable = availableTypes.length > 0;
-  const isCrypto = hasCryptoAvailable && Math.random() < spawnChance;
+  const cryptoRoll = Math.random();
+  const isCrypto = hasCryptoAvailable && cryptoRoll < spawnChance;
   
   let crypto: CryptoType | undefined = undefined;
   if (isCrypto) {
     crypto = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     cryptoSpawnedThisGame[crypto]++;
+    debugLog(`[CRYPTO] Spawned ${crypto} ball: ${id}, roll=${cryptoRoll.toFixed(3)}, chance=${spawnChance}, spawned=${JSON.stringify(cryptoSpawnedThisGame)}`);
   }
   
   return {
@@ -383,6 +386,8 @@ export function createInitialBalls(count: number): Ball[] {
 
 export function createInitialGameState(): GameState {
   debugLog('=== GAME STARTED ===', 'initialBalls:', currentGameplay.balls.initialCount);
+  debugLog(`[CRYPTO CONFIG] spawnChance=${currentEconomy.crypto.spawnChance}, availableCrypto=${JSON.stringify(availableCrypto)}, usdtFundEnabled=${usdtFundEnabled}`);
+  cryptoSpawnedThisGame = { btc: 0, eth: 0, usdt: 0 };
   const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
