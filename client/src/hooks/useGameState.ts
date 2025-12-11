@@ -232,6 +232,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         let updatedState = prev;
         
         const gap = gapContextRef.current;
+        // Debug: log gap status every check
+        if (gap) {
+          const leftIdx = gap.leftBallId ? newBalls.findIndex(b => b.id === gap.leftBallId) : -1;
+          const rightIdx = gap.rightBallId ? newBalls.findIndex(b => b.id === gap.rightBallId) : -1;
+          const isAdj = rightIdx === leftIdx + 1;
+          // Only log when adjacent or first time
+          if (isAdj) {
+            sendDebugLog(`[GAP-FOUND] L:${leftIdx} R:${rightIdx} adj:${isAdj} len:${newBalls.length}`);
+          }
+        }
         if (gap && newBalls.length >= 3) {
           const leftIdx = gap.leftBallId ? newBalls.findIndex(b => b.id === gap.leftBallId) : -1;
           const rightIdx = gap.rightBallId ? newBalls.findIndex(b => b.id === gap.rightBallId) : -1;
