@@ -418,8 +418,8 @@ export function createInitialGameState(): GameState {
   const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
-    shooterBall: createBallFromChain('shooter', balls),
-    nextBall: createBallFromChain('next', balls),
+    shooterBall: createRandomBall('shooter', 0, balls),
+    nextBall: createRandomBall('next', 0, balls),
     score: 0,
     combo: 0,
     maxCombo: 0,

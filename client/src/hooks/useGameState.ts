@@ -343,7 +343,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         
         if (spawnAccumRef.current >= period && canSpawn) {
           spawnAccumRef.current = 0;
-          const newBall = createBallFromChain(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, newBalls, -buffer);
+          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -buffer, newBalls);
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
           
@@ -588,7 +588,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setGameState(prev => ({
       ...prev,
       shooterBall: prev.nextBall,
-      nextBall: createBallFromChain('next-' + Date.now(), prev.balls),
+      nextBall: createRandomBall('next-' + Date.now(), 0, prev.balls),
       shotsTotal: prev.shotsTotal + 1,
     }));
     
