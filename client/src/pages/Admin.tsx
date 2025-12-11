@@ -3685,11 +3685,11 @@ function GameplayTab() {
             <h3 className="font-medium">Цвета</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Количество цветов (2-5)</Label>
+                <Label>Количество цветов (2-10)</Label>
                 <Input
                   type="number"
                   min={2}
-                  max={5}
+                  max={10}
                   value={rawInputs['colorCount'] ?? String(editConfig.colors.count)}
                   onChange={(e) => handleInputChange('colorCount', e.target.value, (num) => 
                     setEditConfig(prev => prev ? { ...prev, colors: { count: Math.floor(num) } } : null)

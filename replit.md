@@ -60,7 +60,7 @@ The application is a fully functional MVP with:
 - **Win Condition**: Clear all balls
 - **Lives System**: Start with 3 lives, lose one when ball reaches finish
 - **Game Over**: When all lives are lost
-- **Ball Colors**: Red, Blue, Green, Yellow, Purple
+- **Ball Colors**: Red, Blue, Green, Yellow, Purple, Cyan, Magenta, Amber, Lime, Violet (10 total, configurable 2-10 via admin)
 - **Dynamic Speed**: Constant base speed with light acceleration in last 20% of path
 
 ## Beads Economic System

@@ -241,7 +241,7 @@ export interface LivesConfig {
   maxExtraLives: number;
 }
 
-export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple';
+export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'cyan' | 'magenta' | 'amber' | 'lime' | 'violet';
 export type CryptoType = 'btc' | 'eth' | 'usdt';
 
 export interface Ball {

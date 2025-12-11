@@ -55,7 +55,7 @@ const BALL_RADIUS = GAME_CONFIG.balls.radius;
 const SHOOTER_BALL_SPEED = GAME_CONFIG.balls.shooterSpeed;
 const COLLISION_RADIUS_MULTIPLIER = GAME_CONFIG.balls.collisionRadius;
 
-const ALL_BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'];
+const ALL_BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'magenta', 'amber', 'lime', 'violet'];
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
 
 const DEFAULT_GAMEPLAY: GameplayConfig = {
@@ -95,7 +95,7 @@ export function getGameplayConfig(): GameplayConfig {
 }
 
 function getActiveBallColors(): BallColor[] {
-  const count = Math.max(2, Math.min(5, currentGameplay.colors.count));
+  const count = Math.max(2, Math.min(10, currentGameplay.colors.count));
   return ALL_BALL_COLORS.slice(0, count);
 }
 
@@ -750,6 +750,11 @@ export const BALL_COLOR_MAP: Record<BallColor, string> = {
   green: '#22c55e',
   yellow: '#eab308',
   purple: '#a855f7',
+  cyan: '#00e5ff',
+  magenta: '#ff2bf2',
+  amber: '#ffc400',
+  lime: '#b6ff00',
+  violet: '#8c3bff',
 };
 
 export const CRYPTO_COLOR_MAP: Record<CryptoType, string> = {
