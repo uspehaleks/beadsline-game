@@ -208,6 +208,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           const leftIdx = gap.leftBallId ? newBalls.findIndex(b => b.id === gap.leftBallId) : -1;
           const rightIdx = gap.rightBallId ? newBalls.findIndex(b => b.id === gap.rightBallId) : -1;
           
+          // Log every frame when gap context exists
+          console.log('[GAP CONTEXT] leftIdx:', leftIdx, 'rightIdx:', rightIdx, 
+                      'adjacent:', rightIdx === leftIdx + 1,
+                      'leftId:', gap.leftBallId?.slice(-6), 'rightId:', gap.rightBallId?.slice(-6));
+          
           let foundMatch = false;
           let matchesToProcess: number[] | null = null;
           
@@ -254,17 +259,24 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               }
             }
           } else if (leftIdx >= 0 && rightIdx < 0) {
+            console.log('[GAP CHECK] Only leftIdx exists, checking left side');
             const matches = findMatchingBalls(newBalls, leftIdx, newBalls[leftIdx]);
             if (matches.length >= 3 && matches.includes(leftIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
             }
           } else if (rightIdx >= 0 && leftIdx < 0) {
+            console.log('[GAP CHECK] Only rightIdx exists, checking right side');
             const matches = findMatchingBalls(newBalls, rightIdx, newBalls[rightIdx]);
             if (matches.length >= 3 && matches.includes(rightIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
             }
+          } else if (leftIdx < 0 || rightIdx < 0) {
+            console.log('[GAP CHECK] Ball not found! leftIdx:', leftIdx, 'rightIdx:', rightIdx, '- clearing gap context');
+            gapContextRef.current = null;
+          } else if (rightIdx !== leftIdx + 1) {
+            console.log('[GAP CHECK] Not adjacent yet, gap still closing. Distance:', rightIdx - leftIdx);
           }
           
           if (foundMatch && matchesToProcess) {
