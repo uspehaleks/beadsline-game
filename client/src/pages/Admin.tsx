@@ -3875,6 +3875,7 @@ function DebugLogsTab() {
                       log.includes('[CHAIN-NOMATCH]') ? 'bg-yellow-500/20 text-yellow-300' :
                       log.includes('[CHAIN-BREAK]') ? 'bg-orange-500/20 text-orange-300' :
                       log.includes('[CHAIN-SHORT]') ? 'bg-orange-500/20 text-orange-300' :
+                      log.includes('[SHOOTER-SMART]') ? 'bg-cyan-500/20 text-cyan-300' :
                       log.includes('[RESET]') ? 'bg-red-500/20 text-red-300' :
                       log.includes('removeBalls') ? 'bg-red-500/20 text-red-300' :
                       log.includes('MATCH') ? 'bg-green-500/20 text-green-300' :

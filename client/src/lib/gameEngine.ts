@@ -353,6 +353,73 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
 
 export function createRandomBall(id: string, pathProgress: number = 0, chainBalls: Ball[] = [], forShooter: boolean = false): Ball {
   const activeColors = getActiveBallColors();
+  
+  // Smart shooter generation when few balls remain
+  if (forShooter && chainBalls.length > 0 && chainBalls.length <= 15) {
+    // Collect unique ball types in chain (color + crypto/usdtFund combination)
+    const ballTypes: Array<{ color: BallColor; crypto?: CryptoType; isUsdtFund?: boolean }> = [];
+    const seenKeys = new Set<string>();
+    
+    for (const ball of chainBalls) {
+      const key = ball.isUsdtFund ? `usdt-fund-${ball.color}` : 
+                  ball.crypto ? `crypto-${ball.crypto}-${ball.color}` : 
+                  `regular-${ball.color}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        ballTypes.push({ 
+          color: ball.color as BallColor, 
+          crypto: ball.crypto, 
+          isUsdtFund: ball.isUsdtFund 
+        });
+      }
+    }
+    
+    if (ballTypes.length > 0) {
+      // Weight by count of each type in chain (more balls = higher chance)
+      const typeWeights = ballTypes.map(type => {
+        const count = chainBalls.filter(b => {
+          if (type.isUsdtFund) return b.isUsdtFund && b.color === type.color;
+          if (type.crypto) return b.crypto === type.crypto && b.color === type.color;
+          return !b.crypto && !b.isUsdtFund && b.color === type.color;
+        }).length;
+        return { type, weight: count };
+      });
+      
+      const totalWeight = typeWeights.reduce((sum, tw) => sum + tw.weight, 0);
+      let random = Math.random() * totalWeight;
+      
+      for (const { type, weight } of typeWeights) {
+        random -= weight;
+        if (random <= 0) {
+          debugLog(`[SHOOTER-SMART] Balls:${chainBalls.length} Types:${ballTypes.length} -> ${type.isUsdtFund ? 'USDT-Fund' : type.crypto || type.color}`);
+          return {
+            id,
+            x: 0,
+            y: 0,
+            color: type.color,
+            crypto: type.crypto,
+            isUsdtFund: type.isUsdtFund,
+            radius: BALL_RADIUS,
+            pathProgress,
+          };
+        }
+      }
+      
+      // Fallback to first type
+      const fallback = ballTypes[0];
+      return {
+        id,
+        x: 0,
+        y: 0,
+        color: fallback.color,
+        crypto: fallback.crypto,
+        isUsdtFund: fallback.isUsdtFund,
+        radius: BALL_RADIUS,
+        pathProgress,
+      };
+    }
+  }
+  
   // forShooter=true: pick only from colors in chain (for shooter/next ball)
   // forShooter=false: balanced distribution from all active colors (for chain spawning)
   const color = (chainBalls.length > 0 
