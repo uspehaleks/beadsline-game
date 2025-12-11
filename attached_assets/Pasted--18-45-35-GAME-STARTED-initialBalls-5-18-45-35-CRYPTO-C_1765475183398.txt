@@ -1,0 +1,41 @@
+[18:45:35] === GAME STARTED === initialBalls: 5
+[18:45:35] [CRYPTO CONFIG] spawnChance=0.08, availableCrypto={"btc":true,"eth":true,"usdt":true}, usdtFundEnabled=false
+[18:45:36] === GAME STARTED === initialBalls: 1
+[18:45:36] [CRYPTO CONFIG] spawnChance=0.07, availableCrypto={"btc":false,"eth":false,"usdt":false}, usdtFundEnabled=false
+[18:46:01] insertBallInChain: shooterBall.color=red, crypto=undefined, insertIndex=11, chainLength=14
+[18:46:01] Created insertedBall: id=ball-1765475161000, color=red, crypto=undefined
+[18:46:01] Chain after insert: [red, red, red, red, red]
+[18:46:01] [OP1] findMatchingBalls START: insertIndex=11, targetBall.id=ball-1765475161000, color=red, crypto=undefined
+[18:46:01] [OP1] Chain snapshot (first 15): 0:re[v42tx4] 1:re[46cpl7] 2:re[7y1cxo] 3:re[2iudkm] 4:re[74y1ag] 5:re[9y3pq8] 6:re[hj3i2p] 7:re[vrs6xv] 8:re[1ne4qh] 9:re[6uivbj] 10:re[hkxqze] 11:re[161000] 12:re[bfol49] 13:re[ik0k3l] 14:re[ball-0]
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 10: id=spawn-1765475142017-b4okyhkxqze, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 9: id=spawn-1765475143833-kbq7c6uivbj, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 8: id=spawn-1765475145649-r8ja1ne4qh, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 7: id=spawn-1765475147467-e0vxtvrs6xv, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 6: id=spawn-1765475149283-eex3hj3i2p, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 5: id=spawn-1765475151118-z6e959y3pq8, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 4: id=spawn-1765475152915-trm0k74y1ag, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 3: id=spawn-1765475154734-fp0s22iudkm, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 2: id=spawn-1765475156533-t5e47y1cxo, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 1: id=spawn-1765475158348-edkko46cpl7, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] LEFT match at 0: id=spawn-1765475160165-c6bkcv42tx4, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] RIGHT match at 12: id=spawn-1765475140200-o54dvbfol49, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] RIGHT match at 13: id=spawn-1765475138384-c0r80ik0k3l, color=red, crypto=undefined
+[18:46:01] ballsMatch color: red vs red = true
+[18:46:01] RIGHT match at 14: id=ball-0, color=red, crypto=undefined
+[18:46:01] [OP1] findMatchingBalls END: found 15 matches, indices=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14], ids=[kcv42tx4,ko46cpl7,e47y1cxo,s22iudkm,0k74y1ag,959y3pq8,x3hj3i2p,xtvrs6xv,ja1ne4qh,7c6uivbj,kyhkxqze,75161000,dvbfol49,80ik0k3l,ball-0], returning MATCH
+[18:46:01] [OP2] removeBalls: removing 15 balls at indices [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+[18:46:01] [OP2] Balls being removed: [idx0:red[kcv42tx4], idx1:red[ko46cpl7], idx2:red[e47y1cxo], idx3:red[s22iudkm], idx4:red[0k74y1ag], idx5:red[959y3pq8], idx6:red[x3hj3i2p], idx7:red[xtvrs6xv], idx8:red[ja1ne4qh], idx9:red[7c6uivbj], idx10:red[kyhkxqze], idx11:red[75161000], idx12:red[dvbfol49], idx13:red[80ik0k3l], idx14:red[ball-0]]
+[18:46:01] [OP2] Chain after removal: length=0

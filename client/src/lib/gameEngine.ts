@@ -347,11 +347,12 @@ export function createBallFromChain(id: string, chainBalls: Ball[], pathProgress
   };
 }
 
-export function createRandomBall(id: string, pathProgress: number = 0, chainBalls: Ball[] = []): Ball {
+export function createRandomBall(id: string, pathProgress: number = 0, chainBalls: Ball[] = [], forShooter: boolean = false): Ball {
   const activeColors = getActiveBallColors();
-  // Use forShooter=true to only select colors that exist in the chain
+  // forShooter=true: pick only from colors in chain (for shooter/next ball)
+  // forShooter=false: balanced distribution from all active colors (for chain spawning)
   const color = (chainBalls.length > 0 
-    ? selectBalancedColor(chainBalls, true)
+    ? selectBalancedColor(chainBalls, forShooter)
     : activeColors[Math.floor(Math.random() * activeColors.length)]) as BallColor;
   
   const spawnChance = currentEconomy.crypto.spawnChance;
@@ -419,8 +420,8 @@ export function createInitialGameState(): GameState {
   const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
-    shooterBall: createRandomBall('shooter', 0, balls),
-    nextBall: createRandomBall('next', 0, balls),
+    shooterBall: createRandomBall('shooter', 0, balls, true),
+    nextBall: createRandomBall('next', 0, balls, true),
     score: 0,
     combo: 0,
     maxCombo: 0,

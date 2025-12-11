@@ -588,7 +588,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     setGameState(prev => ({
       ...prev,
       shooterBall: prev.nextBall,
-      nextBall: createRandomBall('next-' + Date.now(), 0, prev.balls),
+      nextBall: createRandomBall('next-' + Date.now(), 0, prev.balls, true),
       shotsTotal: prev.shotsTotal + 1,
     }));
     
