@@ -70,6 +70,29 @@ interface PendingChainReaction {
 
 const CHAIN_REACTION_DELAY = 250;
 
+// Debug log buffer - accumulates logs and sends them in batches
+const debugLogBuffer: string[] = [];
+let debugLogTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function sendDebugLog(message: string) {
+  const timestamp = new Date().toISOString().slice(11, 23);
+  debugLogBuffer.push(`[${timestamp}] ${message}`);
+  
+  // Debounce sending - wait 500ms after last log before sending batch
+  if (debugLogTimeout) clearTimeout(debugLogTimeout);
+  debugLogTimeout = setTimeout(() => {
+    if (debugLogBuffer.length > 0) {
+      const logsToSend = [...debugLogBuffer];
+      debugLogBuffer.length = 0;
+      fetch('/api/debug-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logs: logsToSend }),
+      }).catch(() => {}); // Ignore errors
+    }
+  }, 500);
+}
+
 export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameStateProps) {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [path, setPath] = useState<PathPoint[]>([]);
@@ -208,10 +231,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           const leftIdx = gap.leftBallId ? newBalls.findIndex(b => b.id === gap.leftBallId) : -1;
           const rightIdx = gap.rightBallId ? newBalls.findIndex(b => b.id === gap.rightBallId) : -1;
           
-          // Log every frame when gap context exists
-          console.log('[GAP CONTEXT] leftIdx:', leftIdx, 'rightIdx:', rightIdx, 
-                      'adjacent:', rightIdx === leftIdx + 1,
-                      'leftId:', gap.leftBallId?.slice(-6), 'rightId:', gap.rightBallId?.slice(-6));
+          // Log every frame when gap context exists (only log when adjacent to reduce spam)
+          if (rightIdx === leftIdx + 1 || leftIdx < 0 || rightIdx < 0) {
+            sendDebugLog(`[GAP] leftIdx:${leftIdx} rightIdx:${rightIdx} adj:${rightIdx === leftIdx + 1} left:${gap.leftBallId?.slice(-6)} right:${gap.rightBallId?.slice(-6)}`);
+          }
           
           let foundMatch = false;
           let matchesToProcess: number[] | null = null;
@@ -225,14 +248,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               ? leftBall.crypto === rightBall.crypto 
               : (!leftBall.crypto && !rightBall.crypto && leftBall.color === rightBall.color);
             
-            console.log('[GAP CHECK] leftBall:', leftBall.id.slice(-6), 'color:', leftBall.color, 'crypto:', leftBall.crypto,
-                        '| rightBall:', rightBall.id.slice(-6), 'color:', rightBall.color, 'crypto:', rightBall.crypto,
-                        '| ballsDoMatch:', ballsDoMatch);
+            sendDebugLog(`[CHECK] L:${leftBall.id.slice(-6)} ${leftBall.color}/${leftBall.crypto || 'reg'} R:${rightBall.id.slice(-6)} ${rightBall.color}/${rightBall.crypto || 'reg'} match:${ballsDoMatch}`);
             
             if (ballsDoMatch) {
               // Boundary balls match - check for 3+ chain that includes both
               const matches = findMatchingBalls(newBalls, leftIdx, leftBall);
-              console.log('[GAP CHECK] matches found:', matches.length, 'includes both:', matches.includes(leftIdx) && matches.includes(rightIdx));
+              sendDebugLog(`[MATCH] found:${matches.length} both:${matches.includes(leftIdx) && matches.includes(rightIdx)}`);
               
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
                 foundMatch = true;
@@ -242,7 +263,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               // Boundary balls DON'T match - check each side independently for 3+ chains
               // Check LEFT side: leftBall and its left neighbors
               const leftMatches = findMatchingBalls(newBalls, leftIdx, leftBall);
-              console.log('[GAP CHECK] left side matches:', leftMatches.length, 'includes leftIdx:', leftMatches.includes(leftIdx));
+              sendDebugLog(`[LEFT] matches:${leftMatches.length} hasLeft:${leftMatches.includes(leftIdx)}`);
               if (leftMatches.length >= 3 && leftMatches.includes(leftIdx)) {
                 foundMatch = true;
                 matchesToProcess = leftMatches;
@@ -251,7 +272,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               // Check RIGHT side: rightBall and its right neighbors (only if left didn't match)
               if (!foundMatch) {
                 const rightMatches = findMatchingBalls(newBalls, rightIdx, rightBall);
-                console.log('[GAP CHECK] right side matches:', rightMatches.length, 'includes rightIdx:', rightMatches.includes(rightIdx));
+                sendDebugLog(`[RIGHT] matches:${rightMatches.length} hasRight:${rightMatches.includes(rightIdx)}`);
                 if (rightMatches.length >= 3 && rightMatches.includes(rightIdx)) {
                   foundMatch = true;
                   matchesToProcess = rightMatches;
@@ -259,29 +280,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
               }
             }
           } else if (leftIdx >= 0 && rightIdx < 0) {
-            console.log('[GAP CHECK] Only leftIdx exists, checking left side');
+            sendDebugLog(`[EDGE] Only left exists, checking`);
             const matches = findMatchingBalls(newBalls, leftIdx, newBalls[leftIdx]);
             if (matches.length >= 3 && matches.includes(leftIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
             }
           } else if (rightIdx >= 0 && leftIdx < 0) {
-            console.log('[GAP CHECK] Only rightIdx exists, checking right side');
+            sendDebugLog(`[EDGE] Only right exists, checking`);
             const matches = findMatchingBalls(newBalls, rightIdx, newBalls[rightIdx]);
             if (matches.length >= 3 && matches.includes(rightIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
             }
           } else if (leftIdx < 0 || rightIdx < 0) {
-            console.log('[GAP CHECK] Ball not found! leftIdx:', leftIdx, 'rightIdx:', rightIdx, '- clearing gap context');
+            sendDebugLog(`[CLEAR] Ball not found! left:${leftIdx} right:${rightIdx}`);
             gapContextRef.current = null;
-          } else if (rightIdx !== leftIdx + 1) {
-            console.log('[GAP CHECK] Not adjacent yet, gap still closing. Distance:', rightIdx - leftIdx);
           }
           
           if (foundMatch && matchesToProcess) {
             const matchedBalls = matchesToProcess.map(i => newBalls[i]);
             const matchedBallIds = matchedBalls.map(b => b.id);
+            
+            sendDebugLog(`[CHAIN] Triggering chain reaction! Removing ${matchesToProcess.length} balls`);
             
             const minIdx = matchesToProcess[0];
             const maxIdx = matchesToProcess[matchesToProcess.length - 1];
@@ -527,8 +548,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           
           if (leftBall || rightBall) {
             gapContextRef.current = { leftBallId: leftBall?.id || null, rightBallId: rightBall?.id || null };
+            sendDebugLog(`[SET] Removed ${matches.length} balls. L:${leftBall?.id.slice(-6) || 'none'} ${leftBall?.color || ''}/${leftBall?.crypto || 'reg'} R:${rightBall?.id.slice(-6) || 'none'} ${rightBall?.color || ''}/${rightBall?.crypto || 'reg'}`);
           } else {
             gapContextRef.current = null;
+            sendDebugLog(`[SET] Removed ${matches.length} balls. No neighbors (chain ends)`);
           }
           
           hapticFeedback('medium');
