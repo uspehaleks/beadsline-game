@@ -225,12 +225,32 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
                         '| ballsDoMatch:', ballsDoMatch);
             
             if (ballsDoMatch) {
+              // Boundary balls match - check for 3+ chain that includes both
               const matches = findMatchingBalls(newBalls, leftIdx, leftBall);
               console.log('[GAP CHECK] matches found:', matches.length, 'includes both:', matches.includes(leftIdx) && matches.includes(rightIdx));
               
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
                 foundMatch = true;
                 matchesToProcess = matches;
+              }
+            } else {
+              // Boundary balls DON'T match - check each side independently for 3+ chains
+              // Check LEFT side: leftBall and its left neighbors
+              const leftMatches = findMatchingBalls(newBalls, leftIdx, leftBall);
+              console.log('[GAP CHECK] left side matches:', leftMatches.length, 'includes leftIdx:', leftMatches.includes(leftIdx));
+              if (leftMatches.length >= 3 && leftMatches.includes(leftIdx)) {
+                foundMatch = true;
+                matchesToProcess = leftMatches;
+              }
+              
+              // Check RIGHT side: rightBall and its right neighbors (only if left didn't match)
+              if (!foundMatch) {
+                const rightMatches = findMatchingBalls(newBalls, rightIdx, rightBall);
+                console.log('[GAP CHECK] right side matches:', rightMatches.length, 'includes rightIdx:', rightMatches.includes(rightIdx));
+                if (rightMatches.length >= 3 && rightMatches.includes(rightIdx)) {
+                  foundMatch = true;
+                  matchesToProcess = rightMatches;
+                }
               }
             }
           } else if (leftIdx >= 0 && rightIdx < 0) {
