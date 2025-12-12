@@ -877,8 +877,8 @@ export class DatabaseStorage implements IStorage {
     const ethWeiRequested = safeEth * ethWeiPerBall;
     const usdtRequested = safeUsdt * usdtRate;
 
-    const btcPoolAvailable = pools?.btcBalanceSats ?? 0;
-    const ethPoolAvailable = pools?.ethBalanceWei ?? 0;
+    const btcPoolAvailable = Math.floor(pools?.btcBalanceSats ?? 0);
+    const ethPoolAvailable = Math.floor(pools?.ethBalanceWei ?? 0);
     const usdtPoolAvailable = pools?.usdtBalance ?? 0;
 
     const result = await db.execute(sql`
