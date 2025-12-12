@@ -652,7 +652,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
           
           setProjectile(null);
           
-          if (checkWin(newBalls)) {
+          // Only win if ALL balls have spawned AND all are cleared
+          if (spawnFinishedRef.current && checkWin(newBalls)) {
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
