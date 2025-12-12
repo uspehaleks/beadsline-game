@@ -1542,7 +1542,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(
         or(
           ilike(beadsTransactions.description, `%${search}%`),
-          sql`${beadsTransactions.userId}::text ILIKE ${'%' + search + '%'}`
+          sql`${beadsTransactions.userId}::text ILIKE ${'%' + search + '%'}`,
+          ilike(users.username, `%${search}%`)
         )
       );
     }
@@ -1573,6 +1574,7 @@ export class DatabaseStorage implements IStorage {
       
       db.select({ count: sql<number>`count(*)::int` })
         .from(beadsTransactions)
+        .leftJoin(users, eq(beadsTransactions.userId, users.id))
         .where(whereClause),
     ]);
     
