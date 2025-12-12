@@ -109,7 +109,7 @@ function getActiveBallColors(): BallColor[] {
 }
 
 const DEFAULT_ECONOMY: GameEconomyConfig = {
-  points: { normal: 100, btc: 500, eth: 300, usdt: 200 },
+  points: { normal: 5, btc: 500, eth: 300, usdt: 200 },
   combo: { multiplier: 1.5, maxChain: 10 },
   crypto: { spawnChance: 0.08 },
   cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
