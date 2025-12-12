@@ -823,7 +823,8 @@ export class DatabaseStorage implements IStorage {
     userId: string, 
     cryptoBtc: number, 
     cryptoEth: number, 
-    cryptoUsdt: number
+    cryptoUsdt: number,
+    gameScoreId?: string
   ): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }> {
     const user = await this.getUser(userId);
     if (!user) {
@@ -953,6 +954,33 @@ export class DatabaseStorage implements IStorage {
         },
       });
       console.log(`Pools updated: BTC ${btcPoolAvailable} -> ${btcPoolAvailable - btcSatsAwarded} sats, ETH ${ethPoolAvailable} -> ${ethPoolAvailable - ethWeiAwarded} wei, USDT ${usdtPoolAvailable} -> ${usdtPoolAvailable - usdtAwarded}`);
+
+      // Save to real_rewards table for audit trail
+      if (btcSatsAwarded > 0) {
+        await db.insert(realRewards).values({
+          userId,
+          cryptoType: 'btc',
+          amount: btcAwarded,
+          gameScoreId: gameScoreId || null,
+        });
+      }
+      if (ethWeiAwarded > 0) {
+        await db.insert(realRewards).values({
+          userId,
+          cryptoType: 'eth',
+          amount: ethAwarded,
+          gameScoreId: gameScoreId || null,
+        });
+      }
+      if (usdtAwarded > 0) {
+        await db.insert(realRewards).values({
+          userId,
+          cryptoType: 'usdt',
+          amount: usdtAwarded,
+          gameScoreId: gameScoreId || null,
+        });
+      }
+      console.log(`Crypto rewards saved to real_rewards table for user ${userId}`);
     }
 
     return { btcAwarded, ethAwarded, usdtAwarded, btcSatsAwarded, ethWeiAwarded };

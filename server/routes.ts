@@ -706,7 +706,8 @@ export async function registerRoutes(
           userId,
           validatedData.cryptoBtc ?? 0,
           validatedData.cryptoEth ?? 0,
-          validatedData.cryptoUsdt ?? 0
+          validatedData.cryptoUsdt ?? 0,
+          score.id
         );
         
         const usdtCollected = validatedData.cryptoUsdt ?? 0;
