@@ -1675,6 +1675,60 @@ export class DatabaseStorage implements IStorage {
     
     return { success: true, newBalance: userBalanceAfter };
   }
+
+  async getCryptoRewards(options: {
+    limit?: number;
+    offset?: number;
+    cryptoType?: string;
+    search?: string;
+  } = {}): Promise<{ rewards: any[]; total: number }> {
+    const { limit = 20, offset = 0, cryptoType, search } = options;
+    
+    const conditions = [];
+    if (cryptoType) {
+      conditions.push(eq(realRewards.cryptoType, cryptoType));
+    }
+    
+    let baseQuery = db
+      .select({
+        id: realRewards.id,
+        userId: realRewards.userId,
+        cryptoType: realRewards.cryptoType,
+        amount: realRewards.amount,
+        gameScoreId: realRewards.gameScoreId,
+        createdAt: realRewards.createdAt,
+        username: users.username,
+      })
+      .from(realRewards)
+      .leftJoin(users, eq(realRewards.userId, users.id));
+    
+    if (cryptoType) {
+      baseQuery = baseQuery.where(eq(realRewards.cryptoType, cryptoType)) as typeof baseQuery;
+    }
+    
+    if (search) {
+      baseQuery = baseQuery.where(ilike(users.username, `%${search}%`)) as typeof baseQuery;
+    }
+    
+    const rewards = await baseQuery
+      .orderBy(desc(realRewards.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    let countQuery = db.select({ count: count() }).from(realRewards).leftJoin(users, eq(realRewards.userId, users.id));
+    if (cryptoType) {
+      countQuery = countQuery.where(eq(realRewards.cryptoType, cryptoType)) as typeof countQuery;
+    }
+    if (search) {
+      countQuery = countQuery.where(ilike(users.username, `%${search}%`)) as typeof countQuery;
+    }
+    const totalResult = await countQuery;
+    
+    return {
+      rewards,
+      total: totalResult[0]?.count || 0,
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

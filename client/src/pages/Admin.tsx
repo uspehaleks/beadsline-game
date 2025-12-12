@@ -486,6 +486,10 @@ export default function Admin() {
                 <Activity className="w-4 h-4 mr-1.5" />
                 Транзакции
               </TabsTrigger>
+              <TabsTrigger value="crypto-rewards" data-testid="tab-crypto-rewards" className="flex-shrink-0">
+                <Bitcoin className="w-4 h-4 mr-1.5" />
+                Криптошарики
+              </TabsTrigger>
               <TabsTrigger value="economy" data-testid="tab-economy" className="flex-shrink-0">
                 <TrendingUp className="w-4 h-4 mr-1.5" />
                 Экономика
@@ -543,6 +547,10 @@ export default function Admin() {
 
           <TabsContent value="transactions">
             <TransactionsTab />
+          </TabsContent>
+
+          <TabsContent value="crypto-rewards">
+            <CryptoRewardsTab />
           </TabsContent>
 
           <TabsContent value="economy">
@@ -1897,6 +1905,23 @@ interface TransactionsResponse {
   offset: number;
 }
 
+interface CryptoRewardData {
+  id: string;
+  userId: string;
+  cryptoType: string;
+  amount: number;
+  gameScoreId: string | null;
+  createdAt: string;
+  username?: string;
+}
+
+interface CryptoRewardsResponse {
+  rewards: CryptoRewardData[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 const TRANSACTION_TYPES = [
   { value: "all", label: "Все типы" },
   { value: "game_win_reward", label: "Победа" },
@@ -2067,6 +2092,199 @@ function TransactionsTab() {
                   onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                   disabled={page >= totalPages - 1}
                   data-testid="button-tx-next"
+                >
+                  Далее
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const CRYPTO_TYPES = [
+  { value: "all", label: "Все типы" },
+  { value: "btc", label: "BTC" },
+  { value: "eth", label: "ETH" },
+  { value: "usdt", label: "USDT" },
+];
+
+function CryptoRewardsTab() {
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [cryptoType, setCryptoType] = useState("all");
+  const perPage = 20;
+
+  const { data, isLoading } = useQuery<CryptoRewardsResponse>({
+    queryKey: ["/api/admin/crypto-rewards", page, cryptoType, search],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: perPage.toString(),
+        offset: (page * perPage).toString(),
+      });
+      if (cryptoType !== "all") params.set("cryptoType", cryptoType);
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/admin/crypto-rewards?${params}`);
+      return res.json();
+    },
+  });
+
+  const handleSearch = () => {
+    setSearch(searchInput);
+    setPage(0);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setCryptoType(value);
+    setPage(0);
+  };
+
+  const totalPages = data ? Math.ceil(data.total / perPage) : 0;
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getCryptoLabel = (type: string) => {
+    const labels: Record<string, { label: string; color: string; icon: any }> = {
+      btc: { label: "BTC", color: "bg-amber-500/20 text-amber-500", icon: Bitcoin },
+      eth: { label: "ETH", color: "bg-blue-500/20 text-blue-500", icon: SiEthereum },
+      usdt: { label: "USDT", color: "bg-green-500/20 text-green-500", icon: SiTether },
+    };
+    return labels[type.toLowerCase()] || { label: type, color: "bg-muted text-muted-foreground", icon: Coins };
+  };
+
+  const formatAmount = (type: string, amount: number) => {
+    switch (type.toLowerCase()) {
+      case "btc":
+        return `${(amount * 100000000).toFixed(0)} sat`;
+      case "eth":
+        return `${(amount * 1000000000).toFixed(0)} gwei`;
+      case "usdt":
+        return `$${amount.toFixed(2)}`;
+      default:
+        return amount.toString();
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Coins className="w-5 h-5" />
+          Крипто-награды
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            <Input
+              placeholder="Поиск по логину..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="flex-1"
+              data-testid="input-crypto-search"
+            />
+            <Button onClick={handleSearch} size="icon" data-testid="button-crypto-search">
+              <Search className="w-4 h-4" />
+            </Button>
+          </div>
+          <Select value={cryptoType} onValueChange={handleTypeChange}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-crypto-type">
+              <SelectValue placeholder="Тип" />
+            </SelectTrigger>
+            <SelectContent>
+              {CRYPTO_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground">
+              Найдено: {data?.total || 0} наград
+            </div>
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-2">
+                {data?.rewards.map((reward) => {
+                  const typeInfo = getCryptoLabel(reward.cryptoType);
+                  const Icon = typeInfo.icon;
+                  return (
+                    <div
+                      key={reward.id}
+                      className="p-3 border rounded-lg"
+                      data-testid={`row-crypto-${reward.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={typeInfo.color}>
+                            <Icon className="w-3 h-3 mr-1" />
+                            {typeInfo.label}
+                          </Badge>
+                          <span className="font-medium">
+                            @{reward.username || "—"}
+                          </span>
+                        </div>
+                        <span className="font-bold text-green-500">
+                          +{formatAmount(reward.cryptoType, reward.amount)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                        <span>Game: {reward.gameScoreId?.slice(0, 8) || "—"}...</span>
+                        <span>{formatDate(reward.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!data?.rewards || data.rewards.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Крипто-награды не найдены
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  data-testid="button-crypto-prev"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Назад
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                  disabled={page >= totalPages - 1}
+                  data-testid="button-crypto-next"
                 >
                   Далее
                   <ChevronRight className="w-4 h-4" />

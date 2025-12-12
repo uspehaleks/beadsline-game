@@ -1833,6 +1833,33 @@ export async function registerRoutes(
     }
   });
 
+  // Crypto Rewards Journal
+  app.get("/api/admin/crypto-rewards", requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const cryptoType = req.query.cryptoType as string | undefined;
+      const search = req.query.search as string | undefined;
+      
+      const result = await storage.getCryptoRewards({
+        limit,
+        offset,
+        cryptoType,
+        search,
+      });
+      
+      res.json({ 
+        rewards: result.rewards, 
+        total: result.total, 
+        limit, 
+        offset 
+      });
+    } catch (error) {
+      console.error("Get crypto rewards error:", error);
+      res.status(500).json({ error: "Failed to get crypto rewards" });
+    }
+  });
+
   // Buy extra life endpoint
   app.post("/api/buy-life", requireAuth, async (req, res) => {
     try {
