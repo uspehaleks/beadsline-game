@@ -482,6 +482,10 @@ export default function Admin() {
                 <Coins className="w-4 h-4 mr-1.5" />
                 Beads
               </TabsTrigger>
+              <TabsTrigger value="transactions" data-testid="tab-transactions" className="flex-shrink-0">
+                <Activity className="w-4 h-4 mr-1.5" />
+                Транзакции
+              </TabsTrigger>
               <TabsTrigger value="economy" data-testid="tab-economy" className="flex-shrink-0">
                 <TrendingUp className="w-4 h-4 mr-1.5" />
                 Экономика
@@ -535,6 +539,10 @@ export default function Admin() {
 
           <TabsContent value="beads-house">
             <BeadsHouseTab />
+          </TabsContent>
+
+          <TabsContent value="transactions">
+            <TransactionsTab />
           </TabsContent>
 
           <TabsContent value="economy">
@@ -885,6 +893,21 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     referredBy: "",
   });
 
+  const { data: userTransactions, isLoading: txLoading } = useQuery<TransactionsResponse>({
+    queryKey: ["/api/admin/transactions", "user", editingUser?.username],
+    queryFn: async () => {
+      if (!editingUser) return { transactions: [], total: 0, limit: 10, offset: 0 };
+      const params = new URLSearchParams({
+        limit: "10",
+        offset: "0",
+        search: editingUser.username,
+      });
+      const res = await fetch(`/api/admin/transactions?${params}`);
+      return res.json();
+    },
+    enabled: !!editingUser,
+  });
+
   const toggleAdminMutation = useMutation({
     mutationFn: async ({ userId, isAdmin }: { userId: string; isAdmin: boolean }) => {
       return apiRequest("PATCH", `/api/admin/users/${userId}/admin`, { isAdmin });
@@ -1153,6 +1176,55 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
               )}
               Сохранить
             </Button>
+            <Separator />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                <Activity className="w-4 h-4" />
+                Последние транзакции ({userTransactions?.total || 0})
+              </p>
+              {txLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </div>
+              ) : userTransactions?.transactions && userTransactions.transactions.length > 0 ? (
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-2">
+                    {userTransactions.transactions.map((tx) => {
+                      const typeLabels: Record<string, { label: string; color: string }> = {
+                        game_win_reward: { label: "Победа", color: "bg-green-500/20 text-green-500" },
+                        buy_extra_life: { label: "Жизнь", color: "bg-blue-500/20 text-blue-500" },
+                        referral_reward: { label: "Реферал", color: "bg-purple-500/20 text-purple-500" },
+                        admin_adjustment: { label: "Админ", color: "bg-amber-500/20 text-amber-500" },
+                        house_deposit: { label: "Пополнение", color: "bg-cyan-500/20 text-cyan-500" },
+                      };
+                      const typeInfo = typeLabels[tx.type] || { label: tx.type, color: "bg-muted" };
+                      return (
+                        <div key={tx.id} className="p-2 border rounded text-xs">
+                          <div className="flex items-center justify-between">
+                            <Badge className={`${typeInfo.color} text-[10px]`}>{typeInfo.label}</Badge>
+                            <span className={tx.amount >= 0 ? "text-green-500" : "text-red-500"}>
+                              {tx.amount >= 0 ? "+" : ""}{tx.amount}
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground mt-1 truncate">
+                            {tx.description || "—"}
+                          </div>
+                          <div className="text-muted-foreground mt-0.5">
+                            {new Date(tx.createdAt).toLocaleString("ru-RU", {
+                              day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  Транзакции не найдены
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1833,6 +1905,180 @@ const TRANSACTION_TYPES = [
   { value: "admin_adjustment", label: "Админ" },
   { value: "house_deposit", label: "Пополнение" },
 ];
+
+function TransactionsTab() {
+  const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState("all");
+  const perPage = 20;
+
+  const { data, isLoading } = useQuery<TransactionsResponse>({
+    queryKey: ["/api/admin/transactions", page, type, search],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: perPage.toString(),
+        offset: (page * perPage).toString(),
+      });
+      if (type !== "all") params.set("type", type);
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/admin/transactions?${params}`);
+      return res.json();
+    },
+  });
+
+  const handleSearch = () => {
+    setSearch(searchInput);
+    setPage(0);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setType(value);
+    setPage(0);
+  };
+
+  const totalPages = data ? Math.ceil(data.total / perPage) : 0;
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getTypeLabel = (txType: string) => {
+    const labels: Record<string, { label: string; color: string }> = {
+      game_win_reward: { label: "Победа", color: "bg-green-500/20 text-green-500" },
+      buy_extra_life: { label: "Покупка жизни", color: "bg-blue-500/20 text-blue-500" },
+      referral_reward: { label: "Реферал", color: "bg-purple-500/20 text-purple-500" },
+      admin_adjustment: { label: "Админ", color: "bg-amber-500/20 text-amber-500" },
+      house_deposit: { label: "Пополнение", color: "bg-cyan-500/20 text-cyan-500" },
+    };
+    return labels[txType] || { label: txType, color: "bg-muted text-muted-foreground" };
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="w-5 h-5" />
+          Журнал транзакций Beads
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            <Input
+              placeholder="Поиск по логину..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="flex-1"
+              data-testid="input-tx-search"
+            />
+            <Button onClick={handleSearch} size="icon" data-testid="button-tx-search">
+              <Search className="w-4 h-4" />
+            </Button>
+          </div>
+          <Select value={type} onValueChange={handleTypeChange}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-tx-type">
+              <SelectValue placeholder="Тип" />
+            </SelectTrigger>
+            <SelectContent>
+              {TRANSACTION_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground">
+              Найдено: {data?.total || 0} транзакций
+            </div>
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-2">
+                {data?.transactions.map((tx) => {
+                  const typeInfo = getTypeLabel(tx.type);
+                  return (
+                    <div
+                      key={tx.id}
+                      className="p-3 border rounded-lg space-y-2"
+                      data-testid={`row-tx-${tx.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
+                          <span className="font-medium">
+                            @{tx.username || "—"}
+                          </span>
+                        </div>
+                        <span className={`font-bold ${tx.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
+                          {tx.amount >= 0 ? "+" : ""}{tx.amount} Beads
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {tx.description || "Без описания"}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Баланс: {tx.balanceBefore} → {tx.balanceAfter}</span>
+                        <span>{formatDate(tx.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!data?.transactions || data.transactions.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Транзакции не найдены
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  data-testid="button-tx-prev"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Назад
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                  disabled={page >= totalPages - 1}
+                  data-testid="button-tx-next"
+                >
+                  Далее
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function BeadsHouseTab() {
   const { toast } = useToast();
