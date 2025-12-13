@@ -148,12 +148,28 @@ export function GameOverScreen({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="grid grid-cols-3 gap-3 mb-8"
+            className="grid grid-cols-3 gap-3 mb-6"
           >
             <StatCard icon={<Clock className="w-4 h-4" />} label="Время" value={formatDuration(timeLeft)} />
             <StatCard icon={<Zap className="w-4 h-4" />} label="Комбо" value={`x${maxCombo}`} />
             <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
           </motion.div>
+
+          {(cryptoCollected.btc > 0 || cryptoCollected.eth > 0 || cryptoCollected.usdt > 0) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.52 }}
+              className="mb-6"
+            >
+              <div className="text-sm text-muted-foreground mb-2">Собрано крипто-шариков:</div>
+              <div className="flex items-center justify-center gap-4 p-3 rounded-lg bg-muted/50" data-testid="crypto-collected-stats">
+                {cryptoCollected.btc > 0 && <CryptoStat type="btc" count={cryptoCollected.btc} />}
+                {cryptoCollected.eth > 0 && <CryptoStat type="eth" count={cryptoCollected.eth} />}
+                {cryptoCollected.usdt > 0 && <CryptoStat type="usdt" count={cryptoCollected.usdt} />}
+              </div>
+            </motion.div>
+          )}
 
           {user && (
             <motion.div
