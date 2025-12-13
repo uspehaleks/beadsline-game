@@ -12,8 +12,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2 } from 'lucide-react';
-import { SiEthereum } from 'react-icons/si';
+import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2, Coins } from 'lucide-react';
+import { SiBitcoin, SiEthereum, SiTether } from 'react-icons/si';
 import { motion } from 'framer-motion';
 
 interface GameOverScreenProps {
@@ -261,62 +261,106 @@ export function GameOverScreen({
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="text-center space-y-4">
-                {/* Progress bar */}
-                <div className="space-y-2">
-                  <div className="w-full h-4 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
-                      style={{ width: `${Math.min(95, Math.max(60, 100 - (gameState.ballsRemaining || 10) * 2))}%` }}
-                    />
+                {/* Score earned this game */}
+                <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30">
+                  <div className="flex items-center justify-center gap-2 mb-1 text-muted-foreground">
+                    <Coins className="w-4 h-4" />
+                    <span className="text-sm font-medium">Набрано за игру:</span>
                   </div>
-                  <div className="text-lg font-bold text-amber-400">
-                    {Math.min(95, Math.max(60, 100 - (gameState.ballsRemaining || 10) * 2))}%
+                  <div className="font-display text-3xl font-bold text-primary tabular-nums">
+                    {score.toLocaleString()} Beads
                   </div>
                 </div>
 
-                {/* Crypto balance */}
-                {user && (
+                {/* Animated progress bar */}
+                <div className="space-y-2">
+                  <div className="w-full h-5 bg-muted rounded-full overflow-hidden relative">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 bg-[length:200%_100%]"
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: `${Math.min(95, Math.max(50, 100 - (gameState.balls?.length || 10) * 1.5))}%`,
+                        backgroundPosition: ['0% 0%', '100% 0%']
+                      }}
+                      transition={{ 
+                        width: { duration: 0.8, ease: 'easeOut' },
+                        backgroundPosition: { duration: 2, repeat: Infinity, ease: 'linear' }
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white drop-shadow-md">
+                        {Math.min(95, Math.max(50, 100 - (gameState.balls?.length || 10) * 1.5))}% пройдено
+                      </span>
+                    </div>
+                  </div>
+                  {gameState.balls?.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Осталось: <span className="font-bold text-amber-400">{gameState.balls.length} шариков</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Crypto earned this game */}
+                {(cryptoCollected.btc > 0 || cryptoCollected.eth > 0 || cryptoCollected.usdt > 0) && (
                   <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
                     <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
                       <Wallet className="w-4 h-4" />
-                      <span className="text-sm font-medium">Ваш баланс:</span>
+                      <span className="text-sm font-medium">Заработано крипты:</span>
                     </div>
-                    <div className="space-y-2 text-left">
-                      <div className="flex items-center justify-between px-2">
-                        <span className="text-crypto-btc font-bold">🟠 Bitcoin:</span>
-                        <span className="font-mono text-foreground">{(user.btcBalance || 0).toFixed(8)} BTC</span>
-                      </div>
-                      <div className="flex items-center justify-between px-2">
-                        <span className="text-crypto-eth font-bold">🟣 Ethereum:</span>
-                        <span className="font-mono text-foreground">{(user.ethBalance || 0).toFixed(6)} ETH</span>
-                      </div>
-                      <div className="flex items-center justify-between px-2">
-                        <span className="text-crypto-usdt font-bold">🟢 USDT:</span>
-                        <span className="font-mono text-foreground">{Number(user.usdtBalance || 0).toFixed(2)} USDT</span>
-                      </div>
+                    <div className="space-y-2">
+                      {cryptoCollected.btc > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiBitcoin className="w-5 h-5 text-orange-500" />
+                            <span className="text-orange-400 font-bold">Bitcoin:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.btc} шариков</span>
+                        </div>
+                      )}
+                      {cryptoCollected.eth > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiEthereum className="w-5 h-5 text-purple-400" />
+                            <span className="text-purple-400 font-bold">Ethereum:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.eth} шариков</span>
+                        </div>
+                      )}
+                      {cryptoCollected.usdt > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiTether className="w-5 h-5 text-green-500" />
+                            <span className="text-green-400 font-bold">USDT:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.usdt} шариков</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Warning */}
-                <div className="flex items-center justify-center gap-2 text-red-400 font-semibold">
-                  <span className="text-xl">⚠️</span>
-                  <span>Потеряете всё без жизни!</span>
-                </div>
+                {/* Warning - bigger and pulsing */}
+                <motion.div 
+                  className="flex items-center justify-center gap-3 p-3 rounded-xl bg-red-500/20 border border-red-500/50"
+                  animate={{ 
+                    opacity: [1, 0.6, 1],
+                    scale: [1, 1.02, 1]
+                  }}
+                  transition={{ 
+                    duration: 1.5, 
+                    repeat: Infinity, 
+                    ease: 'easeInOut' 
+                  }}
+                >
+                  <span className="text-3xl">⚠️</span>
+                  <span className="text-xl font-bold text-red-400">ПОТЕРЯЕТЕ ВСЁ БЕЗ ЖИЗНИ!</span>
+                </motion.div>
 
                 {/* Life cost */}
                 <div className="text-lg">
-                  <span className="text-muted-foreground">💸 Жизнь: </span>
-                  <span className="font-bold text-foreground">{lifeCost} Beads</span>
+                  <span className="text-muted-foreground">💸 Стоимость жизни: </span>
+                  <span className="font-bold text-amber-400">{lifeCost} Beads</span>
                 </div>
-
-                {/* Balls remaining */}
-                {gameState.ballsRemaining !== undefined && gameState.ballsRemaining > 0 && (
-                  <div className="text-lg">
-                    <span className="text-muted-foreground">⏰ Осталось: </span>
-                    <span className="font-bold text-amber-400">{gameState.ballsRemaining} шарика</span>
-                  </div>
-                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -371,21 +415,15 @@ interface CryptoStatProps {
 }
 
 function CryptoStat({ type, count }: CryptoStatProps) {
-  const config = {
-    btc: { symbol: '₿', color: 'text-crypto-btc' },
-    eth: { symbol: null, color: 'text-crypto-eth', icon: true },
-    usdt: { symbol: '₮', color: 'text-crypto-usdt' },
+  const icons = {
+    btc: <SiBitcoin className="w-5 h-5 text-orange-500" />,
+    eth: <SiEthereum className="w-5 h-5 text-purple-400" />,
+    usdt: <SiTether className="w-5 h-5 text-green-500" />,
   };
-
-  const { symbol, color, icon } = config[type] as { symbol: string | null; color: string; icon?: boolean };
 
   return (
     <div className="flex items-center gap-1.5">
-      {icon ? (
-        <SiEthereum className={`w-5 h-5 ${color}`} />
-      ) : (
-        <span className={`font-bold text-lg ${color}`}>{symbol}</span>
-      )}
+      {icons[type]}
       <span className="font-semibold tabular-nums">{count}</span>
     </div>
   );
@@ -397,20 +435,18 @@ interface CryptoBalanceProps {
 }
 
 function CryptoBalance({ type, amount }: CryptoBalanceProps) {
-  const config = {
-    btc: { symbol: '₿', color: 'text-crypto-btc', unit: 'sat', icon: false },
-    eth: { symbol: null, color: 'text-crypto-eth', unit: 'gwei', icon: true },
-    usdt: { symbol: '₮', color: 'text-crypto-usdt', unit: '', icon: false },
+  const icons = {
+    btc: <SiBitcoin className="w-4 h-4 text-orange-500" />,
+    eth: <SiEthereum className="w-4 h-4 text-purple-400" />,
+    usdt: <SiTether className="w-4 h-4 text-green-500" />,
   };
-
-  const { symbol, color, unit, icon } = config[type];
 
   const formatAmount = () => {
     if (type === 'btc') {
-      return `${amount} ${unit}`;
+      return `${amount} sat`;
     } else if (type === 'eth') {
       const gwei = Math.floor(amount / 1000000000);
-      return `${gwei} ${unit}`;
+      return `${gwei} gwei`;
     } else {
       return `$${Number(amount).toFixed(2)}`;
     }
@@ -418,11 +454,7 @@ function CryptoBalance({ type, amount }: CryptoBalanceProps) {
 
   return (
     <div className="flex items-center gap-1" data-testid={`balance-${type}`}>
-      {icon ? (
-        <SiEthereum className={`w-4 h-4 ${color}`} />
-      ) : (
-        <span className={`font-bold ${color}`}>{symbol}</span>
-      )}
+      {icons[type]}
       <span className="text-sm font-medium tabular-nums">{formatAmount()}</span>
     </div>
   );
