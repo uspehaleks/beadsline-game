@@ -237,48 +237,93 @@ export function GameOverScreen({
       </motion.div>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent className="max-w-md p-6">
+        <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50">
           <AlertDialogHeader className="space-y-4">
-            <AlertDialogTitle className="flex items-center justify-center gap-3 text-2xl">
-              <Heart className="w-8 h-8 text-green-500" />
-              Продолжить игру?
+            <AlertDialogTitle className="flex items-center justify-center gap-2 text-2xl text-amber-400">
+              <Target className="w-8 h-8" />
+              ВЫ ПОЧТИ У ЦЕЛИ!
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-4 text-base">
-              <p className="text-lg">
-                С вашего баланса будет списано{' '}
-                <span className="font-bold text-foreground text-xl">{lifeCost} Beads</span>
-              </p>
-              <p className="text-lg">
-                Вы получите{' '}
-                <span className="font-bold text-green-500 text-xl">+1 жизнь</span>{' '}
-                и продолжите игру с начала трассы
-              </p>
-              <div className="pt-2 pb-1 px-4 rounded-lg bg-muted/50 inline-block">
-                <span className="text-muted-foreground">Ваш баланс: </span>
-                <span className="font-bold text-foreground text-lg">{user?.totalPoints?.toLocaleString() || 0} Beads</span>
+            <AlertDialogDescription asChild>
+              <div className="text-center space-y-4">
+                {/* Progress bar */}
+                <div className="space-y-2">
+                  <div className="w-full h-4 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                      style={{ width: `${Math.min(95, Math.max(60, 100 - (gameState.ballsRemaining || 10) * 2))}%` }}
+                    />
+                  </div>
+                  <div className="text-lg font-bold text-amber-400">
+                    {Math.min(95, Math.max(60, 100 - (gameState.ballsRemaining || 10) * 2))}%
+                  </div>
+                </div>
+
+                {/* Crypto balance */}
+                {user && (
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
+                    <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
+                      <Wallet className="w-4 h-4" />
+                      <span className="text-sm font-medium">Ваш баланс:</span>
+                    </div>
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center justify-between px-2">
+                        <span className="text-crypto-btc font-bold">🟠 Bitcoin:</span>
+                        <span className="font-mono text-foreground">{(user.btcBalance || 0).toFixed(8)} BTC</span>
+                      </div>
+                      <div className="flex items-center justify-between px-2">
+                        <span className="text-crypto-eth font-bold">🟣 Ethereum:</span>
+                        <span className="font-mono text-foreground">{(user.ethBalance || 0).toFixed(6)} ETH</span>
+                      </div>
+                      <div className="flex items-center justify-between px-2">
+                        <span className="text-crypto-usdt font-bold">🟢 USDT:</span>
+                        <span className="font-mono text-foreground">{Number(user.usdtBalance || 0).toFixed(2)} USDT</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Warning */}
+                <div className="flex items-center justify-center gap-2 text-red-400 font-semibold">
+                  <span className="text-xl">⚠️</span>
+                  <span>Потеряете всё без жизни!</span>
+                </div>
+
+                {/* Life cost */}
+                <div className="text-lg">
+                  <span className="text-muted-foreground">💸 Жизнь: </span>
+                  <span className="font-bold text-foreground">{lifeCost} Beads</span>
+                </div>
+
+                {/* Balls remaining */}
+                {gameState.ballsRemaining !== undefined && gameState.ballsRemaining > 0 && (
+                  <div className="text-lg">
+                    <span className="text-muted-foreground">⏰ Осталось: </span>
+                    <span className="font-bold text-amber-400">{gameState.ballsRemaining} шарика</span>
+                  </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 mt-6">
-            <AlertDialogCancel 
-              className="flex-1 mt-0 h-12 text-lg"
-              data-testid="button-cancel-continue"
-            >
-              Нет
-            </AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-3 mt-6 sm:flex-col">
             <AlertDialogAction
-              className="flex-1 bg-green-600 hover:bg-green-700 h-12 text-lg"
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-amber-500/30 border-2 border-amber-400"
               onClick={handleConfirmContinue}
               disabled={isBuyingLife}
               data-testid="button-confirm-continue"
             >
               {isBuyingLife ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <Loader2 className="w-6 h-6 mr-2 animate-spin" />
               ) : (
-                <Heart className="w-5 h-5 mr-2" />
+                <Zap className="w-6 h-6 mr-2" />
               )}
-              Да
+              КУПИТЬ ЖИЗНЬ ({lifeCost} BEADS)
             </AlertDialogAction>
+            <AlertDialogCancel 
+              className="w-full mt-0 h-12 text-base bg-transparent border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              data-testid="button-cancel-continue"
+            >
+              ❌ Уйти без крипты
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
