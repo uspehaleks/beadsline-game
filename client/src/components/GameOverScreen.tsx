@@ -15,6 +15,7 @@ import {
 import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2, Coins } from 'lucide-react';
 import { SiBitcoin, SiEthereum, SiTether } from 'react-icons/si';
 import { motion } from 'framer-motion';
+import { getEconomyConfig } from '@/lib/gameEngine';
 
 interface GameOverScreenProps {
   gameState: GameState;
@@ -43,6 +44,14 @@ export function GameOverScreen({
   const [hasAutoShown, setHasAutoShown] = useState(false);
   const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
+  
+  const economy = getEconomyConfig();
+  const SATS_PER_BTC = 100_000_000;
+  const GWEI_PER_ETH = 1_000_000_000;
+  
+  const earnedBtcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
+  const earnedEthGwei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * GWEI_PER_ETH);
+  const earnedUsdt = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
   
   const canContinue = !won && 
     onContinue && 
@@ -155,18 +164,18 @@ export function GameOverScreen({
             <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
           </motion.div>
 
-          {(cryptoCollected.btc > 0 || cryptoCollected.eth > 0 || cryptoCollected.usdt > 0) && (
+          {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.52 }}
               className="mb-6"
             >
-              <div className="text-sm text-muted-foreground mb-2">Собрано крипто-шариков:</div>
+              <div className="text-sm text-muted-foreground mb-2">Заработано крипты:</div>
               <div className="flex items-center justify-center gap-4 p-3 rounded-lg bg-muted/50" data-testid="crypto-collected-stats">
-                {cryptoCollected.btc > 0 && <CryptoStat type="btc" count={cryptoCollected.btc} />}
-                {cryptoCollected.eth > 0 && <CryptoStat type="eth" count={cryptoCollected.eth} />}
-                {cryptoCollected.usdt > 0 && <CryptoStat type="usdt" count={cryptoCollected.usdt} />}
+                {earnedBtcSats > 0 && <CryptoEarned type="btc" amount={earnedBtcSats} />}
+                {earnedEthGwei > 0 && <CryptoEarned type="eth" amount={earnedEthGwei} />}
+                {earnedUsdt > 0 && <CryptoEarned type="usdt" amount={earnedUsdt} />}
               </div>
             </motion.div>
           )}
@@ -301,38 +310,38 @@ export function GameOverScreen({
                 </div>
 
                 {/* Crypto earned this game */}
-                {(cryptoCollected.btc > 0 || cryptoCollected.eth > 0 || cryptoCollected.usdt > 0) && (
+                {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
                   <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
                     <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
                       <Wallet className="w-4 h-4" />
                       <span className="text-sm font-medium">Заработано крипты:</span>
                     </div>
                     <div className="space-y-2">
-                      {cryptoCollected.btc > 0 && (
+                      {earnedBtcSats > 0 && (
                         <div className="flex items-center justify-between px-2">
                           <div className="flex items-center gap-2">
                             <SiBitcoin className="w-5 h-5 text-orange-500" />
                             <span className="text-orange-400 font-bold">Bitcoin:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.btc} шариков</span>
+                          <span className="font-mono text-foreground font-semibold">+{earnedBtcSats} sats</span>
                         </div>
                       )}
-                      {cryptoCollected.eth > 0 && (
+                      {earnedEthGwei > 0 && (
                         <div className="flex items-center justify-between px-2">
                           <div className="flex items-center gap-2">
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.eth} шариков</span>
+                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei} gwei</span>
                         </div>
                       )}
-                      {cryptoCollected.usdt > 0 && (
+                      {earnedUsdt > 0 && (
                         <div className="flex items-center justify-between px-2">
                           <div className="flex items-center gap-2">
                             <SiTether className="w-5 h-5 text-green-500" />
                             <span className="text-green-400 font-bold">USDT:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">{cryptoCollected.usdt} шариков</span>
+                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(2)}</span>
                         </div>
                       )}
                     </div>
@@ -409,22 +418,25 @@ function StatCard({ icon, label, value }: StatCardProps) {
   );
 }
 
-interface CryptoStatProps {
+interface CryptoEarnedProps {
   type: 'btc' | 'eth' | 'usdt';
-  count: number;
+  amount: number;
 }
 
-function CryptoStat({ type, count }: CryptoStatProps) {
-  const icons = {
-    btc: <SiBitcoin className="w-5 h-5 text-orange-500" />,
-    eth: <SiEthereum className="w-5 h-5 text-purple-400" />,
-    usdt: <SiTether className="w-5 h-5 text-green-500" />,
+function CryptoEarned({ type, amount }: CryptoEarnedProps) {
+  const config = {
+    btc: { icon: <SiBitcoin className="w-5 h-5 text-orange-500" />, unit: 'sats' },
+    eth: { icon: <SiEthereum className="w-5 h-5 text-purple-400" />, unit: 'gwei' },
+    usdt: { icon: <SiTether className="w-5 h-5 text-green-500" />, unit: '$' },
   };
+
+  const { icon, unit } = config[type];
+  const formatted = type === 'usdt' ? `$${amount.toFixed(2)}` : `${amount} ${unit}`;
 
   return (
     <div className="flex items-center gap-1.5">
-      {icons[type]}
-      <span className="font-semibold tabular-nums">{count}</span>
+      {icon}
+      <span className="font-semibold tabular-nums text-sm">{formatted}</span>
     </div>
   );
 }
