@@ -192,30 +192,73 @@ export function playLifeLostSound() {
   oscillator.stop(ctx.currentTime + 0.4);
 }
 
-// Генерация звука победы
+// Генерация звука победы (фанфары)
 export function playWinSound() {
   if (!soundEnabled) return;
   const ctx = getAudioContext();
   if (!ctx) return;
 
-  const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5, E5, G5, C6, E6
+  // Fanfare melody - triumphant brass-like sound
+  const fanfare = [
+    { freq: 523.25, delay: 0, duration: 0.15 },      // C5
+    { freq: 523.25, delay: 0.15, duration: 0.15 },   // C5
+    { freq: 523.25, delay: 0.3, duration: 0.15 },    // C5
+    { freq: 659.25, delay: 0.5, duration: 0.3 },     // E5
+    { freq: 523.25, delay: 0.85, duration: 0.15 },   // C5
+    { freq: 659.25, delay: 1.05, duration: 0.15 },   // E5
+    { freq: 783.99, delay: 1.25, duration: 0.6 },    // G5 (long)
+  ];
   
-  notes.forEach((freq, i) => {
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+  fanfare.forEach(({ freq, delay, duration }) => {
+    // Main tone
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
     
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    const startTime = ctx.currentTime + delay;
+    osc1.frequency.setValueAtTime(freq, startTime);
+    osc1.type = 'triangle';
     
-    const startTime = ctx.currentTime + (i * 0.1);
-    oscillator.frequency.setValueAtTime(freq, startTime);
-    oscillator.type = 'sine';
+    gain1.gain.setValueAtTime(0.25, startTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
     
-    gainNode.gain.setValueAtTime(0.15, startTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+    osc1.start(startTime);
+    osc1.stop(startTime + duration);
     
-    oscillator.start(startTime);
-    oscillator.stop(startTime + 0.3);
+    // Harmonic for brass-like sound
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    
+    osc2.frequency.setValueAtTime(freq * 2, startTime);
+    osc2.type = 'sine';
+    
+    gain2.gain.setValueAtTime(0.1, startTime);
+    gain2.gain.exponentialRampToValueAtTime(0.01, startTime + duration * 0.8);
+    
+    osc2.start(startTime);
+    osc2.stop(startTime + duration);
+  });
+  
+  // Final chord flourish
+  const chordNotes = [523.25, 659.25, 783.99, 1046.5]; // C major chord
+  chordNotes.forEach((freq) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    const startTime = ctx.currentTime + 1.9;
+    osc.frequency.setValueAtTime(freq, startTime);
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0.15, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.8);
+    
+    osc.start(startTime);
+    osc.stop(startTime + 0.8);
   });
 }
 
