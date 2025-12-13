@@ -42,6 +42,7 @@ export function GameOverScreen({
 }: GameOverScreenProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [hasAutoShown, setHasAutoShown] = useState(false);
+  const [showVictoryDialog, setShowVictoryDialog] = useState(false);
   const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
   
@@ -67,6 +68,15 @@ export function GameOverScreen({
       return () => clearTimeout(timer);
     }
   }, [canContinue, hasAutoShown]);
+
+  useEffect(() => {
+    if (won) {
+      const timer = setTimeout(() => {
+        setShowVictoryDialog(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [won]);
 
   const handleContinueClick = () => {
     setShowConfirmDialog(true);
@@ -348,22 +358,11 @@ export function GameOverScreen({
                   </div>
                 )}
 
-                {/* Warning - bigger and pulsing */}
-                <motion.div 
-                  className="flex items-center justify-center gap-3 p-3 rounded-xl bg-red-500/20 border border-red-500/50"
-                  animate={{ 
-                    opacity: [1, 0.6, 1],
-                    scale: [1, 1.02, 1]
-                  }}
-                  transition={{ 
-                    duration: 1.5, 
-                    repeat: Infinity, 
-                    ease: 'easeInOut' 
-                  }}
-                >
+                {/* Warning - static */}
+                <div className="flex items-center justify-center gap-3 p-3 rounded-xl bg-red-500/20 border border-red-500/50">
                   <span className="text-3xl">⚠️</span>
                   <span className="text-xl font-bold text-red-400">ПОТЕРЯЕТЕ ВСЁ БЕЗ ЖИЗНИ!</span>
-                </motion.div>
+                </div>
 
                 {/* Life cost */}
                 <div className="text-lg">
@@ -374,24 +373,180 @@ export function GameOverScreen({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-3 mt-6 sm:flex-col">
-            <AlertDialogAction
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-amber-500/30 border-2 border-amber-400"
-              onClick={handleConfirmContinue}
-              disabled={isBuyingLife}
-              data-testid="button-confirm-continue"
+            <motion.div
+              animate={{ 
+                opacity: [1, 0.7, 1],
+                scale: [1, 1.03, 1]
+              }}
+              transition={{ 
+                duration: 1.2, 
+                repeat: Infinity, 
+                ease: 'easeInOut' 
+              }}
+              className="w-full"
             >
-              {isBuyingLife ? (
-                <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-              ) : (
-                <Zap className="w-6 h-6 mr-2" />
-              )}
-              КУПИТЬ ЖИЗНЬ ({lifeCost} BEADS)
-            </AlertDialogAction>
+              <AlertDialogAction
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-amber-500/30 border-2 border-amber-400"
+                onClick={handleConfirmContinue}
+                disabled={isBuyingLife}
+                data-testid="button-confirm-continue"
+              >
+                {isBuyingLife ? (
+                  <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                ) : (
+                  <Zap className="w-6 h-6 mr-2" />
+                )}
+                КУПИТЬ ЖИЗНЬ ({lifeCost} BEADS)
+              </AlertDialogAction>
+            </motion.div>
             <AlertDialogCancel 
               className="w-full mt-0 h-12 text-base bg-transparent border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
               data-testid="button-cancel-continue"
             >
               ❌ Уйти без крипты
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Victory Dialog with Confetti */}
+      <AlertDialog open={showVictoryDialog} onOpenChange={setShowVictoryDialog}>
+        <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50 overflow-hidden">
+          {/* Confetti Animation */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-3 h-3 rounded-sm"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  backgroundColor: ['#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'][i % 6],
+                }}
+                initial={{ top: -20, rotate: 0, opacity: 1 }}
+                animate={{ 
+                  top: '120%',
+                  rotate: 360 * (Math.random() > 0.5 ? 1 : -1),
+                  opacity: [1, 1, 0]
+                }}
+                transition={{ 
+                  duration: 2 + Math.random() * 2,
+                  delay: Math.random() * 0.5,
+                  repeat: Infinity,
+                  ease: 'linear'
+                }}
+              />
+            ))}
+          </div>
+
+          <AlertDialogHeader className="space-y-4 relative z-10">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1, rotate: [0, -10, 10, 0] }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+              className="mx-auto"
+            >
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/50">
+                <Crown className="w-12 h-12 text-white" />
+              </div>
+            </motion.div>
+
+            <AlertDialogTitle className="flex items-center justify-center gap-2 text-3xl text-amber-400">
+              <Zap className="w-8 h-8 text-amber-400" />
+              ПОБЕДА!
+              <Zap className="w-8 h-8 text-amber-400" />
+            </AlertDialogTitle>
+
+            <AlertDialogDescription asChild>
+              <div className="text-center space-y-4">
+                {/* Score earned */}
+                <motion.div 
+                  className="p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <div className="flex items-center justify-center gap-2 mb-2 text-muted-foreground">
+                    <Coins className="w-5 h-5" />
+                    <span className="text-base font-medium">Заработано:</span>
+                  </div>
+                  <div className="font-display text-4xl font-bold text-green-400 tabular-nums">
+                    +{score.toLocaleString()} Beads
+                  </div>
+                </motion.div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2 rounded-lg bg-muted/50 text-center">
+                    <Clock className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
+                    <div className="text-sm font-bold">{formatDuration(timeLeft)}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/50 text-center">
+                    <Zap className="w-4 h-4 mx-auto mb-1 text-amber-400" />
+                    <div className="text-sm font-bold">x{maxCombo}</div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/50 text-center">
+                    <Target className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
+                    <div className="text-sm font-bold">{accuracy}%</div>
+                  </div>
+                </div>
+
+                {/* Crypto earned this game */}
+                {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
+                    <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
+                      <Wallet className="w-4 h-4" />
+                      <span className="text-sm font-medium">Заработано крипты:</span>
+                    </div>
+                    <div className="space-y-2">
+                      {earnedBtcSats > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiBitcoin className="w-5 h-5 text-orange-500" />
+                            <span className="text-orange-400 font-bold">Bitcoin:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">+{earnedBtcSats} sats</span>
+                        </div>
+                      )}
+                      {earnedEthGwei > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiEthereum className="w-5 h-5 text-purple-400" />
+                            <span className="text-purple-400 font-bold">Ethereum:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei} gwei</span>
+                        </div>
+                      )}
+                      {earnedUsdt > 0 && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <SiTether className="w-5 h-5 text-green-500" />
+                            <span className="text-green-400 font-bold">USDT:</span>
+                          </div>
+                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="flex-col gap-3 mt-6 sm:flex-col relative z-10">
+            <AlertDialogAction
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-amber-500/30 border-2 border-amber-400"
+              onClick={onPlayAgain}
+              data-testid="button-victory-play-again"
+            >
+              <RefreshCw className="w-6 h-6 mr-2" />
+              ИГРАТЬ СНОВА
+            </AlertDialogAction>
+            <AlertDialogCancel 
+              className="w-full mt-0 h-12 text-base"
+              onClick={onMainMenu}
+              data-testid="button-victory-main-menu"
+            >
+              Главное меню
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
