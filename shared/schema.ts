@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   referralCode: varchar("referral_code", { length: 20 }).unique(),
   referredBy: varchar("referred_by", { length: 255 }),
   directReferralsCount: integer("direct_referrals_count").default(0).notNull(),
+  completedLevels: integer("completed_levels").array().default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -40,6 +41,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const gameScores = pgTable("game_scores", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   odUserId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  levelId: integer("level_id").default(1).notNull(),
   score: integer("score").notNull(),
   cryptoBtc: integer("crypto_btc").default(0).notNull(),
   cryptoEth: integer("crypto_eth").default(0).notNull(),
@@ -307,6 +309,7 @@ export interface UserUpdate {
   ethBalanceWei?: number;
   referredBy?: string | null;
   directReferralsCount?: number;
+  completedLevels?: number[];
 }
 
 export interface UsdtFundStats {

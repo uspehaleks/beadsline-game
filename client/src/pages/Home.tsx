@@ -4,14 +4,17 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { MainMenu } from '@/components/MainMenu';
 import { GameScreen } from '@/components/GameScreen';
 import { Leaderboard } from '@/components/Leaderboard';
+import { LevelSelect } from '@/components/LevelSelect';
 import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Skeleton } from '@/components/ui/skeleton';
+import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
 
-type Screen = 'menu' | 'game' | 'leaderboard';
+type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
+  const [selectedLevel, setSelectedLevel] = useState<LevelConfig>(LEVELS[0]);
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
 
   const { data: leaderboard = [], isLoading: isLeaderboardLoading } = useQuery<LeaderboardEntry[]>({
@@ -20,7 +23,7 @@ export default function Home() {
   });
 
   const submitScoreMutation = useMutation({
-    mutationFn: async (gameState: GameState) => {
+    mutationFn: async ({ gameState, levelId }: { gameState: GameState; levelId: number }) => {
       if (!user) return;
       
       const response = await apiRequest('POST', '/api/scores', {
@@ -34,6 +37,7 @@ export default function Home() {
           : 0,
         duration: 45 - gameState.timeLeft,
         won: gameState.won,
+        levelId,
       });
       
       return response.json();
@@ -45,10 +49,15 @@ export default function Home() {
   });
 
   const handleGameEnd = useCallback((gameState: GameState) => {
-    submitScoreMutation.mutate(gameState);
-  }, [submitScoreMutation]);
+    submitScoreMutation.mutate({ gameState, levelId: selectedLevel.id });
+  }, [submitScoreMutation, selectedLevel.id]);
 
   const handlePlay = useCallback(() => {
+    setCurrentScreen('levelSelect');
+  }, []);
+
+  const handleSelectLevel = useCallback((level: LevelConfig) => {
+    setSelectedLevel(level);
     setCurrentScreen('game');
   }, []);
 
@@ -65,9 +74,19 @@ export default function Home() {
   }
 
   switch (currentScreen) {
+    case 'levelSelect':
+      return (
+        <LevelSelect
+          completedLevels={user?.completedLevels ?? []}
+          onSelectLevel={handleSelectLevel}
+          onBack={handleMainMenu}
+        />
+      );
+    
     case 'game':
       return (
         <GameScreen
+          level={selectedLevel}
           onGameEnd={handleGameEnd}
           onViewLeaderboard={handleViewLeaderboard}
           onMainMenu={handleMainMenu}

@@ -1,5 +1,6 @@
 import type { Ball, BallColor, CryptoType, GameState, GameEconomyConfig, GameplayConfig } from "@shared/schema";
 import { GAME_CONFIG, calculateDynamicSpeed } from "./gameConfig";
+import type { LevelConfig, LevelPath } from "./levelConfig";
 
 export const DEBUG_GAME_LOGIC = true;
 const MAX_DEBUG_LOGS = 200;
@@ -174,9 +175,22 @@ export interface PathPoint {
   y: number;
 }
 
-export function generatePath(width: number, height: number): PathPoint[] {
+let currentLevelConfig: LevelConfig | null = null;
+
+export function setCurrentLevel(level: LevelConfig | null) {
+  currentLevelConfig = level;
+}
+
+export function getCurrentLevel(): LevelConfig | null {
+  return currentLevelConfig;
+}
+
+function generateSpiralPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
   const points: PathPoint[] = [];
-  const { segments, spiralTurns, outerRadius, innerRadius } = GAME_CONFIG.path;
+  const segments = pathConfig.segments || 600;
+  const spiralTurns = pathConfig.spiralTurns || 3.0;
+  const outerRadius = pathConfig.outerRadius || 0.42;
+  const innerRadius = pathConfig.innerRadius || 0.15;
   
   const centerX = width / 2;
   const centerY = height * 0.48;
@@ -196,11 +210,160 @@ export function generatePath(width: number, height: number): PathPoint[] {
   return points;
 }
 
+function generateZigzagPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
+  const points: PathPoint[] = [];
+  const segments = pathConfig.segments || 500;
+  const amplitude = pathConfig.amplitude || 0.25;
+  const frequency = pathConfig.frequency || 6;
+  
+  const margin = width * 0.1;
+  const pathWidth = width - margin * 2;
+  const pathHeight = height * 0.7;
+  const startY = height * 0.1;
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const y = startY + t * pathHeight;
+    const zigzagPhase = t * frequency * Math.PI;
+    const zigzagOffset = Math.sin(zigzagPhase) * pathWidth * amplitude;
+    const x = width / 2 + zigzagOffset;
+    points.push({ x, y });
+  }
+  
+  return points;
+}
+
+function generateWavePath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
+  const points: PathPoint[] = [];
+  const segments = pathConfig.segments || 550;
+  const amplitude = pathConfig.amplitude || 0.18;
+  const frequency = pathConfig.frequency || 3;
+  
+  const margin = width * 0.1;
+  const pathHeight = height * 0.75;
+  const startY = height * 0.1;
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const y = startY + t * pathHeight;
+    const waveOffset = Math.sin(t * frequency * Math.PI * 2) * width * amplitude;
+    const x = width / 2 + waveOffset;
+    points.push({ x, y });
+  }
+  
+  return points;
+}
+
+function generateSShapePath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
+  const points: PathPoint[] = [];
+  const segments = pathConfig.segments || 500;
+  const amplitude = pathConfig.amplitude || 0.30;
+  
+  const pathHeight = height * 0.75;
+  const startY = height * 0.1;
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const y = startY + t * pathHeight;
+    const sOffset = Math.sin(t * Math.PI * 2) * width * amplitude;
+    const x = width / 2 + sOffset;
+    points.push({ x, y });
+  }
+  
+  return points;
+}
+
+function generateHeartPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
+  const points: PathPoint[] = [];
+  const segments = pathConfig.segments || 600;
+  
+  const centerX = width / 2;
+  const centerY = height * 0.5;
+  const scale = Math.min(width, height) * 0.25;
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = t * Math.PI * 2 - Math.PI / 2;
+    const heartX = 16 * Math.pow(Math.sin(angle), 3);
+    const heartY = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
+    
+    const x = centerX + heartX * scale / 16;
+    const y = centerY + heartY * scale / 16;
+    points.push({ x, y });
+  }
+  
+  return points;
+}
+
+function generateInfinityPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
+  const points: PathPoint[] = [];
+  const segments = pathConfig.segments || 650;
+  
+  const centerX = width / 2;
+  const centerY = height * 0.5;
+  const scaleX = width * 0.35;
+  const scaleY = height * 0.2;
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = t * Math.PI * 2;
+    const x = centerX + scaleX * Math.sin(angle);
+    const y = centerY + scaleY * Math.sin(angle * 2);
+    points.push({ x, y });
+  }
+  
+  return points;
+}
+
+export function generatePathForLevel(width: number, height: number, levelConfig?: LevelConfig): PathPoint[] {
+  const level = levelConfig || currentLevelConfig;
+  
+  if (!level) {
+    return generateSpiralPath(width, height, GAME_CONFIG.path as LevelPath);
+  }
+  
+  switch (level.path.type) {
+    case 'spiral':
+      return generateSpiralPath(width, height, level.path);
+    case 'zigzag':
+      return generateZigzagPath(width, height, level.path);
+    case 'wave':
+      return generateWavePath(width, height, level.path);
+    case 'sShape':
+      return generateSShapePath(width, height, level.path);
+    case 'heart':
+      return generateHeartPath(width, height, level.path);
+    case 'infinity':
+      return generateInfinityPath(width, height, level.path);
+    default:
+      return generateSpiralPath(width, height, level.path);
+  }
+}
+
+export function generatePath(width: number, height: number): PathPoint[] {
+  return generatePathForLevel(width, height);
+}
+
 export function getShooterPosition(width: number, height: number): { x: number; y: number } {
-  return {
-    x: width / 2,
-    y: height * 0.48,
-  };
+  const level = currentLevelConfig;
+  
+  if (!level) {
+    return { x: width / 2, y: height * 0.48 };
+  }
+  
+  switch (level.path.type) {
+    case 'spiral':
+      return { x: width / 2, y: height * 0.48 };
+    case 'zigzag':
+    case 'wave':
+    case 'sShape':
+      return { x: width / 2, y: height * 0.92 };
+    case 'heart':
+    case 'infinity':
+      return { x: width / 2, y: height * 0.5 };
+    default:
+      return { x: width / 2, y: height * 0.48 };
+  }
 }
 
 export function getPositionOnPath(path: PathPoint[], progress: number): { x: number; y: number } {

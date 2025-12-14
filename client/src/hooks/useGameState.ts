@@ -4,7 +4,7 @@ import {
   createInitialGameState,
   createRandomBall,
   createBallFromChain,
-  generatePath,
+  generatePathForLevel,
   getShooterPosition,
   updateBallPositions,
   moveBallsForward,
@@ -24,6 +24,7 @@ import {
   setGameplayConfig,
   getGameplayConfig,
   resetCryptoSpawnedCount,
+  setCurrentLevel,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -39,11 +40,13 @@ import {
   playGameOverSound,
   initSounds
 } from '@/lib/sounds';
+import type { LevelConfig } from '@/lib/levelConfig';
 
 interface UseGameStateProps {
   canvasWidth: number;
   canvasHeight: number;
   onGameEnd?: (state: GameState) => void;
+  level: LevelConfig;
 }
 
 interface Projectile {
@@ -93,7 +96,7 @@ function sendDebugLog(message: string) {
   }, 500);
 }
 
-export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameStateProps) {
+export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: UseGameStateProps) {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [path, setPath] = useState<PathPoint[]>([]);
   const [projectile, setProjectile] = useState<Projectile | null>(null);
@@ -124,11 +127,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
 
   useEffect(() => {
     if (canvasWidth > 0 && canvasHeight > 0) {
-      const newPath = generatePath(canvasWidth, canvasHeight);
+      setCurrentLevel(level);
+      const newPath = generatePathForLevel(canvasWidth, canvasHeight, level);
       setPath(newPath);
       pathRef.current = newPath;
     }
-  }, [canvasWidth, canvasHeight]);
+  }, [canvasWidth, canvasHeight, level]);
 
   const stopAllTimers = useCallback(() => {
     if (gameLoopRef.current !== null) {
@@ -194,7 +198,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     resetCryptoSpawnedCount();
     
     const dims = dimensionsRef.current;
-    const newPath = generatePath(dims.width, dims.height);
+    setCurrentLevel(level);
+    const newPath = generatePathForLevel(dims.width, dims.height, level);
     setPath(newPath);
     pathRef.current = newPath;
     

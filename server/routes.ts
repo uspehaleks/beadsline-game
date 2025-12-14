@@ -691,9 +691,18 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (user) {
         const currentBestScore = user.bestScore;
+        const levelId = validatedData.levelId ?? 1;
+        
+        // Update completed levels if player won and level not already completed
+        let updatedCompletedLevels = user.completedLevels || [];
+        if (isVictory && !updatedCompletedLevels.includes(levelId)) {
+          updatedCompletedLevels = [...updatedCompletedLevels, levelId];
+        }
+        
         await storage.updateUser(userId, {
           gamesPlayed: user.gamesPlayed + 1,
           bestScore: Math.max(currentBestScore, validatedData.score),
+          completedLevels: updatedCompletedLevels,
         });
       }
       

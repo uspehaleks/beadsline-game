@@ -11,14 +11,16 @@ import { apiRequest } from '@/lib/queryClient';
 import { useUser } from '@/contexts/UserContext';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import type { LevelConfig } from '@/lib/levelConfig';
 
 interface GameScreenProps {
+  level: LevelConfig;
   onGameEnd: (state: GameState) => void;
   onViewLeaderboard: () => void;
   onMainMenu: () => void;
 }
 
-export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
+export function GameScreen({ level, onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sessionIdRef = useRef<string | null>(null);
@@ -99,6 +101,7 @@ export function GameScreen({ onGameEnd, onViewLeaderboard, onMainMenu }: GameScr
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
     onGameEnd: handleGameEnd,
+    level,
   });
 
   const startGame = useCallback(() => {
