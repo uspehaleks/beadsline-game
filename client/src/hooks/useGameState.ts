@@ -153,9 +153,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
     }
     
     try {
-      const [economyRes, gameplayRes] = await Promise.all([
+      const [economyRes, gameplayRes, cryptoAvailRes] = await Promise.all([
         fetch('/api/game-economy'),
         fetch('/api/gameplay-config'),
+        fetch('/api/crypto-availability', { credentials: 'include' }),
       ]);
       
       if (economyRes.ok) {
@@ -163,6 +164,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd }: UseGameSt
         setEconomyConfig(economyData);
         setAvailableCrypto(economyData.cryptoAvailable || { btc: true, eth: true, usdt: true });
         setUsdtFundEnabled(economyData.usdtFundEnabled === true);
+      }
+      
+      if (cryptoAvailRes.ok) {
+        const cryptoAvail = await cryptoAvailRes.json();
+        setAvailableCrypto({
+          btc: cryptoAvail.btcEnabled ?? true,
+          eth: cryptoAvail.ethEnabled ?? true,
+          usdt: cryptoAvail.usdtEnabled ?? true,
+        });
       }
       
       if (gameplayRes.ok) {
