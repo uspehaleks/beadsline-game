@@ -281,7 +281,12 @@ export function GameOverScreen({
         </motion.div>
       )}
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <AlertDialog open={showConfirmDialog} onOpenChange={(open) => {
+        setShowConfirmDialog(open);
+        if (!open && !canContinue) {
+          onMainMenu();
+        }
+      }}>
         <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50">
           <AlertDialogHeader className="space-y-4">
             <AlertDialogTitle className="flex items-center justify-center gap-2 text-2xl text-amber-400">
@@ -596,7 +601,11 @@ function CryptoEarned({ type, amount }: CryptoEarnedProps) {
   };
 
   const { icon, unit } = config[type];
-  const formatted = type === 'usdt' ? `$${amount.toFixed(2)}` : `${amount} ${unit}`;
+  const formatted = type === 'usdt' 
+    ? `$${amount.toFixed(4)}` 
+    : type === 'eth' 
+      ? `${amount.toFixed(2)} ${unit}` 
+      : `${amount.toFixed(2)} ${unit}`;
 
   return (
     <div className="flex items-center gap-1.5">
@@ -620,12 +629,11 @@ function CryptoBalance({ type, amount }: CryptoBalanceProps) {
 
   const formatAmount = () => {
     if (type === 'btc') {
-      return `${amount} sat`;
+      return `${Number(amount).toFixed(2)} sat`;
     } else if (type === 'eth') {
-      const gwei = Math.floor(amount / 1000000000);
-      return `${gwei} gwei`;
+      return `${Number(amount).toFixed(2)} gwei`;
     } else {
-      return `$${Number(amount).toFixed(2)}`;
+      return `$${Number(amount).toFixed(4)}`;
     }
   };
 
