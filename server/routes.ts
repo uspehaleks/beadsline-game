@@ -668,6 +668,7 @@ export async function registerRoutes(
       
       const validatedData = insertGameScoreSchema.parse(scoreData);
       const isVictory = validatedData.won === true;
+      const levelId = validatedData.levelId ?? 1;
       
       const score = await storage.createGameScore(validatedData);
       
@@ -686,24 +687,6 @@ export async function registerRoutes(
         if (awardResult.success) {
           beadsAwarded = beadsToAward;
         }
-      }
-      
-      const user = await storage.getUser(userId);
-      if (user) {
-        const currentBestScore = user.bestScore;
-        const levelId = validatedData.levelId ?? 1;
-        
-        // Update completed levels if player won and level not already completed
-        let updatedCompletedLevels = user.completedLevels || [];
-        if (isVictory && !updatedCompletedLevels.includes(levelId)) {
-          updatedCompletedLevels = [...updatedCompletedLevels, levelId];
-        }
-        
-        await storage.updateUser(userId, {
-          gamesPlayed: user.gamesPlayed + 1,
-          bestScore: Math.max(currentBestScore, validatedData.score),
-          completedLevels: updatedCompletedLevels,
-        });
       }
       
       // Only process crypto rewards if player won
@@ -736,6 +719,9 @@ export async function registerRoutes(
           console.error("Referral reward processing error:", refError);
         }
       }
+      
+      // Atomically update games_played, best_score, and completed_levels
+      await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory);
       
       res.json({ 
         ...score, 

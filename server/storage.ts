@@ -121,6 +121,7 @@ export interface IStorage {
   }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }>;
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
+  recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1767,6 +1768,23 @@ export class DatabaseStorage implements IStorage {
       rewards,
       total: totalResult[0]?.count || 0,
     };
+  }
+
+  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        gamesPlayed: sql`COALESCE(${users.gamesPlayed}, 0) + 1`,
+        bestScore: sql`GREATEST(COALESCE(${users.bestScore}, 0), ${score})`,
+        completedLevels: isVictory 
+          ? sql`CASE 
+              WHEN ${levelId} = ANY(COALESCE(${users.completedLevels}, ARRAY[]::integer[])) 
+              THEN COALESCE(${users.completedLevels}, ARRAY[]::integer[])
+              ELSE array_append(COALESCE(${users.completedLevels}, ARRAY[]::integer[]), ${levelId})
+            END`
+          : sql`COALESCE(${users.completedLevels}, ARRAY[]::integer[])`,
+      })
+      .where(eq(users.id, userId));
   }
 }
 

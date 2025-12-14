@@ -171,6 +171,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   gamesPlayed: true,
   bestScore: true,
   isAdmin: true,
+  completedLevels: true,
   createdAt: true,
 });
 
