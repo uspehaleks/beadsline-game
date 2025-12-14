@@ -863,10 +863,10 @@ export class DatabaseStorage implements IStorage {
     const usdtRate = sanitizeRewardRate(cryptoRewards.usdtPerBall, 0.01);
 
     const SATS_PER_BTC = 100_000_000;
-    const WEI_PER_ETH = 1_000_000_000;
+    const WEI_PER_ETH = 1_000_000_000_000_000_000n; // 10^18 Wei per ETH (use BigInt)
 
     const btcSatsPerBall = Math.round(btcRate * SATS_PER_BTC);
-    const ethWeiPerBall = Math.round(ethRate * WEI_PER_ETH);
+    const ethWeiPerBall = Math.round(ethRate * Number(WEI_PER_ETH));
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -942,7 +942,7 @@ export class DatabaseStorage implements IStorage {
     const usdtAwarded = Number(row.usdt_awarded) || 0;
 
     const btcAwarded = btcSatsAwarded / SATS_PER_BTC;
-    const ethAwarded = ethWeiAwarded / WEI_PER_ETH;
+    const ethAwarded = ethWeiAwarded / Number(WEI_PER_ETH);
 
     console.log(`Crypto rewards for user ${userId}: BTC +${btcSatsAwarded} sats (${btcAwarded}), ETH +${ethWeiAwarded} wei (${ethAwarded}), USDT +${usdtAwarded}`);
 
@@ -995,7 +995,7 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
 
     const SATS_PER_BTC = 100_000_000;
-    const WEI_PER_ETH = 1_000_000_000;
+    const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18 Wei per ETH
 
     const btcSatsPerBall = Math.round(cryptoRewards.btcPerBall * SATS_PER_BTC);
     const ethWeiPerBall = Math.round(cryptoRewards.ethPerBall * WEI_PER_ETH);
