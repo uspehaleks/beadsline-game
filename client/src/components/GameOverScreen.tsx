@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { playWinSound } from '@/lib/sounds';
+import { playWinSound, playGameOverSound } from '@/lib/sounds';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +75,12 @@ export function GameOverScreen({
       const timer = setTimeout(() => {
         setShowVictoryDialog(true);
         playWinSound();
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      // Play game over sound when player loses
+      const timer = setTimeout(() => {
+        playGameOverSound();
       }, 300);
       return () => clearTimeout(timer);
     }
