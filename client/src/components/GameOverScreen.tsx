@@ -352,7 +352,7 @@ export function GameOverScreen({
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei} gwei</span>
+                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei.toFixed(2)} gwei</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -361,7 +361,7 @@ export function GameOverScreen({
                             <SiTether className="w-5 h-5 text-green-500" />
                             <span className="text-green-400 font-bold">USDT:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(2)}</span>
+                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(4)}</span>
                         </div>
                       )}
                     </div>
@@ -523,7 +523,7 @@ export function GameOverScreen({
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei} gwei</span>
+                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei.toFixed(2)} gwei</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -532,7 +532,7 @@ export function GameOverScreen({
                             <SiTether className="w-5 h-5 text-green-500" />
                             <span className="text-green-400 font-bold">USDT:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(2)}</span>
+                          <span className="font-mono text-foreground font-semibold">+${earnedUsdt.toFixed(4)}</span>
                         </div>
                       )}
                     </div>

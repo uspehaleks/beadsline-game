@@ -135,8 +135,8 @@ function CryptoRewardCounter({ type, value, unit }: CryptoRewardCounterProps) {
   const { symbol, color, bgColor } = config[type];
   
   const displayValue = type === 'usdt' 
-    ? (value > 0 ? `$${value.toFixed(2)}` : '$0')
-    : `${value} ${unit}`;
+    ? (value > 0 ? `$${value.toFixed(4)}` : '$0')
+    : type === 'eth' ? `${value.toFixed(2)} ${unit}` : `${value} ${unit}`;
 
   return (
     <div 

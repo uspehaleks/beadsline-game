@@ -577,17 +577,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
           <div className="flex gap-3">
             <CryptoCard 
               type="btc" 
-              balance={`${(Number(user.btcBalanceSats) || 0).toLocaleString()} sat`}
+              balance={`${(Number(user.btcBalanceSats) || 0).toFixed(2)} sat`}
               label="BTC"
             />
             <CryptoCard 
               type="eth" 
-              balance={`${(Number(user.ethBalanceWei) || 0).toLocaleString()} gwei`}
+              balance={`${(Number(user.ethBalanceWei) || 0).toFixed(2)} gwei`}
               label="ETH"
             />
             <CryptoCard 
               type="usdt" 
-              balance={`$${(user.usdtBalance || 0).toFixed(2)}`}
+              balance={`$${(user.usdtBalance || 0).toFixed(4)}`}
               label="USDT"
             />
           </div>

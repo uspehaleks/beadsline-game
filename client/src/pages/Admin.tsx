@@ -1020,7 +1020,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">
                         <SiTether className="w-3 h-3" />
-                        ${Number((user as User & { usdtBalance?: number }).usdtBalance ?? 0).toFixed(2)}
+                        ${Number((user as User & { usdtBalance?: number }).usdtBalance ?? 0).toFixed(4)}
                       </span>
                     </div>
                   </div>
@@ -2197,11 +2197,11 @@ function CryptoRewardsTab() {
   const formatAmount = (type: string, amount: number) => {
     switch (type.toLowerCase()) {
       case "btc":
-        return `${(amount * 100000000).toFixed(0)} sat`;
+        return `${(amount * 100000000).toFixed(2)} sat`;
       case "eth":
-        return `${(amount * 1000000000).toFixed(0)} gwei`;
+        return `${(amount * 1000000000).toFixed(2)} gwei`;
       case "usdt":
-        return `$${amount.toFixed(2)}`;
+        return `$${amount.toFixed(4)}`;
       default:
         return amount.toString();
     }
