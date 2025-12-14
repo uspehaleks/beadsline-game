@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { playWinSound } from '@/lib/sounds';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,7 @@ export function GameOverScreen({
     if (won) {
       const timer = setTimeout(() => {
         setShowVictoryDialog(true);
+        playWinSound();
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -101,12 +103,13 @@ export function GameOverScreen({
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm"
     >
-      <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        transition={{ type: 'spring', duration: 0.5 }}
-      >
-        <Card className="w-full max-w-sm p-8 text-center bg-card border-border">
+      {!showVictoryDialog && !showConfirmDialog && (
+        <motion.div
+          initial={{ scale: 0.9, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          transition={{ type: 'spring', duration: 0.5 }}
+        >
+          <Card className="w-full max-w-sm p-8 text-center bg-card border-border">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -269,7 +272,8 @@ export function GameOverScreen({
             </Button>
           </motion.div>
         </Card>
-      </motion.div>
+        </motion.div>
+      )}
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50">
