@@ -1896,6 +1896,9 @@ interface TransactionData {
   gameScoreId: string | null;
   createdAt: string;
   username?: string;
+  cryptoBtc?: number;
+  cryptoEth?: number;
+  cryptoUsdt?: number;
 }
 
 interface TransactionsResponse {
@@ -1913,6 +1916,9 @@ interface CryptoRewardData {
   gameScoreId: string | null;
   createdAt: string;
   username?: string;
+  cryptoBtc?: number;
+  cryptoEth?: number;
+  cryptoUsdt?: number;
 }
 
 interface CryptoRewardsResponse {
@@ -2056,6 +2062,29 @@ function TransactionsTab() {
                       <div className="text-sm text-muted-foreground">
                         {tx.description || "Без описания"}
                       </div>
+                      {tx.gameScoreId && (tx.cryptoBtc || tx.cryptoEth || tx.cryptoUsdt) ? (
+                        <div className="flex items-center gap-2 text-xs mt-1">
+                          <span className="text-muted-foreground">Шарики:</span>
+                          {tx.cryptoBtc ? (
+                            <Badge variant="outline" className="text-amber-500 border-amber-500/30">
+                              <Bitcoin className="w-3 h-3 mr-1" />
+                              {tx.cryptoBtc}
+                            </Badge>
+                          ) : null}
+                          {tx.cryptoEth ? (
+                            <Badge variant="outline" className="text-blue-500 border-blue-500/30">
+                              <SiEthereum className="w-3 h-3 mr-1" />
+                              {tx.cryptoEth}
+                            </Badge>
+                          ) : null}
+                          {tx.cryptoUsdt ? (
+                            <Badge variant="outline" className="text-green-500 border-green-500/30">
+                              <SiTether className="w-3 h-3 mr-1" />
+                              {tx.cryptoUsdt}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Баланс: {tx.balanceBefore} → {tx.balanceAfter}</span>
                         <span>{formatDate(tx.createdAt)}</span>
@@ -2249,6 +2278,29 @@ function CryptoRewardsTab() {
                           +{formatAmount(reward.cryptoType, reward.amount)}
                         </span>
                       </div>
+                      {reward.gameScoreId && (reward.cryptoBtc || reward.cryptoEth || reward.cryptoUsdt) ? (
+                        <div className="flex items-center gap-2 text-xs mt-2">
+                          <span className="text-muted-foreground">Шарики в игре:</span>
+                          {reward.cryptoBtc ? (
+                            <Badge variant="outline" className="text-amber-500 border-amber-500/30">
+                              <Bitcoin className="w-3 h-3 mr-1" />
+                              {reward.cryptoBtc}
+                            </Badge>
+                          ) : null}
+                          {reward.cryptoEth ? (
+                            <Badge variant="outline" className="text-blue-500 border-blue-500/30">
+                              <SiEthereum className="w-3 h-3 mr-1" />
+                              {reward.cryptoEth}
+                            </Badge>
+                          ) : null}
+                          {reward.cryptoUsdt ? (
+                            <Badge variant="outline" className="text-green-500 border-green-500/30">
+                              <SiTether className="w-3 h-3 mr-1" />
+                              {reward.cryptoUsdt}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                         <span>Game: {reward.gameScoreId?.slice(0, 8) || "—"}...</span>
                         <span>{formatDate(reward.createdAt)}</span>

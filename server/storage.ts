@@ -1557,7 +1557,7 @@ export class DatabaseStorage implements IStorage {
     offset?: number;
     type?: string;
     search?: string;
-  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }> {
+  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string; cryptoBtc?: number; cryptoEth?: number; cryptoUsdt?: number }>; total: number }> {
     const { limit = 20, offset = 0, type, search } = options;
     
     const conditions: any[] = [];
@@ -1592,9 +1592,13 @@ export class DatabaseStorage implements IStorage {
         gameScoreId: beadsTransactions.gameScoreId,
         createdAt: beadsTransactions.createdAt,
         username: users.username,
+        cryptoBtc: gameScores.cryptoBtc,
+        cryptoEth: gameScores.cryptoEth,
+        cryptoUsdt: gameScores.cryptoUsdt,
       })
         .from(beadsTransactions)
         .leftJoin(users, eq(beadsTransactions.userId, users.id))
+        .leftJoin(gameScores, eq(beadsTransactions.gameScoreId, gameScores.id))
         .where(whereClause)
         .orderBy(desc(beadsTransactions.createdAt))
         .limit(limit)
@@ -1610,6 +1614,9 @@ export class DatabaseStorage implements IStorage {
       transactions: transactionsResult.map(tx => ({
         ...tx,
         username: tx.username ?? undefined,
+        cryptoBtc: tx.cryptoBtc ?? undefined,
+        cryptoEth: tx.cryptoEth ?? undefined,
+        cryptoUsdt: tx.cryptoUsdt ?? undefined,
       })),
       total: countResult[0]?.count || 0,
     };
@@ -1726,9 +1733,13 @@ export class DatabaseStorage implements IStorage {
         gameScoreId: realRewards.gameScoreId,
         createdAt: realRewards.createdAt,
         username: users.username,
+        cryptoBtc: gameScores.cryptoBtc,
+        cryptoEth: gameScores.cryptoEth,
+        cryptoUsdt: gameScores.cryptoUsdt,
       })
       .from(realRewards)
-      .leftJoin(users, eq(realRewards.userId, users.id));
+      .leftJoin(users, eq(realRewards.userId, users.id))
+      .leftJoin(gameScores, eq(realRewards.gameScoreId, gameScores.id));
     
     if (cryptoType) {
       baseQuery = baseQuery.where(eq(realRewards.cryptoType, cryptoType)) as typeof baseQuery;
