@@ -60,8 +60,8 @@ export const LEVELS: LevelConfig[] = [
     path: {
       type: 'zigzag',
       segments: 500,
-      amplitude: 0.25,
-      frequency: 6,
+      amplitude: 0.35,
+      frequency: 4,
     },
     difficulty: 'easy',
     initialBalls: 5,
