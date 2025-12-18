@@ -9,6 +9,7 @@ import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/components/MaintenancePage";
 import { Loader2 } from "lucide-react";
+import LandingPage from "@/pages/LandingPage";
 
 interface MaintenanceConfig {
   enabled: boolean;
@@ -19,8 +20,15 @@ interface MaintenanceConfig {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      {/* ЛЕНДИНГ — главная страница */}
+      <Route path="/" component={LandingPage} />
+
+      {/* ИГРА — перенесена на /play */}
+      <Route path="/play" component={Home} />
+
       <Route path="/admin" component={Admin} />
+
+      {/* 404 для всех остальных путей */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -36,24 +44,28 @@ function LoadingScreen() {
 
 function MaintenanceWrapper() {
   const { user, isLoading: userLoading } = useUser();
-  
-  const { data: maintenance, isLoading: maintenanceLoading, isFetching: maintenanceFetching } = useQuery<MaintenanceConfig>({
+
+  const {
+    data: maintenance,
+    isLoading: maintenanceLoading,
+    isFetching: maintenanceFetching,
+  } = useQuery<MaintenanceConfig>({
     queryKey: ["/api/maintenance"],
     refetchInterval: 15000,
     staleTime: 0,
   });
 
   const isInitialLoading = maintenanceLoading || userLoading;
-  
+
   if (isInitialLoading) {
     return <LoadingScreen />;
   }
 
   if (maintenance?.enabled && !user?.isAdmin) {
     return (
-      <MaintenancePage 
-        endTime={maintenance.endTime} 
-        message={maintenance.message} 
+      <MaintenancePage
+        endTime={maintenance.endTime}
+        message={maintenance.message}
       />
     );
   }
