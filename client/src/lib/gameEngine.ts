@@ -279,7 +279,7 @@ function generateHeartPath(width: number, height: number, pathConfig: LevelPath)
   
   const centerX = width / 2;
   const centerY = height * 0.5;
-  const scale = Math.min(width, height) * 0.25;
+  const scale = Math.min(width, height) * 0.38;
   
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
