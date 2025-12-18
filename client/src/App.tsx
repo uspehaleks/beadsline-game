@@ -9,7 +9,6 @@ import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/components/MaintenancePage";
 import { Loader2 } from "lucide-react";
-import LandingPage from "@/pages/LandingPage";
 
 interface MaintenanceConfig {
   enabled: boolean;
@@ -20,15 +19,8 @@ interface MaintenanceConfig {
 function Router() {
   return (
     <Switch>
-      {/* ЛЕНДИНГ — главная страница */}
-      <Route path="/" component={LandingPage} />
-
-      {/* ИГРА — перенесена на /play */}
-      <Route path="/play" component={Home} />
-
+      <Route path="/" component={Home} />
       <Route path="/admin" component={Admin} />
-
-      {/* 404 для всех остальных путей */}
       <Route component={NotFound} />
     </Switch>
   );
