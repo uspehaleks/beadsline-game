@@ -401,7 +401,8 @@ export interface FundSettings {
   usdtFundEnabled: boolean;
 }
 
-let availableCrypto: AvailableCrypto = { btc: true, eth: true, usdt: true };
+// Default to disabled for safety - will be set by API response
+let availableCrypto: AvailableCrypto = { btc: false, eth: false, usdt: false };
 let usdtFundEnabled: boolean = false;
 let cryptoSpawnedThisGame: { btc: number; eth: number; usdt: number } = { btc: 0, eth: 0, usdt: 0 };
 

@@ -863,10 +863,10 @@ export class DatabaseStorage implements IStorage {
     const usdtRate = sanitizeRewardRate(cryptoRewards.usdtPerBall, 0.01);
 
     const SATS_PER_BTC = 100_000_000;
-    const WEI_PER_ETH = 1_000_000_000_000_000_000n; // 10^18 Wei per ETH (use BigInt)
+    const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18 Wei per ETH
 
     const btcSatsPerBall = Math.round(btcRate * SATS_PER_BTC);
-    const ethWeiPerBall = Math.round(ethRate * Number(WEI_PER_ETH));
+    const ethWeiPerBall = Math.round(ethRate * WEI_PER_ETH);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -942,7 +942,7 @@ export class DatabaseStorage implements IStorage {
     const usdtAwarded = Number(row.usdt_awarded) || 0;
 
     const btcAwarded = btcSatsAwarded / SATS_PER_BTC;
-    const ethAwarded = ethWeiAwarded / Number(WEI_PER_ETH);
+    const ethAwarded = ethWeiAwarded / WEI_PER_ETH;
 
     console.log(`Crypto rewards for user ${userId}: BTC +${btcSatsAwarded} sats (${btcAwarded}), ETH +${ethWeiAwarded} wei (${ethAwarded}), USDT +${usdtAwarded}`);
 
@@ -991,6 +991,9 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     const config = await this.getGameEconomyConfig();
     const { dailyLimits, pools, perGameLimits, cryptoRewards } = config;
+    
+    // Check if crypto fund is globally enabled
+    const fundToggles = await this.getFundToggles();
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -1026,10 +1029,13 @@ export class DatabaseStorage implements IStorage {
     const ethHasLimit = ethRemaining >= ethWeiPerBall;
     const usdtHasLimit = usdtRemaining >= cryptoRewards.usdtPerBall;
 
+    // Crypto is only enabled if global toggle is ON AND there are funds AND user has remaining limit
+    const cryptoGloballyEnabled = fundToggles.cryptoFundEnabled;
+    
     return {
-      btcEnabled: btcHasFund && btcHasLimit,
-      ethEnabled: ethHasFund && ethHasLimit,
-      usdtEnabled: usdtHasFund && usdtHasLimit,
+      btcEnabled: cryptoGloballyEnabled && btcHasFund && btcHasLimit,
+      ethEnabled: cryptoGloballyEnabled && ethHasFund && ethHasLimit,
+      usdtEnabled: cryptoGloballyEnabled && usdtHasFund && usdtHasLimit,
       btcRemainingToday: btcRemaining,
       ethRemainingToday: ethRemaining,
       usdtRemainingToday: usdtRemaining,

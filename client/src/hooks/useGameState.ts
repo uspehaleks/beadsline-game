@@ -163,21 +163,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         fetch('/api/crypto-availability', { credentials: 'include' }),
       ]);
       
+      // Default to crypto disabled for safety
+      let cryptoAvailable = { btc: false, eth: false, usdt: false };
+      
       if (economyRes.ok) {
         const economyData = await economyRes.json();
         setEconomyConfig(economyData);
-        setAvailableCrypto(economyData.cryptoAvailable || { btc: true, eth: true, usdt: true });
+        // Get crypto availability from economy config (respects cryptoFundEnabled toggle)
+        cryptoAvailable = economyData.cryptoAvailable || { btc: false, eth: false, usdt: false };
         setUsdtFundEnabled(economyData.usdtFundEnabled === true);
       }
       
       if (cryptoAvailRes.ok) {
         const cryptoAvail = await cryptoAvailRes.json();
-        setAvailableCrypto({
-          btc: cryptoAvail.btcEnabled ?? true,
-          eth: cryptoAvail.ethEnabled ?? true,
-          usdt: cryptoAvail.usdtEnabled ?? true,
-        });
+        // Only override if crypto-availability returns explicit values
+        // This endpoint also respects cryptoFundEnabled, so use AND logic
+        cryptoAvailable = {
+          btc: cryptoAvailable.btc && (cryptoAvail.btcEnabled === true),
+          eth: cryptoAvailable.eth && (cryptoAvail.ethEnabled === true),
+          usdt: cryptoAvailable.usdt && (cryptoAvail.usdtEnabled === true),
+        };
       }
+      
+      setAvailableCrypto(cryptoAvailable);
       
       if (gameplayRes.ok) {
         const gameplayData = await gameplayRes.json();
@@ -186,7 +194,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       }
     } catch (error) {
       console.error('Failed to fetch game config:', error);
-      setAvailableCrypto({ btc: true, eth: true, usdt: true });
+      // Default to crypto disabled for safety when API fails
+      setAvailableCrypto({ btc: false, eth: false, usdt: false });
       setUsdtFundEnabled(false);
     }
     
