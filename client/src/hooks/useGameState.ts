@@ -25,6 +25,7 @@ import {
   getGameplayConfig,
   resetCryptoSpawnedCount,
   setCurrentLevel,
+  updateBoostTimers,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -244,6 +245,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
       lastTimeRef.current = timestamp;
       const currentPath = pathRef.current;
+      
+      updateBoostTimers();
       
       if (pendingChainReactionRef.current) {
         gameLoopRef.current = requestAnimationFrame(runLoop);
@@ -835,6 +838,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       
       const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
       lastTimeRef.current = timestamp;
+      
+      updateBoostTimers();
       
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
