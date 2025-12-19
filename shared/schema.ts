@@ -135,6 +135,47 @@ export const referralRewardsRelations = relations(referralRewards, ({ one }) => 
   }),
 }));
 
+export const boosts = pgTable("boosts", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull().unique(),
+  nameRu: text("name_ru").notNull(),
+  nameEn: text("name_en").notNull(),
+  descriptionRu: text("description_ru").notNull(),
+  descriptionEn: text("description_en").notNull(),
+  icon: text("icon").notNull(),
+  price: integer("price").notNull(),
+  durationSeconds: integer("duration_seconds").default(0).notNull(),
+  effectValue: real("effect_value").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const userBoostInventory = pgTable("user_boost_inventory", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  boostId: varchar("boost_id", { length: 255 }).notNull().references(() => boosts.id),
+  quantity: integer("quantity").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const boostsRelations = relations(boosts, ({ many }) => ({
+  inventory: many(userBoostInventory),
+}));
+
+export const userBoostInventoryRelations = relations(userBoostInventory, ({ one }) => ({
+  user: one(users, {
+    fields: [userBoostInventory.userId],
+    references: [users.id],
+  }),
+  boost: one(boosts, {
+    fields: [userBoostInventory.boostId],
+    references: [boosts.id],
+  }),
+}));
+
 export const beadsTransactions = pgTable("beads_transactions", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id", { length: 255 }).references(() => users.id),
@@ -205,6 +246,18 @@ export const insertReferralRewardSchema = createInsertSchema(referralRewards).om
   createdAt: true,
 });
 
+export const insertBoostSchema = createInsertSchema(boosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserBoostInventorySchema = createInsertSchema(userBoostInventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGameScore = z.infer<typeof insertGameScoreSchema>;
@@ -221,10 +274,17 @@ export type InsertReferralReward = z.infer<typeof insertReferralRewardSchema>;
 export type ReferralReward = typeof referralRewards.$inferSelect;
 export type InsertBeadsTransaction = z.infer<typeof insertBeadsTransactionSchema>;
 export type BeadsTransaction = typeof beadsTransactions.$inferSelect;
+export type InsertBoost = z.infer<typeof insertBoostSchema>;
+export type Boost = typeof boosts.$inferSelect;
+export type InsertUserBoostInventory = z.infer<typeof insertUserBoostInventorySchema>;
+export type UserBoostInventory = typeof userBoostInventory.$inferSelect;
+
+export type BoostType = 'slowdown' | 'bomb' | 'rainbow' | 'rewind';
 
 export type TransactionType = 
   | 'game_win_reward'
   | 'buy_extra_life'
+  | 'buy_boost'
   | 'referral_reward'
   | 'admin_adjustment'
   | 'house_deposit'
