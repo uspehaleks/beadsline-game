@@ -1,5 +1,5 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Circle, Heart, Plus, Loader2, Timer, Bomb, Sparkles, RotateCcw } from 'lucide-react';
+import { Clock, Zap, Circle, Heart, Plus, Loader2, Timer, Bomb, Sparkles, RotateCcw, Shield, Magnet, Crosshair } from 'lucide-react';
 import { getEconomyConfig, getBoostState } from '@/lib/gameEngine';
 import { Button } from '@/components/ui/button';
 import type { BoostType } from '@/lib/gameEngine';
@@ -142,7 +142,10 @@ export function GameHUD({
                 (item.boostType === 'slowdown' && boostState.slowdownActive) ||
                 (item.boostType === 'rainbow' && boostState.rainbowActive) ||
                 (item.boostType === 'bomb' && boostState.pendingBomb) ||
-                (item.boostType === 'rewind' && boostState.pendingRewind)
+                (item.boostType === 'rewind' && boostState.pendingRewind) ||
+                (item.boostType === 'shield' && boostState.shieldActive) ||
+                (item.boostType === 'magnet' && boostState.magnetActive) ||
+                (item.boostType === 'laser' && boostState.pendingLaser)
               }
             />
           ))}
@@ -197,6 +200,9 @@ const BOOST_CONFIG: Record<BoostType, { icon: typeof Timer; color: string; bgCol
   bomb: { icon: Bomb, color: 'text-red-400', bgColor: 'bg-red-500/20', label: 'Бомба' },
   rainbow: { icon: Sparkles, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Радуга' },
   rewind: { icon: RotateCcw, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Откат' },
+  shield: { icon: Shield, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Щит' },
+  magnet: { icon: Magnet, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Магнит' },
+  laser: { icon: Crosshair, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Лазер' },
 };
 
 function BoostButton({ boostType, quantity, onUse, disabled, isActive }: BoostButtonProps) {

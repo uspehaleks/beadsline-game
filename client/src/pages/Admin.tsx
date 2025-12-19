@@ -4480,6 +4480,9 @@ function BoostsTab() {
       case 'bomb': return <Target className="w-5 h-5 text-red-400" />;
       case 'rainbow': return <Sparkles className="w-5 h-5 text-purple-400" />;
       case 'rewind': return <RotateCcw className="w-5 h-5 text-green-400" />;
+      case 'shield': return <Shield className="w-5 h-5 text-cyan-400" />;
+      case 'magnet': return <Target className="w-5 h-5 text-orange-400" />;
+      case 'laser': return <Target className="w-5 h-5 text-yellow-400" />;
       default: return <Sparkles className="w-5 h-5 text-muted-foreground" />;
     }
   };

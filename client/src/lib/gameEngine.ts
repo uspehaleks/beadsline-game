@@ -171,7 +171,7 @@ export function getEconomyConfig(): GameEconomyConfig {
 }
 
 // ========== BOOST SYSTEM ==========
-export type BoostType = 'slowdown' | 'bomb' | 'rainbow' | 'rewind';
+export type BoostType = 'slowdown' | 'bomb' | 'rainbow' | 'rewind' | 'shield' | 'magnet' | 'laser';
 
 interface ActiveBoostState {
   slowdownActive: boolean;
@@ -180,6 +180,11 @@ interface ActiveBoostState {
   rainbowActive: boolean;
   pendingBomb: boolean;
   pendingRewind: boolean;
+  shieldActive: boolean;
+  magnetActive: boolean;
+  magnetRadius: number;
+  pendingLaser: boolean;
+  laserPierceCount: number;
 }
 
 let boostState: ActiveBoostState = {
@@ -189,6 +194,11 @@ let boostState: ActiveBoostState = {
   rainbowActive: false,
   pendingBomb: false,
   pendingRewind: false,
+  shieldActive: false,
+  magnetActive: false,
+  magnetRadius: 0,
+  pendingLaser: false,
+  laserPierceCount: 0,
 };
 
 export function resetBoostState() {
@@ -199,6 +209,11 @@ export function resetBoostState() {
     rainbowActive: false,
     pendingBomb: false,
     pendingRewind: false,
+    shieldActive: false,
+    magnetActive: false,
+    magnetRadius: 0,
+    pendingLaser: false,
+    laserPierceCount: 0,
   };
   debugLog('[BOOST] State reset');
 }
@@ -254,6 +269,87 @@ export function consumeRewind(): boolean {
     return true;
   }
   return false;
+}
+
+export function activateShield() {
+  boostState.shieldActive = true;
+  debugLog('[BOOST] Shield activated - protects from one life loss');
+}
+
+export function consumeShield(): boolean {
+  if (boostState.shieldActive) {
+    boostState.shieldActive = false;
+    debugLog('[BOOST] Shield consumed - blocked life loss');
+    return true;
+  }
+  return false;
+}
+
+export function activateMagnet(radius: number = 3) {
+  boostState.magnetActive = true;
+  boostState.magnetRadius = radius;
+  debugLog(`[BOOST] Magnet activated - attracts same color balls within ${radius} positions`);
+}
+
+export function consumeMagnet(): { active: boolean; radius: number } {
+  if (boostState.magnetActive) {
+    const radius = boostState.magnetRadius;
+    boostState.magnetActive = false;
+    boostState.magnetRadius = 0;
+    debugLog('[BOOST] Magnet consumed');
+    return { active: true, radius };
+  }
+  return { active: false, radius: 0 };
+}
+
+export function activateLaser(pierceCount: number = 3) {
+  boostState.pendingLaser = true;
+  boostState.laserPierceCount = pierceCount;
+  debugLog(`[BOOST] Laser activated - next shot pierces ${pierceCount} balls`);
+}
+
+export function consumeLaser(): { active: boolean; pierceCount: number } {
+  if (boostState.pendingLaser) {
+    const count = boostState.laserPierceCount;
+    boostState.pendingLaser = false;
+    boostState.laserPierceCount = 0;
+    debugLog('[BOOST] Laser consumed');
+    return { active: true, pierceCount: count };
+  }
+  return { active: false, pierceCount: 0 };
+}
+
+export function applyMagnetEffect(balls: Ball[], insertIndex: number, radius: number): Ball[] {
+  const insertedBall = balls[insertIndex];
+  if (!insertedBall) return balls;
+  
+  const targetColor = insertedBall.color;
+  const newBalls = [...balls];
+  
+  for (let i = Math.max(0, insertIndex - radius); i <= Math.min(balls.length - 1, insertIndex + radius); i++) {
+    if (i !== insertIndex && newBalls[i].color === targetColor) {
+      const direction = i < insertIndex ? 0.01 : -0.01;
+      newBalls[i] = {
+        ...newBalls[i],
+        pathProgress: newBalls[i].pathProgress + direction,
+      };
+    }
+  }
+  
+  debugLog(`[BOOST] Magnet effect applied at index ${insertIndex}`);
+  return newBalls;
+}
+
+export function applyLaserEffect(balls: Ball[], hitIndices: number[]): {
+  newBalls: Ball[];
+  removedBalls: Ball[];
+  removedIndices: number[];
+} {
+  const removedBalls = hitIndices.map(i => balls[i]).filter(Boolean);
+  const newBalls = balls.filter((_, i) => !hitIndices.includes(i));
+  
+  debugLog(`[BOOST] Laser pierced through ${hitIndices.length} balls`);
+  return { newBalls, removedBalls, removedIndices: hitIndices };
 }
 
 export function updateBoostTimers() {
