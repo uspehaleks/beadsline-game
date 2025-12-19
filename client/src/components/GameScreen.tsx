@@ -1,26 +1,16 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import type { GameState, LivesConfig } from '@shared/schema';
 import { GameCanvas } from './GameCanvas';
-import { GameHUD, BoostInventoryItem } from './GameHUD';
+import { GameHUD } from './GameHUD';
 import { NextBallPreview } from './NextBallPreview';
 import { GameOverScreen } from './GameOverScreen';
 import { useGameState } from '@/hooks/useGameState';
-import { 
-  setLevelCompleted, 
-  activateSlowdown, 
-  activateRainbow, 
-  activateBomb, 
-  activateRewind,
-  activateShield, 
-  activateMagnet, 
-  activateLaser,
-  BoostType
-} from '@/lib/gameEngine';
+import { setLevelCompleted } from '@/lib/gameEngine';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import { useUser } from '@/contexts/UserContext';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import type { LevelConfig } from '@/lib/levelConfig';
 
@@ -44,68 +34,6 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
 
   const { data: livesConfig } = useQuery<LivesConfig>({
     queryKey: ["/api/lives-config"],
-  });
-
-  const { data: rawBoostInventory = [] } = useQuery<Array<{ boost: { boostType: string }; quantity: number }>>({
-    queryKey: ["/api/user/boosts"],
-    enabled: !!user,
-  });
-
-  const boostInventory: BoostInventoryItem[] = rawBoostInventory.map(item => ({
-    boostType: item.boost.boostType as BoostType,
-    quantity: item.quantity,
-  }));
-
-  const useBoostMutation = useMutation({
-    mutationFn: async (boostType: BoostType) => {
-      const res = await apiRequest('POST', '/api/boosts/use', { boostType });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Ошибка использования буста');
-      }
-      return boostType;
-    },
-    onSuccess: (boostType) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
-      
-      switch (boostType) {
-        case 'slowdown':
-          activateSlowdown(10000, 0.5);
-          toast({ title: "⏱️ Замедление", description: "Шарики замедлены на 10 секунд" });
-          break;
-        case 'rainbow':
-          activateRainbow();
-          toast({ title: "🌈 Радуга", description: "Следующий шар - универсальный" });
-          break;
-        case 'bomb':
-          activateBomb();
-          toast({ title: "💣 Бомба", description: "Следующее попадание взорвёт соседние шары" });
-          break;
-        case 'rewind':
-          activateRewind();
-          toast({ title: "⏪ Откат", description: "Цепь сдвинется назад" });
-          break;
-        case 'shield':
-          activateShield();
-          toast({ title: "🛡️ Щит", description: "Защита от потери жизни" });
-          break;
-        case 'magnet':
-          activateMagnet(3);
-          toast({ title: "🧲 Магнит", description: "Притягивает шары одного цвета" });
-          break;
-        case 'laser':
-          activateLaser(3);
-          toast({ title: "🎯 Лазер", description: "Следующий выстрел пробьёт 3 шара" });
-          break;
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   const startSession = useCallback(async () => {
@@ -184,11 +112,6 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     startSession();
     originalStartGame();
   }, [startSession, originalStartGame]);
-
-  const handleUseBoost = useCallback((boostType: BoostType) => {
-    if (!gameState.isPlaying) return;
-    useBoostMutation.mutate(boostType);
-  }, [gameState.isPlaying, useBoostMutation]);
 
   const hasStartedRef = useRef(false);
   const startGameRef = useRef(startGame);
@@ -309,9 +232,6 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           maxExtraLives={livesConfig?.maxExtraLives || 5}
           onBuyLife={handleBuyLife}
           isBuyingLife={isBuyingLife}
-          boostInventory={boostInventory}
-          onUseBoost={handleUseBoost}
-          isUsingBoost={useBoostMutation.isPending}
         />
       )}
 
