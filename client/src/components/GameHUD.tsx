@@ -96,6 +96,28 @@ export function GameHUD({
               )}
             </Button>
           </div>
+          {boostInventory.length > 0 && (
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border/50">
+              {boostInventory.map((item) => (
+                <BoostButton
+                  key={item.boostType}
+                  boostType={item.boostType}
+                  quantity={item.quantity}
+                  onUse={() => onUseBoost?.(item.boostType)}
+                  disabled={isUsingBoost || item.quantity <= 0}
+                  isActive={
+                    (item.boostType === 'slowdown' && boostState.slowdownActive) ||
+                    (item.boostType === 'rainbow' && boostState.rainbowActive) ||
+                    (item.boostType === 'bomb' && boostState.pendingBomb) ||
+                    (item.boostType === 'rewind' && boostState.pendingRewind) ||
+                    (item.boostType === 'shield' && boostState.shieldActive) ||
+                    (item.boostType === 'magnet' && boostState.magnetActive) ||
+                    (item.boostType === 'laser' && boostState.pendingLaser)
+                  }
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col items-center">
@@ -129,28 +151,6 @@ export function GameHUD({
         <CryptoRewardCounter type="usdt" value={usdtAmount} unit="$" />
       </div>
 
-      {boostInventory.length > 0 && (
-        <div className="fixed right-2 top-1/2 -translate-y-1/2 flex flex-col gap-2 backdrop-blur-md bg-background/60 rounded-lg px-2 py-3 border border-border/30 z-20">
-          {boostInventory.map((item) => (
-            <BoostButton
-              key={item.boostType}
-              boostType={item.boostType}
-              quantity={item.quantity}
-              onUse={() => onUseBoost?.(item.boostType)}
-              disabled={isUsingBoost || item.quantity <= 0}
-              isActive={
-                (item.boostType === 'slowdown' && boostState.slowdownActive) ||
-                (item.boostType === 'rainbow' && boostState.rainbowActive) ||
-                (item.boostType === 'bomb' && boostState.pendingBomb) ||
-                (item.boostType === 'rewind' && boostState.pendingRewind) ||
-                (item.boostType === 'shield' && boostState.shieldActive) ||
-                (item.boostType === 'magnet' && boostState.magnetActive) ||
-                (item.boostType === 'laser' && boostState.pendingLaser)
-              }
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
