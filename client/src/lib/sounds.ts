@@ -285,6 +285,181 @@ export function playGameOverSound() {
   oscillator.stop(ctx.currentTime + 0.6);
 }
 
+// Звук активации замедления (плавное понижение тона)
+export function playSlowdownSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.frequency.setValueAtTime(800, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+  osc.type = 'sine';
+  
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.5);
+}
+
+// Звук активации бомбы (глухой взрыв)
+export function playBombSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.frequency.setValueAtTime(150, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.3);
+  osc.type = 'sawtooth';
+  
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.35);
+
+  const noise = ctx.createOscillator();
+  const noiseGain = ctx.createGain();
+  noise.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.frequency.setValueAtTime(80, ctx.currentTime);
+  noise.type = 'square';
+  noiseGain.gain.setValueAtTime(0.15, ctx.currentTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  noise.start(ctx.currentTime);
+  noise.stop(ctx.currentTime + 0.2);
+}
+
+// Звук активации радуги (переливающаяся арпеджио)
+export function playRainbowSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const notes = [523.25, 587.33, 659.25, 783.99, 880]; // C5-A5
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    const startTime = ctx.currentTime + i * 0.05;
+    osc.frequency.setValueAtTime(freq, startTime);
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0.12, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+    
+    osc.start(startTime);
+    osc.stop(startTime + 0.2);
+  });
+}
+
+// Звук активации отката (обратный свист)
+export function playRewindSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.frequency.setValueAtTime(300, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.25);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.4);
+  osc.type = 'triangle';
+  
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.45);
+}
+
+// Звук активации щита (металлический звон)
+export function playShieldSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc1.connect(gain);
+  osc2.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc1.frequency.setValueAtTime(1200, ctx.currentTime);
+  osc1.type = 'sine';
+  osc2.frequency.setValueAtTime(1800, ctx.currentTime);
+  osc2.type = 'sine';
+  
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+  
+  osc1.start(ctx.currentTime);
+  osc2.start(ctx.currentTime);
+  osc1.stop(ctx.currentTime + 0.4);
+  osc2.stop(ctx.currentTime + 0.4);
+}
+
+// Звук активации магнита (притягивающий гул)
+export function playMagnetSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.frequency.setValueAtTime(100, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.3);
+  osc.type = 'sawtooth';
+  
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.4);
+}
+
+// Звук активации лазера (высокочастотный луч)
+export function playLaserSound() {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  osc.frequency.setValueAtTime(2000, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.15);
+  osc.type = 'square';
+  
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.2);
+}
+
 // Инициализация звуков (вызывать при первом взаимодействии пользователя)
 let initialized = false;
 export function initSounds() {

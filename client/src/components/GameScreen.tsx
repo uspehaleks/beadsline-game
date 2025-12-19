@@ -23,6 +23,15 @@ import { useUser } from '@/contexts/UserContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import type { LevelConfig } from '@/lib/levelConfig';
+import { 
+  playSlowdownSound, 
+  playBombSound, 
+  playRainbowSound, 
+  playRewindSound, 
+  playShieldSound, 
+  playMagnetSound, 
+  playLaserSound 
+} from '@/lib/sounds';
 
 interface GameScreenProps {
   level: LevelConfig;
@@ -87,30 +96,37 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
         switch (boostType) {
           case 'slowdown':
             activateSlowdown(10000, 0.5);
+            playSlowdownSound();
             toast({ title: "Замедление активировано!", description: "Шары замедлены на 10 секунд" });
             break;
           case 'rainbow':
             activateRainbow();
+            playRainbowSound();
             toast({ title: "Радуга активирована!", description: "Следующий шар совместим со всеми цветами" });
             break;
           case 'bomb':
             activateBomb();
+            playBombSound();
             toast({ title: "Бомба активирована!", description: "Следующий выстрел уничтожит область" });
             break;
           case 'rewind':
             activateRewind();
+            playRewindSound();
             toast({ title: "Откат активирован!", description: "Шары откатятся назад" });
             break;
           case 'shield':
             activateShield();
+            playShieldSound();
             toast({ title: "Щит активирован!", description: "Защита от одного попадания в конец" });
             break;
           case 'magnet':
             activateMagnet(3);
+            playMagnetSound();
             toast({ title: "Магнит активирован!", description: "Притянет ближайшие шары" });
             break;
           case 'laser':
             activateLaser(3);
+            playLaserSound();
             toast({ title: "Лазер активирован!", description: "Пробьёт несколько шаров" });
             break;
         }
