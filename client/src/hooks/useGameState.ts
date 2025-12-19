@@ -28,6 +28,7 @@ import {
   updateBoostTimers,
   consumeBomb,
   applyBombEffect,
+  consumeRainbow,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -797,6 +798,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
     const vx = (dx / distance) * SHOOTER_BALL_SPEED;
     const vy = (dy / distance) * SHOOTER_BALL_SPEED;
     
+    // Apply rainbow boost to the shooting ball if active
+    let ballToShoot = gameState.shooterBall;
+    if (consumeRainbow()) {
+      ballToShoot = { ...ballToShoot, isRainbow: true };
+    }
+    
     setProjectile({
       x: shooterPosition.x,
       y: shooterPosition.y,
@@ -804,7 +811,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       prevY: shooterPosition.y,
       vx,
       vy,
-      ball: gameState.shooterBall,
+      ball: ballToShoot,
     });
     
     setGameState(prev => ({
