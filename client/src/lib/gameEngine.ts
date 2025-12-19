@@ -1033,20 +1033,54 @@ export function findMatchingBalls(balls: Ball[], insertIndex: number, insertedBa
   const matches: number[] = [insertIndex];
   const targetBall = balls[insertIndex];
   
-  debugLog(`[OP${opId}] findMatchingBalls START: insertIndex=${insertIndex}, targetBall.id=${targetBall.id}, color=${targetBall.color}, crypto=${targetBall.crypto}`);
+  debugLog(`[OP${opId}] findMatchingBalls START: insertIndex=${insertIndex}, targetBall.id=${targetBall.id}, color=${targetBall.color}, crypto=${targetBall.crypto}, isRainbow=${targetBall.isRainbow}`);
   
   const chainSnapshot = balls.slice(0, Math.min(15, balls.length)).map((b, i) => `${i}:${b.color?.slice(0,2)}[${b.id?.slice(-6)}]`).join(' ');
   debugLog(`[OP${opId}] Chain snapshot (first 15): ${chainSnapshot}`);
   
+  // For rainbow balls, we need to find the color of adjacent balls to match against
+  // Rainbow ball acts as a wildcard for the color of its neighbors
+  let matchColor = targetBall.color;
+  let matchCrypto = targetBall.crypto;
+  
+  if (targetBall.isRainbow) {
+    // Find the color from the left or right neighbor
+    const leftNeighbor = insertIndex > 0 ? balls[insertIndex - 1] : null;
+    const rightNeighbor = insertIndex < balls.length - 1 ? balls[insertIndex + 1] : null;
+    
+    // Prefer non-crypto neighbor's color
+    if (leftNeighbor && !leftNeighbor.crypto && !leftNeighbor.isRainbow) {
+      matchColor = leftNeighbor.color;
+      matchCrypto = undefined;
+      debugLog(`  Rainbow using LEFT neighbor color: ${matchColor}`);
+    } else if (rightNeighbor && !rightNeighbor.crypto && !rightNeighbor.isRainbow) {
+      matchColor = rightNeighbor.color;
+      matchCrypto = undefined;
+      debugLog(`  Rainbow using RIGHT neighbor color: ${matchColor}`);
+    } else {
+      debugLog(`  Rainbow has no valid neighbor to match, no match possible`);
+      return [];
+    }
+  }
+  
+  // Helper function for rainbow-aware matching
+  const matchesTarget = (ball: Ball): boolean => {
+    if (ball.isRainbow) return true; // Rainbow balls always match in a group
+    if (matchCrypto) {
+      return ball.crypto === matchCrypto;
+    }
+    return !ball.crypto && ball.color === matchColor;
+  };
+  
   let left = insertIndex - 1;
-  while (left >= 0 && ballsMatch(balls[left], targetBall)) {
+  while (left >= 0 && matchesTarget(balls[left])) {
     debugLog(`  LEFT match at ${left}: id=${balls[left].id}, color=${balls[left].color}, crypto=${balls[left].crypto}`);
     matches.unshift(left);
     left--;
   }
   
   let right = insertIndex + 1;
-  while (right < balls.length && ballsMatch(balls[right], targetBall)) {
+  while (right < balls.length && matchesTarget(balls[right])) {
     debugLog(`  RIGHT match at ${right}: id=${balls[right].id}, color=${balls[right].color}, crypto=${balls[right].crypto}`);
     matches.push(right);
     right++;
