@@ -28,6 +28,7 @@ interface GameOverScreenProps {
   lifeCost?: number;
   maxExtraLives?: number;
   isBuyingLife?: boolean;
+  levelName?: string;
 }
 
 export function GameOverScreen({
@@ -40,6 +41,7 @@ export function GameOverScreen({
   lifeCost = 50,
   maxExtraLives = 5,
   isBuyingLife = false,
+  levelName = '',
 }: GameOverScreenProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [hasAutoShown, setHasAutoShown] = useState(false);
@@ -62,27 +64,17 @@ export function GameOverScreen({
 
   useEffect(() => {
     if (canContinue && !hasAutoShown) {
-      const timer = setTimeout(() => {
-        setShowConfirmDialog(true);
-        setHasAutoShown(true);
-      }, 300);
-      return () => clearTimeout(timer);
+      setShowConfirmDialog(true);
+      setHasAutoShown(true);
     }
   }, [canContinue, hasAutoShown]);
 
   useEffect(() => {
     if (won) {
-      const timer = setTimeout(() => {
-        setShowVictoryDialog(true);
-        playWinSound();
-      }, 300);
-      return () => clearTimeout(timer);
+      setShowVictoryDialog(true);
+      playWinSound();
     } else {
-      // Play game over sound when player loses
-      const timer = setTimeout(() => {
-        playGameOverSound();
-      }, 300);
-      return () => clearTimeout(timer);
+      playGameOverSound();
     }
   }, [won]);
 
@@ -142,6 +134,17 @@ export function GameOverScreen({
           >
             {won ? 'Победа!' : 'Игра окончена'}
           </motion.h2>
+
+          {levelName && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.32 }}
+              className="text-sm text-primary font-medium mb-1"
+            >
+              Уровень: {levelName}
+            </motion.div>
+          )}
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
@@ -416,6 +419,7 @@ export function GameOverScreen({
             </motion.div>
             <AlertDialogCancel 
               className="w-full mt-0 h-12 text-base bg-transparent border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              onClick={onMainMenu}
               data-testid="button-cancel-continue"
             >
               ❌ Уйти без крипты
@@ -465,10 +469,15 @@ export function GameOverScreen({
               </div>
             </motion.div>
 
-            <AlertDialogTitle className="flex items-center justify-center gap-2 text-3xl text-amber-400">
-              <Zap className="w-8 h-8 text-amber-400" />
-              ПОБЕДА!
-              <Zap className="w-8 h-8 text-amber-400" />
+            <AlertDialogTitle className="flex flex-col items-center justify-center gap-1">
+              <div className="flex items-center gap-2 text-3xl text-amber-400">
+                <Zap className="w-8 h-8 text-amber-400" />
+                ПОБЕДА!
+                <Zap className="w-8 h-8 text-amber-400" />
+              </div>
+              {levelName && (
+                <span className="text-sm text-primary font-medium">Уровень: {levelName}</span>
+              )}
             </AlertDialogTitle>
 
             <AlertDialogDescription asChild>

@@ -277,6 +277,7 @@ export function GameScreen({ level, onGameEnd, onViewLeaderboard, onMainMenu }: 
           lifeCost={livesConfig?.extraLifeCost || 50}
           maxExtraLives={livesConfig?.maxExtraLives || 5}
           isBuyingLife={isBuyingLife}
+          levelName={level.nameRu}
         />
       )}
     </div>

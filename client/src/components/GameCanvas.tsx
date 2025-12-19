@@ -40,7 +40,7 @@ export function GameCanvas({
     if (path.length < 2) return;
     
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.15)';
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.25)';
     ctx.lineWidth = BALL_RADIUS * 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -52,8 +52,17 @@ export function GameCanvas({
     ctx.stroke();
     
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.08)';
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.12)';
     ctx.lineWidth = BALL_RADIUS * 3;
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) {
+      ctx.lineTo(path[i].x, path[i].y);
+    }
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+    ctx.lineWidth = 2;
     ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
       ctx.lineTo(path[i].x, path[i].y);
