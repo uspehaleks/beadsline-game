@@ -292,9 +292,16 @@ export function GameOverScreen({
       }}>
         <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50">
           <AlertDialogHeader className="space-y-4">
-            <AlertDialogTitle className="flex items-center justify-center gap-2 text-2xl text-amber-400">
-              <Target className="w-8 h-8" />
-              ВЫ ПОЧТИ У ЦЕЛИ!
+            <AlertDialogTitle className="flex flex-col items-center justify-center gap-2 text-2xl text-amber-400">
+              <div className="flex items-center gap-2">
+                <Target className="w-8 h-8" />
+                ВЫ ПОЧТИ У ЦЕЛИ!
+              </div>
+              {levelName && (
+                <span className="text-base text-muted-foreground font-normal">
+                  Уровень: {levelName}
+                </span>
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="text-center space-y-4">

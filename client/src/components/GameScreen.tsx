@@ -5,6 +5,7 @@ import { GameHUD } from './GameHUD';
 import { NextBallPreview } from './NextBallPreview';
 import { GameOverScreen } from './GameOverScreen';
 import { useGameState } from '@/hooks/useGameState';
+import { setLevelCompleted } from '@/lib/gameEngine';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
@@ -15,12 +16,15 @@ import type { LevelConfig } from '@/lib/levelConfig';
 
 interface GameScreenProps {
   level: LevelConfig;
+  isLevelCompleted: boolean;
   onGameEnd: (state: GameState) => void;
   onViewLeaderboard: () => void;
   onMainMenu: () => void;
 }
 
-export function GameScreen({ level, onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
+export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
+  setLevelCompleted(isLevelCompleted);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sessionIdRef = useRef<string | null>(null);

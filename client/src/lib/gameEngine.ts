@@ -185,6 +185,10 @@ export function getCurrentLevel(): LevelConfig | null {
   return currentLevelConfig;
 }
 
+export function getBallSpacing(): number {
+  return currentLevelConfig?.ballSpacing ?? GAME_CONFIG.balls.spacing;
+}
+
 function generateSpiralPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
   const points: PathPoint[] = [];
   const segments = pathConfig.segments || 600;
@@ -359,8 +363,9 @@ export function getShooterPosition(width: number, height: number): { x: number; 
     case 'sShape':
       return { x: width / 2, y: height * 0.92 };
     case 'heart':
+      return { x: width / 2, y: height * 0.55 };
     case 'infinity':
-      return { x: width / 2, y: height * 0.5 };
+      return { x: width / 2, y: height * 0.75 };
     default:
       return { x: width / 2, y: height * 0.48 };
   }
@@ -405,6 +410,18 @@ export interface FundSettings {
 let availableCrypto: AvailableCrypto = { btc: false, eth: false, usdt: false };
 let usdtFundEnabled: boolean = false;
 let cryptoSpawnedThisGame: { btc: number; eth: number; usdt: number } = { btc: 0, eth: 0, usdt: 0 };
+
+// Flag to disable crypto balls on completed levels (motivate playing new levels)
+let isLevelCompleted: boolean = false;
+
+export function setLevelCompleted(completed: boolean) {
+  isLevelCompleted = completed;
+  debugLog(`[CRYPTO] Level completed flag set to: ${completed} - crypto balls ${completed ? 'DISABLED' : 'ENABLED'}`);
+}
+
+export function getIsLevelCompleted(): boolean {
+  return isLevelCompleted;
+}
 
 export function setAvailableCrypto(crypto: AvailableCrypto) {
   availableCrypto = crypto;
@@ -593,6 +610,18 @@ export function createRandomBall(id: string, pathProgress: number = 0, chainBall
   const spawnChance = currentEconomy.crypto.spawnChance;
   const limits = currentEconomy.perGameLimits;
   
+  // Skip crypto spawning on completed levels - only regular balls
+  if (isLevelCompleted) {
+    return {
+      id,
+      x: 0,
+      y: 0,
+      color,
+      radius: BALL_RADIUS,
+      pathProgress,
+    };
+  }
+  
   const isUsdtFundBall = usdtFundEnabled && Math.random() < spawnChance;
   
   if (isUsdtFundBall) {
@@ -637,7 +666,7 @@ export function createRandomBall(id: string, pathProgress: number = 0, chainBall
 
 export function createInitialBalls(count: number): Ball[] {
   const balls: Ball[] = [];
-  const spacing = GAME_CONFIG.balls.spacing;
+  const spacing = getBallSpacing();
   const startOffset = -GAME_CONFIG.spawn.buffer;
   
   for (let i = 0; i < count; i++) {
@@ -694,7 +723,7 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   if (balls.length < 2) return balls;
   
-  const spacing = GAME_CONFIG.balls.spacing;
+  const spacing = getBallSpacing();
   const rollbackSpeed = 0.15;
   const rollbackAmount = rollbackSpeed * deltaTime * 0.001;
   
@@ -812,7 +841,7 @@ export function insertBallInChain(
   debugLog(`insertBallInChain: shooterBall.color=${shooterBall.color}, crypto=${shooterBall.crypto}, insertIndex=${insertIndex}, chainLength=${balls.length}`);
   
   const newBalls = [...balls];
-  const spacing = GAME_CONFIG.balls.spacing;
+  const spacing = getBallSpacing();
   
   const insertProgress = insertIndex < balls.length 
     ? balls[insertIndex].pathProgress 
@@ -976,7 +1005,7 @@ function findClosestProgressOnPath(x: number, y: number, path: PathPoint[]): num
 
 export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
   const newBalls = [...balls];
-  const spacing = GAME_CONFIG.balls.spacing;
+  const spacing = getBallSpacing();
   
   for (let i = 0; i < count; i++) {
     const lastProgress = newBalls.length > 0 
@@ -990,7 +1019,7 @@ export function addNewBallsToChain(balls: Ball[], count: number): Ball[] {
 }
 
 export function spawnBallAtStart(balls: Ball[]): Ball[] {
-  const spacing = GAME_CONFIG.balls.spacing;
+  const spacing = getBallSpacing();
   const newBall = createRandomBall(`spawn-${Date.now()}`, 0, balls);
   
   const shiftedBalls = balls.map(ball => ({

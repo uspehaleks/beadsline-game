@@ -27,6 +27,7 @@ export interface LevelConfig {
   };
   colors: number;
   unlockCondition: number | null;
+  ballSpacing?: number;
 }
 
 export const LEVELS: LevelConfig[] = [
@@ -130,6 +131,7 @@ export const LEVELS: LevelConfig[] = [
     speed: { base: 0.011, max: 0.018 },
     colors: 6,
     unlockCondition: 4,
+    ballSpacing: 0.012,
   },
   {
     id: 6,

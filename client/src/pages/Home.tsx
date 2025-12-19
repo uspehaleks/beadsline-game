@@ -87,6 +87,7 @@ export default function Home() {
       return (
         <GameScreen
           level={selectedLevel}
+          isLevelCompleted={(user?.completedLevels ?? []).includes(selectedLevel.id)}
           onGameEnd={handleGameEnd}
           onViewLeaderboard={handleViewLeaderboard}
           onMainMenu={handleMainMenu}
