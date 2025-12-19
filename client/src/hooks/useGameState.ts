@@ -31,6 +31,7 @@ import {
   consumeRainbow,
   consumeRewind,
   applyRewindEffect,
+  consumeShield,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -487,6 +488,39 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         }
         
         if (checkGameOver(newBalls)) {
+          if (consumeShield()) {
+            const spacing = GAME_CONFIG.balls.spacing;
+            const targetHeadPosition = 0.5;
+            
+            let respawnedBalls = [...newBalls];
+            respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
+            
+            const n = respawnedBalls.length;
+            if (n > 0) {
+              const chainLength = (n - 1) * spacing;
+              let headPos = targetHeadPosition;
+              
+              if (headPos - chainLength < 0) {
+                headPos = chainLength;
+              }
+              if (headPos > 0.85) {
+                headPos = 0.85;
+              }
+              
+              for (let i = 0; i < n; i++) {
+                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+              }
+            }
+            
+            respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+            respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
+            
+            gapContextRef.current = null;
+            
+            hapticFeedback('medium');
+            return { ...updatedState, balls: respawnedBalls, combo: 0 };
+          }
+          
           const newLives = updatedState.lives - 1;
           
           if (newLives <= 0) {
@@ -913,6 +947,37 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         }
         
         if (checkGameOver(newBalls)) {
+          if (consumeShield()) {
+            const spacing = GAME_CONFIG.balls.spacing;
+            const targetHeadPosition = 0.5;
+            
+            let respawnedBalls = [...newBalls];
+            respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
+            
+            const n = respawnedBalls.length;
+            if (n > 0) {
+              const chainLength = (n - 1) * spacing;
+              let headPos = targetHeadPosition;
+              
+              if (headPos - chainLength < 0) {
+                headPos = chainLength;
+              }
+              if (headPos > 0.85) {
+                headPos = 0.85;
+              }
+              
+              for (let i = 0; i < n; i++) {
+                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+              }
+            }
+            
+            respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+            respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
+            
+            hapticFeedback('medium');
+            return { ...prev, balls: respawnedBalls, combo: 0 };
+          }
+          
           const newLives = prev.lives - 1;
           
           if (newLives <= 0) {
