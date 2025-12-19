@@ -1989,6 +1989,105 @@ export async function registerRoutes(
     }
   });
 
+  // ========== BOOSTS API ==========
+  
+  // Get all active boosts
+  app.get("/api/boosts", async (req, res) => {
+    try {
+      const boosts = await storage.getBoosts();
+      res.json(boosts);
+    } catch (error) {
+      console.error("Get boosts error:", error);
+      res.status(500).json({ error: "Failed to get boosts" });
+    }
+  });
+
+  // Get user boost inventory
+  app.get("/api/user/boosts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const inventory = await storage.getUserBoostInventory(userId);
+      res.json(inventory);
+    } catch (error) {
+      console.error("Get user boosts error:", error);
+      res.status(500).json({ error: "Failed to get user boosts" });
+    }
+  });
+
+  // Buy a boost
+  app.post("/api/boosts/buy", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { boostId } = req.body;
+      if (!boostId) {
+        return res.status(400).json({ error: "boostId is required" });
+      }
+      const result = await storage.buyBoost(userId, boostId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true, newBalance: result.newBalance });
+    } catch (error) {
+      console.error("Buy boost error:", error);
+      res.status(500).json({ error: "Failed to buy boost" });
+    }
+  });
+
+  // Use a boost
+  app.post("/api/boosts/use", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { boostId } = req.body;
+      if (!boostId) {
+        return res.status(400).json({ error: "boostId is required" });
+      }
+      const result = await storage.useBoost(userId, boostId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true, boost: result.boost });
+    } catch (error) {
+      console.error("Use boost error:", error);
+      res.status(500).json({ error: "Failed to use boost" });
+    }
+  });
+
+  // Admin: Get all boosts (including inactive)
+  app.get("/api/admin/boosts", requireAdmin, async (req, res) => {
+    try {
+      const boosts = await storage.getBoosts();
+      res.json(boosts);
+    } catch (error) {
+      console.error("Admin get boosts error:", error);
+      res.status(500).json({ error: "Failed to get boosts" });
+    }
+  });
+
+  // Admin: Update boost
+  app.patch("/api/admin/boosts/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const boost = await storage.updateBoost(id, updates);
+      if (!boost) {
+        return res.status(404).json({ error: "Boost not found" });
+      }
+      res.json(boost);
+    } catch (error) {
+      console.error("Update boost error:", error);
+      res.status(500).json({ error: "Failed to update boost" });
+    }
+  });
+
   // Debug logs API - for game debugging
   app.post("/api/debug-logs", async (req, res) => {
     try {

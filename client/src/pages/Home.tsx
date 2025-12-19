@@ -5,12 +5,13 @@ import { MainMenu } from '@/components/MainMenu';
 import { GameScreen } from '@/components/GameScreen';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LevelSelect } from '@/components/LevelSelect';
+import { BoostShop } from '@/components/BoostShop';
 import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
 
-type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard';
+type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
@@ -69,6 +70,10 @@ export default function Home() {
     setCurrentScreen('menu');
   }, []);
 
+  const handleShop = useCallback(() => {
+    setCurrentScreen('shop');
+  }, []);
+
   if (isUserLoading) {
     return <LoadingScreen />;
   }
@@ -104,12 +109,18 @@ export default function Home() {
         />
       );
     
+    case 'shop':
+      return (
+        <BoostShop onBack={handleMainMenu} />
+      );
+    
     default:
       return (
         <MainMenu
           user={user}
           onPlay={handlePlay}
           onLeaderboard={handleViewLeaderboard}
+          onShop={handleShop}
           isLoading={submitScoreMutation.isPending}
         />
       );

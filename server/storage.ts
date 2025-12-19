@@ -7,6 +7,8 @@ import {
   realRewards,
   referralRewards,
   beadsTransactions,
+  boosts,
+  userBoostInventory,
   type User, 
   type InsertUser,
   type GameScore,
@@ -36,6 +38,10 @@ import {
   type LivesConfig,
   type TransactionType,
   type GameplayConfig,
+  type Boost,
+  type InsertBoost,
+  type UserBoostInventory,
+  type InsertUserBoostInventory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -122,6 +128,17 @@ export interface IStorage {
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
   recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void>;
+  
+  getBoosts(): Promise<Boost[]>;
+  getBoost(id: string): Promise<Boost | undefined>;
+  getBoostByType(type: string): Promise<Boost | undefined>;
+  createBoost(boost: InsertBoost): Promise<Boost>;
+  updateBoost(id: string, updates: Partial<InsertBoost>): Promise<Boost | undefined>;
+  deleteBoost(id: string): Promise<void>;
+  
+  getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>>;
+  buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }>;
+  useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1791,6 +1808,154 @@ export class DatabaseStorage implements IStorage {
           : sql`COALESCE(${users.completedLevels}, ARRAY[]::integer[])`,
       })
       .where(eq(users.id, userId));
+  }
+
+  async getBoosts(): Promise<Boost[]> {
+    return db
+      .select()
+      .from(boosts)
+      .where(eq(boosts.isActive, true))
+      .orderBy(boosts.sortOrder);
+  }
+
+  async getBoost(id: string): Promise<Boost | undefined> {
+    const [boost] = await db.select().from(boosts).where(eq(boosts.id, id));
+    return boost || undefined;
+  }
+
+  async getBoostByType(type: string): Promise<Boost | undefined> {
+    const [boost] = await db.select().from(boosts).where(eq(boosts.type, type));
+    return boost || undefined;
+  }
+
+  async createBoost(insertBoost: InsertBoost): Promise<Boost> {
+    const [boost] = await db
+      .insert(boosts)
+      .values(insertBoost)
+      .returning();
+    return boost;
+  }
+
+  async updateBoost(id: string, updates: Partial<InsertBoost>): Promise<Boost | undefined> {
+    const [boost] = await db
+      .update(boosts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(boosts.id, id))
+      .returning();
+    return boost || undefined;
+  }
+
+  async deleteBoost(id: string): Promise<void> {
+    await db.delete(boosts).where(eq(boosts.id, id));
+  }
+
+  async getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>> {
+    const inventory = await db
+      .select({
+        id: userBoostInventory.id,
+        userId: userBoostInventory.userId,
+        boostId: userBoostInventory.boostId,
+        quantity: userBoostInventory.quantity,
+        createdAt: userBoostInventory.createdAt,
+        updatedAt: userBoostInventory.updatedAt,
+        boost: boosts,
+      })
+      .from(userBoostInventory)
+      .innerJoin(boosts, eq(userBoostInventory.boostId, boosts.id))
+      .where(and(
+        eq(userBoostInventory.userId, userId),
+        sql`${userBoostInventory.quantity} > 0`
+      ));
+    
+    return inventory;
+  }
+
+  async buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { success: false, error: 'Пользователь не найден' };
+    }
+
+    const boost = await this.getBoost(boostId);
+    if (!boost) {
+      return { success: false, error: 'Буст не найден' };
+    }
+
+    if (!boost.isActive) {
+      return { success: false, error: 'Буст недоступен' };
+    }
+
+    if (user.totalPoints < boost.price) {
+      return { success: false, error: 'Недостаточно Beads' };
+    }
+
+    const result = await this.chargeBeadsToHouse(
+      userId,
+      boost.price,
+      'buy_boost',
+      `Покупка буста: ${boost.nameRu}`
+    );
+
+    if (!result.success) {
+      return { success: false, error: 'Ошибка списания Beads' };
+    }
+
+    const [existingInventory] = await db
+      .select()
+      .from(userBoostInventory)
+      .where(and(
+        eq(userBoostInventory.userId, userId),
+        eq(userBoostInventory.boostId, boostId)
+      ));
+
+    if (existingInventory) {
+      await db
+        .update(userBoostInventory)
+        .set({ 
+          quantity: existingInventory.quantity + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(userBoostInventory.id, existingInventory.id));
+    } else {
+      await db
+        .insert(userBoostInventory)
+        .values({
+          userId,
+          boostId,
+          quantity: 1,
+        });
+    }
+
+    return { success: true, newBalance: result.newBalance };
+  }
+
+  async useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }> {
+    const [inventoryItem] = await db
+      .select()
+      .from(userBoostInventory)
+      .where(and(
+        eq(userBoostInventory.userId, userId),
+        eq(userBoostInventory.boostId, boostId)
+      ));
+
+    if (!inventoryItem || inventoryItem.quantity <= 0) {
+      return { success: false, error: 'У вас нет этого буста' };
+    }
+
+    const boost = await this.getBoost(boostId);
+    if (!boost) {
+      return { success: false, error: 'Буст не найден' };
+    }
+
+    await db
+      .update(userBoostInventory)
+      .set({ 
+        quantity: inventoryItem.quantity - 1,
+        updatedAt: new Date()
+      })
+      .where(eq(userBoostInventory.id, inventoryItem.id));
+
+    return { success: true, boost };
   }
 }
 

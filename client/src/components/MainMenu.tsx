@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -17,6 +17,7 @@ interface MainMenuProps {
   user: User | null;
   onPlay: () => void;
   onLeaderboard: () => void;
+  onShop: () => void;
   isLoading?: boolean;
 }
 
@@ -339,7 +340,7 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
   );
 }
 
-export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuProps) {
+export function MainMenu({ user, onPlay, onLeaderboard, onShop, isLoading }: MainMenuProps) {
   const [showReferral, setShowReferral] = useState(false);
   const [showReferralStats, setShowReferralStats] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -748,6 +749,23 @@ export function MainMenu({ user, onPlay, onLeaderboard, isLoading }: MainMenuPro
             )}
           </Button>
         </div>
+
+        {user && (
+          <Button
+            size="lg"
+            className="w-full font-display mt-3 border-0"
+            onClick={onShop}
+            data-testid="button-shop"
+            style={{
+              background: 'linear-gradient(135deg, #f7931a 0%, #ffcc00 100%)',
+              boxShadow: '0 0 20px rgba(247, 147, 26, 0.4)',
+              color: '#000',
+            }}
+          >
+            <Zap className="w-5 h-5 mr-2" />
+            Магазин бустов
+          </Button>
+        )}
 
         {user?.isAdmin && (
           <Link href="/admin">
