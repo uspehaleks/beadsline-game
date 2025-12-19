@@ -46,10 +46,15 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     queryKey: ["/api/lives-config"],
   });
 
-  const { data: boostInventory = [] } = useQuery<BoostInventoryItem[]>({
+  const { data: rawBoostInventory = [] } = useQuery<Array<{ boost: { boostType: string }; quantity: number }>>({
     queryKey: ["/api/user/boosts"],
     enabled: !!user,
   });
+
+  const boostInventory: BoostInventoryItem[] = rawBoostInventory.map(item => ({
+    boostType: item.boost.boostType as BoostType,
+    quantity: item.quantity,
+  }));
 
   const useBoostMutation = useMutation({
     mutationFn: async (boostType: BoostType) => {
