@@ -1,7 +1,13 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Circle, Heart, Plus, Loader2 } from 'lucide-react';
-import { getEconomyConfig } from '@/lib/gameEngine';
+import { Clock, Zap, Circle, Heart, Plus, Loader2, Timer, Bomb, Sparkles, RotateCcw } from 'lucide-react';
+import { getEconomyConfig, getBoostState } from '@/lib/gameEngine';
 import { Button } from '@/components/ui/button';
+import type { BoostType } from '@/lib/gameEngine';
+
+export interface BoostInventoryItem {
+  boostType: BoostType;
+  quantity: number;
+}
 
 interface GameHUDProps {
   gameState: GameState;
@@ -14,6 +20,9 @@ interface GameHUDProps {
   maxExtraLives: number;
   onBuyLife: () => void;
   isBuyingLife: boolean;
+  boostInventory?: BoostInventoryItem[];
+  onUseBoost?: (boostType: BoostType) => void;
+  isUsingBoost?: boolean;
 }
 
 export function GameHUD({ 
@@ -27,9 +36,13 @@ export function GameHUD({
   maxExtraLives,
   onBuyLife,
   isBuyingLife,
+  boostInventory = [],
+  onUseBoost,
+  isUsingBoost = false,
 }: GameHUDProps) {
   const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
   const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
+  const boostState = getBoostState();
   
   const economy = getEconomyConfig();
   const SATS_PER_BTC = 100_000_000;
@@ -115,6 +128,26 @@ export function GameHUD({
         <CryptoRewardCounter type="eth" value={ethWei} unit="gwei" />
         <CryptoRewardCounter type="usdt" value={usdtAmount} unit="$" />
       </div>
+
+      {boostInventory.length > 0 && (
+        <div className="flex items-center justify-center gap-2 mt-2 backdrop-blur-md bg-background/60 rounded-lg px-3 py-2 border border-border/30">
+          {boostInventory.map((item) => (
+            <BoostButton
+              key={item.boostType}
+              boostType={item.boostType}
+              quantity={item.quantity}
+              onUse={() => onUseBoost?.(item.boostType)}
+              disabled={isUsingBoost || item.quantity <= 0}
+              isActive={
+                (item.boostType === 'slowdown' && boostState.slowdownActive) ||
+                (item.boostType === 'rainbow' && boostState.rainbowActive) ||
+                (item.boostType === 'bomb' && boostState.pendingBomb) ||
+                (item.boostType === 'rewind' && boostState.pendingRewind)
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -148,5 +181,43 @@ function CryptoRewardCounter({ type, value, unit }: CryptoRewardCounterProps) {
         {displayValue}
       </span>
     </div>
+  );
+}
+
+interface BoostButtonProps {
+  boostType: BoostType;
+  quantity: number;
+  onUse: () => void;
+  disabled: boolean;
+  isActive: boolean;
+}
+
+const BOOST_CONFIG: Record<BoostType, { icon: typeof Timer; color: string; bgColor: string; label: string }> = {
+  slowdown: { icon: Timer, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Замедление' },
+  bomb: { icon: Bomb, color: 'text-red-400', bgColor: 'bg-red-500/20', label: 'Бомба' },
+  rainbow: { icon: Sparkles, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Радуга' },
+  rewind: { icon: RotateCcw, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Откат' },
+};
+
+function BoostButton({ boostType, quantity, onUse, disabled, isActive }: BoostButtonProps) {
+  const config = BOOST_CONFIG[boostType];
+  const Icon = config.icon;
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={onUse}
+      disabled={disabled}
+      className={`relative h-10 px-3 ${config.bgColor} ${isActive ? 'ring-2 ring-primary animate-pulse' : ''} ${disabled ? 'opacity-40' : 'hover-elevate'}`}
+      data-testid={`button-boost-${boostType}`}
+    >
+      <Icon className={`w-5 h-5 ${config.color}`} />
+      {quantity > 0 && (
+        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+          {quantity}
+        </span>
+      )}
+    </Button>
   );
 }

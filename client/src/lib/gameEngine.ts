@@ -170,6 +170,153 @@ export function getEconomyConfig(): GameEconomyConfig {
   return currentEconomy;
 }
 
+// ========== BOOST SYSTEM ==========
+export type BoostType = 'slowdown' | 'bomb' | 'rainbow' | 'rewind';
+
+interface ActiveBoostState {
+  slowdownActive: boolean;
+  slowdownEndTime: number;
+  slowdownMultiplier: number;
+  rainbowActive: boolean;
+  pendingBomb: boolean;
+  pendingRewind: boolean;
+}
+
+let boostState: ActiveBoostState = {
+  slowdownActive: false,
+  slowdownEndTime: 0,
+  slowdownMultiplier: 1.0,
+  rainbowActive: false,
+  pendingBomb: false,
+  pendingRewind: false,
+};
+
+export function resetBoostState() {
+  boostState = {
+    slowdownActive: false,
+    slowdownEndTime: 0,
+    slowdownMultiplier: 1.0,
+    rainbowActive: false,
+    pendingBomb: false,
+    pendingRewind: false,
+  };
+  debugLog('[BOOST] State reset');
+}
+
+export function getBoostState(): ActiveBoostState {
+  return { ...boostState };
+}
+
+export function activateSlowdown(durationMs: number, multiplier: number = 0.5) {
+  boostState.slowdownActive = true;
+  boostState.slowdownEndTime = Date.now() + durationMs;
+  boostState.slowdownMultiplier = multiplier;
+  debugLog(`[BOOST] Slowdown activated: ${durationMs}ms, multiplier=${multiplier}`);
+}
+
+export function activateRainbow() {
+  boostState.rainbowActive = true;
+  debugLog('[BOOST] Rainbow activated - next ball is wild');
+}
+
+export function consumeRainbow(): boolean {
+  if (boostState.rainbowActive) {
+    boostState.rainbowActive = false;
+    debugLog('[BOOST] Rainbow consumed');
+    return true;
+  }
+  return false;
+}
+
+export function activateBomb() {
+  boostState.pendingBomb = true;
+  debugLog('[BOOST] Bomb activated - next hit will explode');
+}
+
+export function consumeBomb(): boolean {
+  if (boostState.pendingBomb) {
+    boostState.pendingBomb = false;
+    debugLog('[BOOST] Bomb consumed');
+    return true;
+  }
+  return false;
+}
+
+export function activateRewind() {
+  boostState.pendingRewind = true;
+  debugLog('[BOOST] Rewind activated - chain will move back');
+}
+
+export function consumeRewind(): boolean {
+  if (boostState.pendingRewind) {
+    boostState.pendingRewind = false;
+    debugLog('[BOOST] Rewind consumed');
+    return true;
+  }
+  return false;
+}
+
+export function updateBoostTimers() {
+  if (boostState.slowdownActive && Date.now() >= boostState.slowdownEndTime) {
+    boostState.slowdownActive = false;
+    boostState.slowdownMultiplier = 1.0;
+    debugLog('[BOOST] Slowdown expired');
+  }
+}
+
+export function getSpeedMultiplier(): number {
+  return boostState.slowdownActive ? boostState.slowdownMultiplier : 1.0;
+}
+
+export function applyBombEffect(balls: Ball[], hitIndex: number, radius: number = 5): { 
+  newBalls: Ball[]; 
+  removedBalls: Ball[];
+  removedIndices: number[];
+} {
+  const toRemove: number[] = [];
+  const hitBall = balls[hitIndex];
+  if (!hitBall) {
+    return { newBalls: balls, removedBalls: [], removedIndices: [] };
+  }
+  
+  for (let i = Math.max(0, hitIndex - radius); i <= Math.min(balls.length - 1, hitIndex + radius); i++) {
+    toRemove.push(i);
+  }
+  
+  const removedBalls = toRemove.map(i => balls[i]);
+  const newBalls = balls.filter((_, i) => !toRemove.includes(i));
+  
+  debugLog(`[BOOST] Bomb exploded at index ${hitIndex}: removed ${toRemove.length} balls`);
+  return { newBalls, removedBalls, removedIndices: toRemove };
+}
+
+export function applyRewindEffect(balls: Ball[], rewindPercent: number = 0.15): Ball[] {
+  const rewindAmount = rewindPercent;
+  const newBalls = balls.map(ball => ({
+    ...ball,
+    pathProgress: Math.max(0, ball.pathProgress - rewindAmount),
+  }));
+  debugLog(`[BOOST] Rewind applied: moved balls back by ${rewindPercent * 100}%`);
+  return newBalls;
+}
+
+export function createRainbowBall(id: string, baseBall?: Ball): Ball {
+  const activeColors = getActiveBallColors();
+  const randomColor = activeColors[Math.floor(Math.random() * activeColors.length)];
+  
+  return {
+    id,
+    x: baseBall?.x ?? 0,
+    y: baseBall?.y ?? 0,
+    color: randomColor,
+    radius: BALL_RADIUS,
+    pathProgress: baseBall?.pathProgress ?? 0,
+    isRainbow: true,
+  };
+}
+
+// ========== END BOOST SYSTEM ==========
+
 export interface PathPoint {
   x: number;
   y: number;
@@ -681,6 +828,7 @@ export function createInitialGameState(): GameState {
   debugLog('=== GAME STARTED ===', 'initialBalls:', currentGameplay.balls.initialCount);
   debugLog(`[CRYPTO CONFIG] spawnChance=${currentEconomy.crypto.spawnChance}, availableCrypto=${JSON.stringify(availableCrypto)}, usdtFundEnabled=${usdtFundEnabled}`);
   cryptoSpawnedThisGame = { btc: 0, eth: 0, usdt: 0 };
+  resetBoostState();
   const balls = createInitialBalls(currentGameplay.balls.initialCount);
   return {
     balls,
@@ -710,9 +858,10 @@ export function updateBallPositions(balls: Ball[], path: PathPoint[]): Ball[] {
 }
 
 export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
+  const speedMultiplier = getSpeedMultiplier();
   return balls.map(ball => {
     const dynamicSpeed = calculateDynamicSpeed(ball.pathProgress);
-    const moveAmount = dynamicSpeed * deltaTime * 0.001;
+    const moveAmount = dynamicSpeed * deltaTime * 0.001 * speedMultiplier;
     return {
       ...ball,
       pathProgress: ball.pathProgress + moveAmount,
@@ -753,6 +902,16 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
 }
 
 function ballsMatch(ball1: Ball, ball2: Ball): boolean {
+  // Rainbow balls match any non-crypto ball
+  if (ball1.isRainbow && !ball2.crypto) {
+    debugLog(`ballsMatch rainbow: ball1 is rainbow, matches ${ball2.color}`);
+    return true;
+  }
+  if (ball2.isRainbow && !ball1.crypto) {
+    debugLog(`ballsMatch rainbow: ball2 is rainbow, matches ${ball1.color}`);
+    return true;
+  }
+  
   if (ball1.crypto && ball2.crypto) {
     const result = ball1.crypto === ball2.crypto;
     debugLog(`ballsMatch crypto: ${ball1.crypto} vs ${ball2.crypto} = ${result}`);

@@ -314,6 +314,7 @@ export interface Ball {
   color: BallColor;
   crypto?: CryptoType;
   isUsdtFund?: boolean;
+  isRainbow?: boolean;
   radius: number;
   pathProgress: number;
 }

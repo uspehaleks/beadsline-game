@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
-import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats } from "@shared/schema";
+import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats, Boost } from "@shared/schema";
 import { 
   Users, 
   Users2,
@@ -48,7 +48,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  FileText
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -510,6 +511,10 @@ export default function Admin() {
                 <FileText className="w-4 h-4 mr-1.5" />
                 Логи
               </TabsTrigger>
+              <TabsTrigger value="boosts" data-testid="tab-boosts" className="flex-shrink-0">
+                <Sparkles className="w-4 h-4 mr-1.5" />
+                Бусты
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -570,6 +575,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="debug-logs">
             <DebugLogsTab />
+          </TabsContent>
+          <TabsContent value="boosts">
+            <BoostsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -4405,6 +4413,241 @@ function DebugLogsTab() {
               </div>
             )}
           </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function BoostsTab() {
+  const { toast } = useToast();
+  const [editingBoost, setEditingBoost] = useState<Boost | null>(null);
+  const [editForm, setEditForm] = useState({
+    price: 0,
+    durationSeconds: 0,
+    effectValue: 0,
+    isActive: true,
+    sortOrder: 0,
+  });
+
+  const { data: boosts, isLoading } = useQuery<Boost[]>({
+    queryKey: ["/api/admin/boosts"],
+  });
+
+  const updateBoostMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Boost> }) => {
+      return apiRequest("PATCH", `/api/admin/boosts/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/boosts"] });
+      toast({ title: "Сохранено", description: "Буст успешно обновлён" });
+      setEditingBoost(null);
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить буст", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (boost: Boost) => {
+    setEditingBoost(boost);
+    setEditForm({
+      price: boost.price,
+      durationSeconds: boost.durationSeconds,
+      effectValue: boost.effectValue,
+      isActive: boost.isActive,
+      sortOrder: boost.sortOrder,
+    });
+  };
+
+  const handleSave = () => {
+    if (!editingBoost) return;
+    updateBoostMutation.mutate({
+      id: editingBoost.id,
+      updates: editForm,
+    });
+  };
+
+  const handleToggleActive = (boost: Boost) => {
+    updateBoostMutation.mutate({
+      id: boost.id,
+      updates: { isActive: !boost.isActive },
+    });
+  };
+
+  const getBoostIcon = (type: string) => {
+    switch (type) {
+      case 'slowdown': return <Clock className="w-5 h-5 text-blue-400" />;
+      case 'bomb': return <Target className="w-5 h-5 text-red-400" />;
+      case 'rainbow': return <Sparkles className="w-5 h-5 text-purple-400" />;
+      case 'rewind': return <RotateCcw className="w-5 h-5 text-green-400" />;
+      default: return <Sparkles className="w-5 h-5 text-muted-foreground" />;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Управление бустами
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Настройте цены, эффекты и доступность бустов в магазине
+          </p>
+        </CardHeader>
+        <CardContent>
+          {!boosts || boosts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Бусты не найдены. Добавьте их в базу данных.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {boosts.map((boost) => (
+                <div
+                  key={boost.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                  data-testid={`boost-item-${boost.type}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-lg bg-muted">
+                      {getBoostIcon(boost.type)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{boost.nameRu}</span>
+                        <Badge variant={boost.isActive ? "default" : "secondary"}>
+                          {boost.isActive ? "Активен" : "Отключён"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{boost.descriptionRu}</p>
+                      <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                        <span>Тип: <code>{boost.type}</code></span>
+                        <span>Цена: <strong>{boost.price}</strong> Beads</span>
+                        {boost.durationSeconds > 0 && (
+                          <span>Длительность: <strong>{boost.durationSeconds}с</strong></span>
+                        )}
+                        {boost.effectValue > 0 && (
+                          <span>Эффект: <strong>{boost.effectValue}</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={boost.isActive}
+                      onCheckedChange={() => handleToggleActive(boost)}
+                      disabled={updateBoostMutation.isPending}
+                      data-testid={`toggle-boost-${boost.type}`}
+                    />
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(boost)}
+                          data-testid={`button-edit-boost-${boost.type}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            {getBoostIcon(boost.type)}
+                            Редактировать: {boost.nameRu}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label>Цена (Beads)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editForm.price}
+                              onChange={(e) => setEditForm({ ...editForm, price: parseInt(e.target.value) || 0 })}
+                              data-testid="input-boost-price"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Длительность (секунды)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editForm.durationSeconds}
+                              onChange={(e) => setEditForm({ ...editForm, durationSeconds: parseInt(e.target.value) || 0 })}
+                              data-testid="input-boost-duration"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Для бустов типа замедление. 0 = мгновенный эффект.
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Значение эффекта</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={editForm.effectValue}
+                              onChange={(e) => setEditForm({ ...editForm, effectValue: parseFloat(e.target.value) || 0 })}
+                              data-testid="input-boost-effect"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Замедление: множитель скорости (0.5 = в 2 раза медленнее). Бомба: радиус. Откат: процент отката.
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Порядок сортировки</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editForm.sortOrder}
+                              onChange={(e) => setEditForm({ ...editForm, sortOrder: parseInt(e.target.value) || 0 })}
+                              data-testid="input-boost-sort"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={editForm.isActive}
+                              onCheckedChange={(checked) => setEditForm({ ...editForm, isActive: checked })}
+                              data-testid="toggle-boost-active-edit"
+                            />
+                            <Label>Активен в магазине</Label>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4">
+                            <Button
+                              onClick={handleSave}
+                              disabled={updateBoostMutation.isPending}
+                              data-testid="button-save-boost"
+                            >
+                              {updateBoostMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4 mr-2" />
+                              )}
+                              Сохранить
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
