@@ -101,7 +101,7 @@ export function GameOverScreen({
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm"
     >
-      {!showVictoryDialog && !showConfirmDialog && (
+      {!showVictoryDialog && !showConfirmDialog && !isBuyingLife && (
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
@@ -410,7 +410,7 @@ export function GameOverScreen({
               }}
               className="w-full"
             >
-              <AlertDialogAction
+              <Button
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold h-14 text-lg rounded-xl shadow-lg shadow-amber-500/30 border-2 border-amber-400"
                 onClick={handleConfirmContinue}
                 disabled={isBuyingLife}
@@ -422,7 +422,7 @@ export function GameOverScreen({
                   <Zap className="w-6 h-6 mr-2" />
                 )}
                 КУПИТЬ ЖИЗНЬ ({lifeCost} BEADS)
-              </AlertDialogAction>
+              </Button>
             </motion.div>
             <AlertDialogCancel 
               className="w-full mt-0 h-12 text-base bg-transparent border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
