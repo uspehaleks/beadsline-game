@@ -130,7 +130,7 @@ export function GameHUD({
       </div>
 
       {boostInventory.length > 0 && (
-        <div className="flex items-center justify-center gap-2 mt-2 backdrop-blur-md bg-background/60 rounded-lg px-3 py-2 border border-border/30">
+        <div className="fixed right-2 top-1/2 -translate-y-1/2 flex flex-col gap-2 backdrop-blur-md bg-background/60 rounded-lg px-2 py-3 border border-border/30 z-20">
           {boostInventory.map((item) => (
             <BoostButton
               key={item.boostType}
