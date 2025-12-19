@@ -29,6 +29,8 @@ import {
   consumeBomb,
   applyBombEffect,
   consumeRainbow,
+  consumeRewind,
+  applyRewindEffect,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -991,6 +993,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
   const totalBalls = maxTotalBallsRef.current;
   const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
 
+  const applyRewind = useCallback(() => {
+    setGameState(prev => {
+      const rewindedBalls = applyRewindEffect(prev.balls, 0.2);
+      const updatedBalls = updateBallPositions(rewindedBalls, pathRef.current);
+      return { ...prev, balls: updatedBalls };
+    });
+    hapticFeedback('medium');
+  }, []);
+
   return {
     gameState,
     path,
@@ -1006,5 +1017,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
     updateAim,
     addExtraLife,
     resumeGame,
+    applyRewind,
   };
 }

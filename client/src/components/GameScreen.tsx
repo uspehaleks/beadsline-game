@@ -111,8 +111,9 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
             break;
           case 'rewind':
             activateRewind();
+            applyRewind();
             playRewindSound();
-            toast({ title: "Откат активирован!", description: "Шары откатятся назад" });
+            toast({ title: "Откат активирован!", description: "Шары откатились назад" });
             break;
           case 'shield':
             activateShield();
@@ -206,6 +207,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     updateAim,
     addExtraLife,
     resumeGame,
+    applyRewind,
   } = useGameState({
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
