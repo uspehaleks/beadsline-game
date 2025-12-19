@@ -82,11 +82,11 @@ export function GameOverScreen({
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmContinue = () => {
-    setShowConfirmDialog(false);
+  const handleConfirmContinue = async () => {
     if (onContinue) {
-      onContinue();
+      await onContinue();
     }
+    setShowConfirmDialog(false);
   };
   
   const formatDuration = (seconds: number) => {
