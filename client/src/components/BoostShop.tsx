@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,9 @@ const BOOST_ICONS: Record<string, typeof Zap> = {
   bomb: Bomb,
   rainbow: Sparkles,
   rewind: RotateCcw,
+  shield: Shield,
+  magnet: Magnet,
+  laser: Crosshair,
 };
 
 const BOOST_COLORS: Record<string, { bg: string; border: string; text: string; glow: string }> = {
@@ -34,6 +38,19 @@ const BOOST_COLORS: Record<string, { bg: string; border: string; text: string; g
   bomb: { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)', text: '#ef4444', glow: '#ef444450' },
   rainbow: { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.3)', text: '#a855f7', glow: '#a855f750' },
   rewind: { bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.3)', text: '#22c55e', glow: '#22c55e50' },
+  shield: { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.3)', text: '#06b6d4', glow: '#06b6d450' },
+  magnet: { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.3)', text: '#f97316', glow: '#f9731650' },
+  laser: { bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.3)', text: '#eab308', glow: '#eab30850' },
+};
+
+const BOOST_FULL_DESCRIPTIONS: Record<string, string> = {
+  slowdown: 'Замедляет движение всех шаров на 5 секунд. Даёт вам больше времени для прицеливания и создания комбинаций. Особенно полезен на сложных уровнях с быстрым движением шаров.',
+  bomb: 'Следующий ваш выстрел взрывает область вокруг места попадания, уничтожая до 5 ближайших шаров независимо от их цвета. Отличный способ быстро очистить опасную зону.',
+  rainbow: 'Следующий выпущенный шар становится "радужным" - он автоматически принимает цвет соседнего шара при попадании, гарантируя создание комбинации минимум из 3 шаров.',
+  rewind: 'Мгновенно откатывает все шары на 20% назад по пути. Используйте когда шары подошли слишком близко к концу и нужно выиграть время.',
+  shield: 'Создаёт защитный барьер, который блокирует одну потерю жизни. Когда шары достигают конца пути, щит поглощает удар вместо снятия жизни. Одноразовая защита.',
+  magnet: 'При следующем выстреле притягивает все шары того же цвета ближе к месту попадания. Помогает собрать разбросанные шары одного цвета для создания комбинации.',
+  laser: 'Следующий выстрел становится лазерным лучом, который пробивает насквозь до 3 шаров подряд, уничтожая их. Не вставляет шар в цепочку, а просто удаляет шары на пути.',
 };
 
 function MiniBeadsLogo({ size = 18 }: { size?: number }) {
@@ -67,13 +84,15 @@ function BoostCard({
   ownedQuantity, 
   userBalance,
   onBuy,
-  isPurchasing 
+  isPurchasing,
+  onShowDetails,
 }: { 
   boost: Boost; 
   ownedQuantity: number;
   userBalance: number;
   onBuy: (boostId: string) => void;
   isPurchasing: boolean;
+  onShowDetails: (boost: Boost) => void;
 }) {
   const Icon = BOOST_ICONS[boost.type] || Zap;
   const colors = BOOST_COLORS[boost.type] || BOOST_COLORS.slowdown;
@@ -87,7 +106,8 @@ function BoostCard({
       whileTap={{ scale: 0.98 }}
     >
       <Card 
-        className="relative p-4 overflow-hidden"
+        className="relative p-4 overflow-hidden cursor-pointer"
+        onClick={() => onShowDetails(boost)}
         style={{ 
           backgroundColor: colors.bg,
           border: `1px solid ${colors.border}`,
@@ -96,12 +116,22 @@ function BoostCard({
       >
         {ownedQuantity > 0 && (
           <Badge 
-            className="absolute top-2 right-2"
+            className="absolute top-2 right-10"
             style={{ backgroundColor: colors.text, color: '#fff' }}
           >
             x{ownedQuantity}
           </Badge>
         )}
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 h-6 w-6"
+          onClick={(e) => { e.stopPropagation(); onShowDetails(boost); }}
+          data-testid={`button-info-${boost.type}`}
+        >
+          <Info className="w-4 h-4" style={{ color: colors.text }} />
+        </Button>
         
         <div className="flex items-start gap-3">
           <div 
@@ -134,7 +164,7 @@ function BoostCard({
           
           <Button
             size="sm"
-            onClick={() => onBuy(boost.id)}
+            onClick={(e) => { e.stopPropagation(); onBuy(boost.id); }}
             disabled={!canAfford || isPurchasing}
             data-testid={`button-buy-boost-${boost.type}`}
             style={canAfford ? {
@@ -161,6 +191,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
   const { user, refreshUser } = useUser();
   const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [selectedBoost, setSelectedBoost] = useState<Boost | null>(null);
 
   const { data: boosts = [], isLoading: boostsLoading } = useQuery<Boost[]>({
     queryKey: ['/api/boosts'],
@@ -270,6 +301,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
                     userBalance={user?.totalPoints || 0}
                     onBuy={handleBuy}
                     isPurchasing={purchasingId === boost.id}
+                    onShowDetails={setSelectedBoost}
                   />
                 </motion.div>
               ))}
@@ -316,6 +348,76 @@ export function BoostShop({ onBack }: BoostShopProps) {
           </div>
         </motion.div>
       )}
+
+      <Dialog open={!!selectedBoost} onOpenChange={(open) => !open && setSelectedBoost(null)}>
+        <DialogContent className="max-w-sm" style={{ 
+          backgroundColor: selectedBoost ? BOOST_COLORS[selectedBoost.type]?.bg || 'hsl(var(--card))' : 'hsl(var(--card))',
+          borderColor: selectedBoost ? BOOST_COLORS[selectedBoost.type]?.border : undefined,
+        }}>
+          {selectedBoost && (() => {
+            const Icon = BOOST_ICONS[selectedBoost.type] || Zap;
+            const colors = BOOST_COLORS[selectedBoost.type] || BOOST_COLORS.slowdown;
+            const fullDesc = BOOST_FULL_DESCRIPTIONS[selectedBoost.type] || selectedBoost.descriptionRu;
+            const canAfford = (user?.totalPoints || 0) >= selectedBoost.price;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div 
+                      className="w-14 h-14 rounded-xl flex items-center justify-center"
+                      style={{ 
+                        backgroundColor: colors.text,
+                        boxShadow: `0 0 20px ${colors.text}`,
+                      }}
+                    >
+                      <Icon className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <DialogTitle style={{ color: colors.text }}>
+                        {selectedBoost.nameRu}
+                      </DialogTitle>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <MiniBeadsLogo size={16} />
+                        <span className="font-bold text-sm" style={{ color: '#00ff88' }}>
+                          {selectedBoost.price}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <DialogDescription className="text-sm text-foreground/80 leading-relaxed">
+                  {fullDesc}
+                </DialogDescription>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedBoost(null)}
+                  >
+                    Закрыть
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      handleBuy(selectedBoost.id);
+                      setSelectedBoost(null);
+                    }}
+                    disabled={!canAfford || purchasingId === selectedBoost.id}
+                    style={canAfford ? {
+                      backgroundColor: colors.text,
+                      boxShadow: `0 0 10px ${colors.glow}`,
+                    } : undefined}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-1" />
+                    Купить
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
