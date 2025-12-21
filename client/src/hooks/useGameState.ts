@@ -32,6 +32,8 @@ import {
   consumeRewind,
   applyRewindEffect,
   consumeShield,
+  consumeMagnet,
+  applyMagnetEffect,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -622,6 +624,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         
         let newBalls = insertBallInChain(prev.balls, projectile.ball, insertIndex);
         newBalls = updateBallPositions(newBalls, pathRef.current);
+        
+        // Check if magnet boost is active - attracts same color balls closer
+        const magnetResult = consumeMagnet();
+        if (magnetResult.active) {
+          newBalls = applyMagnetEffect(newBalls, insertIndex, magnetResult.radius);
+          newBalls = updateBallPositions(newBalls, pathRef.current);
+          hapticFeedback('medium');
+        }
         
         // Check if bomb boost is active
         if (consumeBomb()) {

@@ -324,19 +324,27 @@ export function applyMagnetEffect(balls: Ball[], insertIndex: number, radius: nu
   if (!insertedBall) return balls;
   
   const targetColor = insertedBall.color;
+  const targetProgress = insertedBall.pathProgress;
   const newBalls = [...balls];
+  const spacing = 0.02;
   
+  let movedCount = 0;
   for (let i = Math.max(0, insertIndex - radius); i <= Math.min(balls.length - 1, insertIndex + radius); i++) {
     if (i !== insertIndex && newBalls[i].color === targetColor) {
-      const direction = i < insertIndex ? 0.01 : -0.01;
+      const distance = Math.abs(i - insertIndex);
+      const newProgress = i < insertIndex 
+        ? targetProgress - (distance * spacing)
+        : targetProgress + (distance * spacing);
+      
       newBalls[i] = {
         ...newBalls[i],
-        pathProgress: newBalls[i].pathProgress + direction,
+        pathProgress: Math.max(0, Math.min(1, newProgress)),
       };
+      movedCount++;
     }
   }
   
-  debugLog(`[BOOST] Magnet effect applied at index ${insertIndex}`);
+  debugLog(`[BOOST] Magnet pulled ${movedCount} same-color balls toward index ${insertIndex}`);
   return newBalls;
 }
 
