@@ -34,6 +34,8 @@ import {
   consumeShield,
   consumeMagnet,
   applyMagnetEffect,
+  consumeLaser,
+  applyLaserEffect,
   SHOOTER_BALL_SPEED,
   type PathPoint,
 } from '@/lib/gameEngine';
@@ -621,6 +623,54 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       
       if (collision) {
         const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
+        
+        // Check if laser boost is active - pierces through balls without inserting
+        const laserResult = consumeLaser();
+        if (laserResult.active) {
+          const hitIndices: number[] = [];
+          for (let i = 0; i < Math.min(laserResult.pierceCount, prev.balls.length); i++) {
+            const idx = collision.index + i;
+            if (idx >= 0 && idx < prev.balls.length) {
+              hitIndices.push(idx);
+            }
+          }
+          
+          if (hitIndices.length > 0) {
+            const { newBalls: laserBalls, removedBalls } = applyLaserEffect(prev.balls, hitIndices);
+            const updatedBalls = updateBallPositions(laserBalls, pathRef.current);
+            
+            const { points, cryptoCollected, usdtFundCollected } = calculatePoints(removedBalls, 0);
+            
+            hapticFeedback('heavy');
+            playComboSound(removedBalls.length);
+            
+            const hasCrypto = removedBalls.some(b => b.crypto || b.isUsdtFund);
+            if (hasCrypto) {
+              playCryptoMatchSound();
+            } else {
+              playMatchSound();
+            }
+            
+            gapContextRef.current = null;
+            setProjectile(null);
+            
+            return {
+              ...prev,
+              balls: updatedBalls,
+              score: prev.score + points,
+              combo: removedBalls.length,
+              maxCombo: Math.max(prev.maxCombo, removedBalls.length),
+              cryptoCollected: {
+                btc: prev.cryptoCollected.btc + cryptoCollected.btc,
+                eth: prev.cryptoCollected.eth + cryptoCollected.eth,
+                usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
+              },
+              usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
+              currentBall: prev.nextBall,
+              nextBall: createRandomBall(),
+            };
+          }
+        }
         
         let newBalls = insertBallInChain(prev.balls, projectile.ball, insertIndex);
         newBalls = updateBallPositions(newBalls, pathRef.current);
