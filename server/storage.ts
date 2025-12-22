@@ -9,6 +9,11 @@ import {
   beadsTransactions,
   boosts,
   userBoostInventory,
+  characters,
+  accessoryCategories,
+  baseBodies,
+  accessories,
+  userAccessories,
   type User, 
   type InsertUser,
   type GameScore,
@@ -42,6 +47,17 @@ import {
   type InsertBoost,
   type UserBoostInventory,
   type InsertUserBoostInventory,
+  type Character,
+  type InsertCharacter,
+  type AccessoryCategory,
+  type InsertAccessoryCategory,
+  type BaseBody,
+  type InsertBaseBody,
+  type Accessory,
+  type InsertAccessory,
+  type UserAccessory,
+  type InsertUserAccessory,
+  type CharacterWithAccessories,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -139,6 +155,38 @@ export interface IStorage {
   getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>>;
   buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }>;
   useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }>;
+  
+  // Character System
+  getCharacter(userId: string): Promise<Character | undefined>;
+  createCharacter(character: InsertCharacter): Promise<Character>;
+  updateCharacter(userId: string, updates: Partial<InsertCharacter>): Promise<Character | undefined>;
+  getCharacterWithAccessories(userId: string): Promise<CharacterWithAccessories | null>;
+  
+  // Base Bodies
+  getBaseBodies(gender?: string): Promise<BaseBody[]>;
+  getDefaultBaseBody(gender: string): Promise<BaseBody | undefined>;
+  createBaseBody(body: InsertBaseBody): Promise<BaseBody>;
+  updateBaseBody(id: string, updates: Partial<InsertBaseBody>): Promise<BaseBody | undefined>;
+  deleteBaseBody(id: string): Promise<void>;
+  
+  // Accessory Categories
+  getAccessoryCategories(): Promise<AccessoryCategory[]>;
+  createAccessoryCategory(category: InsertAccessoryCategory): Promise<AccessoryCategory>;
+  updateAccessoryCategory(id: string, updates: Partial<InsertAccessoryCategory>): Promise<AccessoryCategory | undefined>;
+  deleteAccessoryCategory(id: string): Promise<void>;
+  
+  // Accessories
+  getAccessories(categoryId?: string, gender?: string): Promise<Accessory[]>;
+  getAccessory(id: string): Promise<Accessory | undefined>;
+  createAccessory(accessory: InsertAccessory): Promise<Accessory>;
+  updateAccessory(id: string, updates: Partial<InsertAccessory>): Promise<Accessory | undefined>;
+  deleteAccessory(id: string): Promise<void>;
+  
+  // User Accessories
+  getUserAccessories(userId: string): Promise<Array<UserAccessory & { accessory: Accessory }>>;
+  purchaseAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string; userAccessory?: UserAccessory }>;
+  equipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
+  unequipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1956,6 +2004,265 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userBoostInventory.id, inventoryItem.id));
 
     return { success: true, boost };
+  }
+
+  // Character System Methods
+  async getCharacter(userId: string): Promise<Character | undefined> {
+    const [character] = await db.select().from(characters).where(eq(characters.userId, userId));
+    return character || undefined;
+  }
+
+  async createCharacter(character: InsertCharacter): Promise<Character> {
+    const [newCharacter] = await db.insert(characters).values(character).returning();
+    return newCharacter;
+  }
+
+  async updateCharacter(userId: string, updates: Partial<InsertCharacter>): Promise<Character | undefined> {
+    const [character] = await db
+      .update(characters)
+      .set(updates)
+      .where(eq(characters.userId, userId))
+      .returning();
+    return character || undefined;
+  }
+
+  async getCharacterWithAccessories(userId: string): Promise<CharacterWithAccessories | null> {
+    const character = await this.getCharacter(userId);
+    if (!character) return null;
+
+    const baseBody = await this.getDefaultBaseBody(character.gender);
+    const equippedAccessories = await db
+      .select()
+      .from(userAccessories)
+      .innerJoin(accessories, eq(userAccessories.accessoryId, accessories.id))
+      .where(and(
+        eq(userAccessories.userId, userId),
+        eq(userAccessories.isEquipped, true)
+      ));
+
+    return {
+      character,
+      baseBody: baseBody || null,
+      equippedAccessories: equippedAccessories.map(row => ({
+        ...row.user_accessories,
+        accessory: row.accessories,
+      })),
+    };
+  }
+
+  // Base Bodies
+  async getBaseBodies(gender?: string): Promise<BaseBody[]> {
+    if (gender) {
+      return db.select().from(baseBodies).where(eq(baseBodies.gender, gender)).orderBy(baseBodies.createdAt);
+    }
+    return db.select().from(baseBodies).orderBy(baseBodies.createdAt);
+  }
+
+  async getDefaultBaseBody(gender: string): Promise<BaseBody | undefined> {
+    const [body] = await db
+      .select()
+      .from(baseBodies)
+      .where(and(eq(baseBodies.gender, gender), eq(baseBodies.isDefault, true)));
+    return body || undefined;
+  }
+
+  async createBaseBody(body: InsertBaseBody): Promise<BaseBody> {
+    const [newBody] = await db.insert(baseBodies).values(body).returning();
+    return newBody;
+  }
+
+  async updateBaseBody(id: string, updates: Partial<InsertBaseBody>): Promise<BaseBody | undefined> {
+    const [body] = await db.update(baseBodies).set(updates).where(eq(baseBodies.id, id)).returning();
+    return body || undefined;
+  }
+
+  async deleteBaseBody(id: string): Promise<void> {
+    await db.delete(baseBodies).where(eq(baseBodies.id, id));
+  }
+
+  // Accessory Categories
+  async getAccessoryCategories(): Promise<AccessoryCategory[]> {
+    return db.select().from(accessoryCategories).orderBy(accessoryCategories.sortOrder);
+  }
+
+  async createAccessoryCategory(category: InsertAccessoryCategory): Promise<AccessoryCategory> {
+    const [newCategory] = await db.insert(accessoryCategories).values(category).returning();
+    return newCategory;
+  }
+
+  async updateAccessoryCategory(id: string, updates: Partial<InsertAccessoryCategory>): Promise<AccessoryCategory | undefined> {
+    const [category] = await db.update(accessoryCategories).set(updates).where(eq(accessoryCategories.id, id)).returning();
+    return category || undefined;
+  }
+
+  async deleteAccessoryCategory(id: string): Promise<void> {
+    await db.delete(accessoryCategories).where(eq(accessoryCategories.id, id));
+  }
+
+  // Accessories
+  async getAccessories(categoryId?: string, gender?: string): Promise<Accessory[]> {
+    let conditions = [];
+    if (categoryId) conditions.push(eq(accessories.categoryId, categoryId));
+    if (gender) conditions.push(or(eq(accessories.gender, gender), eq(accessories.gender, 'both')));
+    conditions.push(eq(accessories.isActive, true));
+
+    if (conditions.length > 0) {
+      return db.select().from(accessories).where(and(...conditions)).orderBy(accessories.createdAt);
+    }
+    return db.select().from(accessories).where(eq(accessories.isActive, true)).orderBy(accessories.createdAt);
+  }
+
+  async getAccessory(id: string): Promise<Accessory | undefined> {
+    const [accessory] = await db.select().from(accessories).where(eq(accessories.id, id));
+    return accessory || undefined;
+  }
+
+  async createAccessory(accessory: InsertAccessory): Promise<Accessory> {
+    const [newAccessory] = await db.insert(accessories).values(accessory).returning();
+    return newAccessory;
+  }
+
+  async updateAccessory(id: string, updates: Partial<InsertAccessory>): Promise<Accessory | undefined> {
+    const [accessory] = await db.update(accessories).set(updates).where(eq(accessories.id, id)).returning();
+    return accessory || undefined;
+  }
+
+  async deleteAccessory(id: string): Promise<void> {
+    await db.delete(accessories).where(eq(accessories.id, id));
+  }
+
+  // User Accessories
+  async getUserAccessories(userId: string): Promise<Array<UserAccessory & { accessory: Accessory }>> {
+    const result = await db
+      .select()
+      .from(userAccessories)
+      .innerJoin(accessories, eq(userAccessories.accessoryId, accessories.id))
+      .where(eq(userAccessories.userId, userId));
+
+    return result.map(row => ({
+      ...row.user_accessories,
+      accessory: row.accessories,
+    }));
+  }
+
+  async purchaseAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string; userAccessory?: UserAccessory }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const accessory = await this.getAccessory(accessoryId);
+    if (!accessory) return { success: false, error: 'Аксессуар не найден' };
+    if (!accessory.isActive) return { success: false, error: 'Аксессуар недоступен' };
+
+    // Check if already owned
+    const [existing] = await db
+      .select()
+      .from(userAccessories)
+      .where(and(
+        eq(userAccessories.userId, userId),
+        eq(userAccessories.accessoryId, accessoryId)
+      ));
+    if (existing) return { success: false, error: 'Вы уже владеете этим аксессуаром' };
+
+    // Check quantity limit
+    if (accessory.maxQuantity !== null && accessory.soldCount >= accessory.maxQuantity) {
+      return { success: false, error: 'Аксессуар распродан' };
+    }
+
+    // Check balance
+    if (user.totalPoints < accessory.price) {
+      return { success: false, error: 'Недостаточно Beads' };
+    }
+
+    // Charge beads
+    const result = await this.chargeBeadsToHouse(
+      userId,
+      accessory.price,
+      'buy_boost',
+      `Покупка аксессуара: ${accessory.nameRu}`
+    );
+    if (!result.success) return { success: false, error: 'Ошибка списания Beads' };
+
+    // Update sold count
+    await db.update(accessories).set({ soldCount: accessory.soldCount + 1 }).where(eq(accessories.id, accessoryId));
+
+    // Create user accessory
+    const [userAccessory] = await db.insert(userAccessories).values({
+      userId,
+      accessoryId,
+      isEquipped: false,
+    }).returning();
+
+    return { success: true, userAccessory };
+  }
+
+  async equipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }> {
+    // Find the user accessory
+    const [userAccessory] = await db
+      .select()
+      .from(userAccessories)
+      .innerJoin(accessories, eq(userAccessories.accessoryId, accessories.id))
+      .where(and(
+        eq(userAccessories.userId, userId),
+        eq(userAccessories.accessoryId, accessoryId)
+      ));
+
+    if (!userAccessory) return { success: false, error: 'Аксессуар не найден в инвентаре' };
+
+    // Get accessory's category to unequip other items in same slot
+    const category = await db
+      .select()
+      .from(accessoryCategories)
+      .where(eq(accessoryCategories.id, userAccessory.accessories.categoryId));
+    
+    if (category.length > 0) {
+      // Unequip all accessories in the same slot
+      const accessoriesInSameSlot = await db
+        .select()
+        .from(accessories)
+        .innerJoin(accessoryCategories, eq(accessories.categoryId, accessoryCategories.id))
+        .where(eq(accessoryCategories.slot, category[0].slot));
+
+      const accessoryIdsInSlot = accessoriesInSameSlot.map(a => a.accessories.id);
+      if (accessoryIdsInSlot.length > 0) {
+        await db
+          .update(userAccessories)
+          .set({ isEquipped: false })
+          .where(and(
+            eq(userAccessories.userId, userId),
+            inArray(userAccessories.accessoryId, accessoryIdsInSlot)
+          ));
+      }
+    }
+
+    // Equip the new accessory
+    await db
+      .update(userAccessories)
+      .set({ isEquipped: true })
+      .where(and(
+        eq(userAccessories.userId, userId),
+        eq(userAccessories.accessoryId, accessoryId)
+      ));
+
+    return { success: true };
+  }
+
+  async unequipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }> {
+    const [userAccessory] = await db
+      .select()
+      .from(userAccessories)
+      .where(and(
+        eq(userAccessories.userId, userId),
+        eq(userAccessories.accessoryId, accessoryId)
+      ));
+
+    if (!userAccessory) return { success: false, error: 'Аксессуар не найден в инвентаре' };
+
+    await db
+      .update(userAccessories)
+      .set({ isEquipped: false })
+      .where(eq(userAccessories.id, userAccessory.id));
+
+    return { success: true };
   }
 }
 

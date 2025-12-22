@@ -201,6 +201,83 @@ export const beadsTransactionsRelations = relations(beadsTransactions, ({ one })
   }),
 }));
 
+// Character System Tables
+export const characters = pgTable("characters", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id).unique(),
+  name: text("name").notNull(),
+  gender: varchar("gender", { length: 10 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const accessoryCategories = pgTable("accessory_categories", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  nameRu: text("name_ru").notNull(),
+  slot: varchar("slot", { length: 20 }).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+});
+
+export const baseBodies = pgTable("base_bodies", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  gender: varchar("gender", { length: 10 }).notNull(),
+  imageUrl: text("image_url").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const accessories = pgTable("accessories", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id", { length: 255 }).notNull().references(() => accessoryCategories.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  nameRu: text("name_ru").notNull(),
+  descriptionRu: text("description_ru"),
+  imageUrl: text("image_url").notNull(),
+  gender: varchar("gender", { length: 10 }).notNull(),
+  positionX: integer("position_x").default(0).notNull(),
+  positionY: integer("position_y").default(0).notNull(),
+  zIndex: integer("z_index").default(1).notNull(),
+  price: integer("price").default(100).notNull(),
+  maxQuantity: integer("max_quantity"),
+  soldCount: integer("sold_count").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userAccessories = pgTable("user_accessories", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  accessoryId: varchar("accessory_id", { length: 255 }).notNull().references(() => accessories.id),
+  isEquipped: boolean("is_equipped").default(false).notNull(),
+  purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
+});
+
+export const charactersRelations = relations(characters, ({ one }) => ({
+  user: one(users, {
+    fields: [characters.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accessoriesRelations = relations(accessories, ({ one, many }) => ({
+  category: one(accessoryCategories, {
+    fields: [accessories.categoryId],
+    references: [accessoryCategories.id],
+  }),
+  userAccessories: many(userAccessories),
+}));
+
+export const userAccessoriesRelations = relations(userAccessories, ({ one }) => ({
+  user: one(users, {
+    fields: [userAccessories.userId],
+    references: [users.id],
+  }),
+  accessory: one(accessories, {
+    fields: [userAccessories.accessoryId],
+    references: [accessories.id],
+  }),
+}));
+
 export const insertBeadsTransactionSchema = createInsertSchema(beadsTransactions).omit({
   id: true,
   createdAt: true,
@@ -258,6 +335,32 @@ export const insertUserBoostInventorySchema = createInsertSchema(userBoostInvent
   updatedAt: true,
 });
 
+// Character System Insert Schemas
+export const insertCharacterSchema = createInsertSchema(characters).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAccessoryCategorySchema = createInsertSchema(accessoryCategories).omit({
+  id: true,
+});
+
+export const insertBaseBodySchema = createInsertSchema(baseBodies).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAccessorySchema = createInsertSchema(accessories).omit({
+  id: true,
+  soldCount: true,
+  createdAt: true,
+});
+
+export const insertUserAccessorySchema = createInsertSchema(userAccessories).omit({
+  id: true,
+  purchasedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGameScore = z.infer<typeof insertGameScoreSchema>;
@@ -278,6 +381,28 @@ export type InsertBoost = z.infer<typeof insertBoostSchema>;
 export type Boost = typeof boosts.$inferSelect;
 export type InsertUserBoostInventory = z.infer<typeof insertUserBoostInventorySchema>;
 export type UserBoostInventory = typeof userBoostInventory.$inferSelect;
+
+// Character System Types
+export type InsertCharacter = z.infer<typeof insertCharacterSchema>;
+export type Character = typeof characters.$inferSelect;
+export type InsertAccessoryCategory = z.infer<typeof insertAccessoryCategorySchema>;
+export type AccessoryCategory = typeof accessoryCategories.$inferSelect;
+export type InsertBaseBody = z.infer<typeof insertBaseBodySchema>;
+export type BaseBody = typeof baseBodies.$inferSelect;
+export type InsertAccessory = z.infer<typeof insertAccessorySchema>;
+export type Accessory = typeof accessories.$inferSelect;
+export type InsertUserAccessory = z.infer<typeof insertUserAccessorySchema>;
+export type UserAccessory = typeof userAccessories.$inferSelect;
+
+export type GenderType = 'male' | 'female';
+export type AccessoryGenderType = 'male' | 'female' | 'both';
+export type SlotType = 'head' | 'eyes' | 'face' | 'body' | 'background';
+
+export interface CharacterWithAccessories {
+  character: Character;
+  baseBody: BaseBody | null;
+  equippedAccessories: (UserAccessory & { accessory: Accessory })[];
+}
 
 export type BoostType = 'slowdown' | 'bomb' | 'rainbow' | 'rewind';
 

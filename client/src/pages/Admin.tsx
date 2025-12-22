@@ -515,6 +515,10 @@ export default function Admin() {
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 Бусты
               </TabsTrigger>
+              <TabsTrigger value="characters" data-testid="tab-characters" className="flex-shrink-0">
+                <Users className="w-4 h-4 mr-1.5" />
+                Персонажи
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -578,6 +582,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="boosts">
             <BoostsTab />
+          </TabsContent>
+          <TabsContent value="characters">
+            <CharactersTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -4301,6 +4308,546 @@ function GameplayTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function CharactersTab() {
+  const { toast } = useToast();
+  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'bodies' | 'accessories'>('categories');
+  
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/accessory-categories'],
+  });
+  
+  const { data: baseBodies = [], isLoading: bodiesLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/base-bodies'],
+  });
+  
+  const { data: accessories = [], isLoading: accessoriesLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/accessories'],
+  });
+
+  const [newCategory, setNewCategory] = useState({ name: '', nameRu: '', slot: 'head', sortOrder: 0 });
+  const [newBody, setNewBody] = useState({ gender: 'male', imageUrl: '', isDefault: false });
+  const [newAccessory, setNewAccessory] = useState({
+    categoryId: '',
+    name: '',
+    nameRu: '',
+    descriptionRu: '',
+    imageUrl: '',
+    gender: 'both',
+    positionX: 0,
+    positionY: 0,
+    zIndex: 1,
+    price: 100,
+    maxQuantity: null as number | null,
+    isActive: true,
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: typeof newCategory) => {
+      return apiRequest('POST', '/api/admin/accessory-categories', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessory-categories'] });
+      toast({ title: 'Категория создана' });
+      setNewCategory({ name: '', nameRu: '', slot: 'head', sortOrder: 0 });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка создания категории', variant: 'destructive' });
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/admin/accessory-categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessory-categories'] });
+      toast({ title: 'Категория удалена' });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка удаления категории', variant: 'destructive' });
+    },
+  });
+
+  const createBodyMutation = useMutation({
+    mutationFn: async (data: typeof newBody) => {
+      return apiRequest('POST', '/api/admin/base-bodies', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/base-bodies'] });
+      toast({ title: 'Базовое тело создано' });
+      setNewBody({ gender: 'male', imageUrl: '', isDefault: false });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка создания базового тела', variant: 'destructive' });
+    },
+  });
+
+  const deleteBodyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/admin/base-bodies/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/base-bodies'] });
+      toast({ title: 'Базовое тело удалено' });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка удаления', variant: 'destructive' });
+    },
+  });
+
+  const setDefaultBodyMutation = useMutation({
+    mutationFn: async ({ id, gender }: { id: string; gender: string }) => {
+      return apiRequest('PATCH', `/api/admin/base-bodies/${id}/default`, { gender });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/base-bodies'] });
+      toast({ title: 'Базовое тело по умолчанию обновлено' });
+    },
+  });
+
+  const createAccessoryMutation = useMutation({
+    mutationFn: async (data: typeof newAccessory) => {
+      return apiRequest('POST', '/api/admin/accessories', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
+      toast({ title: 'Аксессуар создан' });
+      setNewAccessory({
+        categoryId: '',
+        name: '',
+        nameRu: '',
+        descriptionRu: '',
+        imageUrl: '',
+        gender: 'both',
+        positionX: 0,
+        positionY: 0,
+        zIndex: 1,
+        price: 100,
+        maxQuantity: null,
+        isActive: true,
+      });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка создания аксессуара', variant: 'destructive' });
+    },
+  });
+
+  const deleteAccessoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/admin/accessories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
+      toast({ title: 'Аксессуар удалён' });
+    },
+  });
+
+  const toggleAccessoryMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return apiRequest('PATCH', `/api/admin/accessories/${id}`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
+    },
+  });
+
+  const slotOptions = [
+    { value: 'head', label: 'Голова' },
+    { value: 'eyes', label: 'Глаза' },
+    { value: 'face', label: 'Лицо' },
+    { value: 'body', label: 'Тело' },
+    { value: 'background', label: 'Фон' },
+  ];
+
+  const genderOptions = [
+    { value: 'male', label: 'Мужской' },
+    { value: 'female', label: 'Женский' },
+    { value: 'both', label: 'Оба' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-2">
+        <Button
+          variant={activeSubTab === 'categories' ? 'default' : 'outline'}
+          onClick={() => setActiveSubTab('categories')}
+          data-testid="subtab-categories"
+        >
+          Категории
+        </Button>
+        <Button
+          variant={activeSubTab === 'bodies' ? 'default' : 'outline'}
+          onClick={() => setActiveSubTab('bodies')}
+          data-testid="subtab-bodies"
+        >
+          Базовые тела
+        </Button>
+        <Button
+          variant={activeSubTab === 'accessories' ? 'default' : 'outline'}
+          onClick={() => setActiveSubTab('accessories')}
+          data-testid="subtab-accessories"
+        >
+          Аксессуары
+        </Button>
+      </div>
+
+      {activeSubTab === 'categories' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Категории аксессуаров</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+              <div className="space-y-2">
+                <Label>Код (англ.)</Label>
+                <Input
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  placeholder="head_wear"
+                  data-testid="input-category-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Название (рус.)</Label>
+                <Input
+                  value={newCategory.nameRu}
+                  onChange={(e) => setNewCategory({ ...newCategory, nameRu: e.target.value })}
+                  placeholder="Головные уборы"
+                  data-testid="input-category-nameRu"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Слот</Label>
+                <Select value={newCategory.slot} onValueChange={(v) => setNewCategory({ ...newCategory, slot: v })}>
+                  <SelectTrigger data-testid="select-category-slot">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {slotOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Порядок</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={newCategory.sortOrder}
+                    onChange={(e) => setNewCategory({ ...newCategory, sortOrder: parseInt(e.target.value) || 0 })}
+                    data-testid="input-category-sort"
+                  />
+                  <Button
+                    onClick={() => createCategoryMutation.mutate(newCategory)}
+                    disabled={createCategoryMutation.isPending || !newCategory.name || !newCategory.nameRu}
+                    data-testid="button-create-category"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {categoriesLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {categories.map((cat: any) => (
+                  <div key={cat.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`category-${cat.id}`}>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">{cat.slot}</Badge>
+                      <span className="font-medium">{cat.nameRu}</span>
+                      <span className="text-muted-foreground text-sm">({cat.name})</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteCategoryMutation.mutate(cat.id)}
+                      disabled={deleteCategoryMutation.isPending}
+                      data-testid={`delete-category-${cat.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSubTab === 'bodies' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Базовые тела персонажей</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+              <div className="space-y-2">
+                <Label>Пол</Label>
+                <Select value={newBody.gender} onValueChange={(v) => setNewBody({ ...newBody, gender: v })}>
+                  <SelectTrigger data-testid="select-body-gender">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Мужской</SelectItem>
+                    <SelectItem value="female">Женский</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>URL изображения</Label>
+                <Input
+                  value={newBody.imageUrl}
+                  onChange={(e) => setNewBody({ ...newBody, imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  data-testid="input-body-url"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>По умолчанию</Label>
+                <div className="flex gap-2 items-center">
+                  <Switch
+                    checked={newBody.isDefault}
+                    onCheckedChange={(checked) => setNewBody({ ...newBody, isDefault: checked })}
+                    data-testid="toggle-body-default"
+                  />
+                  <Button
+                    onClick={() => createBodyMutation.mutate(newBody)}
+                    disabled={createBodyMutation.isPending || !newBody.imageUrl}
+                    data-testid="button-create-body"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {bodiesLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {baseBodies.map((body: any) => (
+                  <div key={body.id} className="border rounded-lg p-2 space-y-2" data-testid={`body-${body.id}`}>
+                    <div className="aspect-square bg-muted rounded overflow-hidden">
+                      <img src={body.imageUrl} alt="Body" className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={body.gender === 'male' ? 'default' : 'secondary'}>
+                          {body.gender === 'male' ? 'М' : 'Ж'}
+                        </Badge>
+                        {body.isDefault && <Badge variant="outline">По умолч.</Badge>}
+                      </div>
+                      <div className="flex gap-1">
+                        {!body.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDefaultBodyMutation.mutate({ id: body.id, gender: body.gender })}
+                            data-testid={`set-default-body-${body.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteBodyMutation.mutate(body.id)}
+                          data-testid={`delete-body-${body.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSubTab === 'accessories' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Аксессуары</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+              <div className="space-y-2">
+                <Label>Категория</Label>
+                <Select 
+                  value={newAccessory.categoryId} 
+                  onValueChange={(v) => setNewAccessory({ ...newAccessory, categoryId: v })}
+                >
+                  <SelectTrigger data-testid="select-accessory-category">
+                    <SelectValue placeholder="Выберите категорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.nameRu}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Код (англ.)</Label>
+                <Input
+                  value={newAccessory.name}
+                  onChange={(e) => setNewAccessory({ ...newAccessory, name: e.target.value })}
+                  placeholder="cool_hat"
+                  data-testid="input-accessory-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Название (рус.)</Label>
+                <Input
+                  value={newAccessory.nameRu}
+                  onChange={(e) => setNewAccessory({ ...newAccessory, nameRu: e.target.value })}
+                  placeholder="Крутая шляпа"
+                  data-testid="input-accessory-nameRu"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>URL изображения</Label>
+                <Input
+                  value={newAccessory.imageUrl}
+                  onChange={(e) => setNewAccessory({ ...newAccessory, imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  data-testid="input-accessory-url"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Пол</Label>
+                <Select 
+                  value={newAccessory.gender} 
+                  onValueChange={(v) => setNewAccessory({ ...newAccessory, gender: v })}
+                >
+                  <SelectTrigger data-testid="select-accessory-gender">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genderOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-2">
+                  <Label>X</Label>
+                  <Input
+                    type="number"
+                    value={newAccessory.positionX}
+                    onChange={(e) => setNewAccessory({ ...newAccessory, positionX: parseInt(e.target.value) || 0 })}
+                    data-testid="input-accessory-x"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Y</Label>
+                  <Input
+                    type="number"
+                    value={newAccessory.positionY}
+                    onChange={(e) => setNewAccessory({ ...newAccessory, positionY: parseInt(e.target.value) || 0 })}
+                    data-testid="input-accessory-y"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Z</Label>
+                  <Input
+                    type="number"
+                    value={newAccessory.zIndex}
+                    onChange={(e) => setNewAccessory({ ...newAccessory, zIndex: parseInt(e.target.value) || 1 })}
+                    data-testid="input-accessory-z"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Цена (Beads)</Label>
+                <Input
+                  type="number"
+                  value={newAccessory.price}
+                  onChange={(e) => setNewAccessory({ ...newAccessory, price: parseInt(e.target.value) || 0 })}
+                  data-testid="input-accessory-price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Лимит (пусто = безлимит)</Label>
+                <Input
+                  type="number"
+                  value={newAccessory.maxQuantity ?? ''}
+                  onChange={(e) => setNewAccessory({ ...newAccessory, maxQuantity: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="∞"
+                  data-testid="input-accessory-limit"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={() => createAccessoryMutation.mutate(newAccessory)}
+                  disabled={createAccessoryMutation.isPending || !newAccessory.categoryId || !newAccessory.name || !newAccessory.nameRu || !newAccessory.imageUrl}
+                  className="w-full"
+                  data-testid="button-create-accessory"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Создать
+                </Button>
+              </div>
+            </div>
+
+            {accessoriesLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {accessories.map((acc: any) => (
+                  <div key={acc.id} className="flex items-center gap-4 p-3 border rounded-lg" data-testid={`accessory-${acc.id}`}>
+                    <div className="w-12 h-12 bg-muted rounded overflow-hidden flex-shrink-0">
+                      <img src={acc.imageUrl} alt={acc.nameRu} className="w-full h-full object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{acc.nameRu}</span>
+                        <Badge variant="outline">{acc.gender === 'both' ? 'Все' : acc.gender === 'male' ? 'М' : 'Ж'}</Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span>{acc.price} Beads</span>
+                        {acc.maxQuantity && <span>• Лимит: {acc.soldCount}/{acc.maxQuantity}</span>}
+                        <span>• Z: {acc.zIndex}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={acc.isActive}
+                        onCheckedChange={(checked) => toggleAccessoryMutation.mutate({ id: acc.id, isActive: checked })}
+                        data-testid={`toggle-accessory-${acc.id}`}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteAccessoryMutation.mutate(acc.id)}
+                        data-testid={`delete-accessory-${acc.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

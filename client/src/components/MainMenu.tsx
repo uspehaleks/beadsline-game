@@ -18,6 +18,8 @@ interface MainMenuProps {
   onPlay: () => void;
   onLeaderboard: () => void;
   onShop: () => void;
+  onAccessoryShop?: () => void;
+  onCustomize?: () => void;
   isLoading?: boolean;
 }
 
@@ -340,7 +342,7 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
   );
 }
 
-export function MainMenu({ user, onPlay, onLeaderboard, onShop, isLoading }: MainMenuProps) {
+export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop, onCustomize, isLoading }: MainMenuProps) {
   const [showReferral, setShowReferral] = useState(false);
   const [showReferralStats, setShowReferralStats] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -764,6 +766,32 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, isLoading }: Mai
           >
             <Zap className="w-5 h-5 mr-2" />
             Магазин бустов
+          </Button>
+        )}
+
+        {user && onAccessoryShop && (
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full font-display mt-3"
+            onClick={onAccessoryShop}
+            data-testid="button-accessory-shop"
+          >
+            <Gift className="w-5 h-5 mr-2" />
+            Магазин аксессуаров
+          </Button>
+        )}
+
+        {user && onCustomize && (
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full font-display mt-3"
+            onClick={onCustomize}
+            data-testid="button-customize"
+          >
+            <Award className="w-5 h-5 mr-2" />
+            Персонаж
           </Button>
         )}
 

@@ -6,17 +6,25 @@ import { GameScreen } from '@/components/GameScreen';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LevelSelect } from '@/components/LevelSelect';
 import { BoostShop } from '@/components/BoostShop';
+import { AccessoryShop } from '@/components/AccessoryShop';
+import { CharacterCustomize } from '@/components/CharacterCustomize';
+import CharacterCreation from '@/pages/CharacterCreation';
 import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
 
-type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop';
+type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop' | 'accessoryShop' | 'customize';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig>(LEVELS[0]);
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
+
+  const { data: characterExists, isLoading: isCharacterLoading, refetch: refetchCharacter } = useQuery<{ exists: boolean }>({
+    queryKey: ['/api/character/exists'],
+    enabled: !!user,
+  });
 
   const { data: leaderboard = [], isLoading: isLeaderboardLoading } = useQuery<LeaderboardEntry[]>({
     queryKey: ['/api/leaderboard'],
@@ -74,8 +82,24 @@ export default function Home() {
     setCurrentScreen('shop');
   }, []);
 
-  if (isUserLoading) {
+  const handleAccessoryShop = useCallback(() => {
+    setCurrentScreen('accessoryShop');
+  }, []);
+
+  const handleCustomize = useCallback(() => {
+    setCurrentScreen('customize');
+  }, []);
+
+  const handleCharacterCreated = useCallback(() => {
+    refetchCharacter();
+  }, [refetchCharacter]);
+
+  if (isUserLoading || isCharacterLoading) {
     return <LoadingScreen />;
+  }
+
+  if (user && characterExists && !characterExists.exists) {
+    return <CharacterCreation onComplete={handleCharacterCreated} />;
   }
 
   switch (currentScreen) {
@@ -114,6 +138,16 @@ export default function Home() {
         <BoostShop onBack={handleMainMenu} />
       );
     
+    case 'accessoryShop':
+      return (
+        <AccessoryShop onBack={handleMainMenu} />
+      );
+    
+    case 'customize':
+      return (
+        <CharacterCustomize onBack={handleMainMenu} />
+      );
+    
     default:
       return (
         <MainMenu
@@ -121,6 +155,8 @@ export default function Home() {
           onPlay={handlePlay}
           onLeaderboard={handleViewLeaderboard}
           onShop={handleShop}
+          onAccessoryShop={handleAccessoryShop}
+          onCustomize={handleCustomize}
           isLoading={submitScoreMutation.isPending}
         />
       );

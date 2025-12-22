@@ -2117,5 +2117,356 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // ===== CHARACTER SYSTEM API =====
+
+  // Get current user's character
+  app.get("/api/character", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const characterData = await storage.getCharacterWithAccessories(userId);
+      res.json(characterData);
+    } catch (error) {
+      console.error("Get character error:", error);
+      res.status(500).json({ error: "Failed to get character" });
+    }
+  });
+
+  // Check if user has a character
+  app.get("/api/character/exists", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const character = await storage.getCharacter(userId);
+      res.json({ exists: !!character, character });
+    } catch (error) {
+      console.error("Check character exists error:", error);
+      res.status(500).json({ error: "Failed to check character" });
+    }
+  });
+
+  // Create character
+  app.post("/api/character", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { name, gender } = req.body;
+      if (!name || !gender) {
+        return res.status(400).json({ error: "name and gender are required" });
+      }
+      if (gender !== 'male' && gender !== 'female') {
+        return res.status(400).json({ error: "gender must be 'male' or 'female'" });
+      }
+
+      const existingCharacter = await storage.getCharacter(userId);
+      if (existingCharacter) {
+        return res.status(400).json({ error: "Character already exists" });
+      }
+
+      const character = await storage.createCharacter({ userId, name, gender });
+      res.json(character);
+    } catch (error) {
+      console.error("Create character error:", error);
+      res.status(500).json({ error: "Failed to create character" });
+    }
+  });
+
+  // Update character
+  app.patch("/api/character", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { name } = req.body;
+      const character = await storage.updateCharacter(userId, { name });
+      if (!character) {
+        return res.status(404).json({ error: "Character not found" });
+      }
+      res.json(character);
+    } catch (error) {
+      console.error("Update character error:", error);
+      res.status(500).json({ error: "Failed to update character" });
+    }
+  });
+
+  // Get accessory categories
+  app.get("/api/accessories/categories", async (req, res) => {
+    try {
+      const categories = await storage.getAccessoryCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Get accessory categories error:", error);
+      res.status(500).json({ error: "Failed to get categories" });
+    }
+  });
+
+  // Get accessories (filtered by category and/or gender)
+  app.get("/api/accessories", async (req, res) => {
+    try {
+      const { categoryId, gender } = req.query;
+      const accessoriesData = await storage.getAccessories(
+        categoryId as string | undefined, 
+        gender as string | undefined
+      );
+      res.json(accessoriesData);
+    } catch (error) {
+      console.error("Get accessories error:", error);
+      res.status(500).json({ error: "Failed to get accessories" });
+    }
+  });
+
+  // Get user's purchased accessories
+  app.get("/api/user/accessories", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const userAccessoriesData = await storage.getUserAccessories(userId);
+      res.json(userAccessoriesData);
+    } catch (error) {
+      console.error("Get user accessories error:", error);
+      res.status(500).json({ error: "Failed to get user accessories" });
+    }
+  });
+
+  // Purchase accessory
+  app.post("/api/accessories/purchase", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { accessoryId } = req.body;
+      if (!accessoryId) {
+        return res.status(400).json({ error: "accessoryId is required" });
+      }
+
+      const result = await storage.purchaseAccessory(userId, accessoryId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true, userAccessory: result.userAccessory });
+    } catch (error) {
+      console.error("Purchase accessory error:", error);
+      res.status(500).json({ error: "Failed to purchase accessory" });
+    }
+  });
+
+  // Equip accessory
+  app.post("/api/accessories/equip", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { accessoryId } = req.body;
+      if (!accessoryId) {
+        return res.status(400).json({ error: "accessoryId is required" });
+      }
+
+      const result = await storage.equipAccessory(userId, accessoryId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Equip accessory error:", error);
+      res.status(500).json({ error: "Failed to equip accessory" });
+    }
+  });
+
+  // Unequip accessory
+  app.post("/api/accessories/unequip", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      
+      const { accessoryId } = req.body;
+      if (!accessoryId) {
+        return res.status(400).json({ error: "accessoryId is required" });
+      }
+
+      const result = await storage.unequipAccessory(userId, accessoryId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Unequip accessory error:", error);
+      res.status(500).json({ error: "Failed to unequip accessory" });
+    }
+  });
+
+  // Get base bodies
+  app.get("/api/base-bodies", async (req, res) => {
+    try {
+      const { gender } = req.query;
+      const bodies = await storage.getBaseBodies(gender as string | undefined);
+      res.json(bodies);
+    } catch (error) {
+      console.error("Get base bodies error:", error);
+      res.status(500).json({ error: "Failed to get base bodies" });
+    }
+  });
+
+  // ===== ADMIN CHARACTER MANAGEMENT =====
+
+  // Admin: Create accessory category
+  app.post("/api/admin/accessory-categories", requireAdmin, async (req, res) => {
+    try {
+      const { name, nameRu, slot, sortOrder } = req.body;
+      if (!name || !nameRu || !slot) {
+        return res.status(400).json({ error: "name, nameRu, and slot are required" });
+      }
+      const category = await storage.createAccessoryCategory({ name, nameRu, slot, sortOrder: sortOrder || 0 });
+      res.json(category);
+    } catch (error) {
+      console.error("Create accessory category error:", error);
+      res.status(500).json({ error: "Failed to create category" });
+    }
+  });
+
+  // Admin: Update accessory category
+  app.patch("/api/admin/accessory-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.updateAccessoryCategory(id, req.body);
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Update accessory category error:", error);
+      res.status(500).json({ error: "Failed to update category" });
+    }
+  });
+
+  // Admin: Delete accessory category
+  app.delete("/api/admin/accessory-categories/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAccessoryCategory(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete accessory category error:", error);
+      res.status(500).json({ error: "Failed to delete category" });
+    }
+  });
+
+  // Admin: Create base body
+  app.post("/api/admin/base-bodies", requireAdmin, async (req, res) => {
+    try {
+      const { gender, imageUrl, isDefault } = req.body;
+      if (!gender || !imageUrl) {
+        return res.status(400).json({ error: "gender and imageUrl are required" });
+      }
+      const body = await storage.createBaseBody({ gender, imageUrl, isDefault: isDefault || false });
+      res.json(body);
+    } catch (error) {
+      console.error("Create base body error:", error);
+      res.status(500).json({ error: "Failed to create base body" });
+    }
+  });
+
+  // Admin: Update base body
+  app.patch("/api/admin/base-bodies/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const body = await storage.updateBaseBody(id, req.body);
+      if (!body) {
+        return res.status(404).json({ error: "Base body not found" });
+      }
+      res.json(body);
+    } catch (error) {
+      console.error("Update base body error:", error);
+      res.status(500).json({ error: "Failed to update base body" });
+    }
+  });
+
+  // Admin: Delete base body
+  app.delete("/api/admin/base-bodies/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBaseBody(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete base body error:", error);
+      res.status(500).json({ error: "Failed to delete base body" });
+    }
+  });
+
+  // Admin: Create accessory
+  app.post("/api/admin/accessories", requireAdmin, async (req, res) => {
+    try {
+      const { categoryId, name, nameRu, descriptionRu, imageUrl, gender, positionX, positionY, zIndex, price, maxQuantity, isActive } = req.body;
+      if (!categoryId || !name || !nameRu || !imageUrl || !gender) {
+        return res.status(400).json({ error: "categoryId, name, nameRu, imageUrl, and gender are required" });
+      }
+      const accessory = await storage.createAccessory({
+        categoryId, name, nameRu, descriptionRu, imageUrl, gender,
+        positionX: positionX || 0,
+        positionY: positionY || 0,
+        zIndex: zIndex || 1,
+        price: price || 100,
+        maxQuantity: maxQuantity || null,
+        isActive: isActive !== false,
+      });
+      res.json(accessory);
+    } catch (error) {
+      console.error("Create accessory error:", error);
+      res.status(500).json({ error: "Failed to create accessory" });
+    }
+  });
+
+  // Admin: Update accessory
+  app.patch("/api/admin/accessories/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const accessory = await storage.updateAccessory(id, req.body);
+      if (!accessory) {
+        return res.status(404).json({ error: "Accessory not found" });
+      }
+      res.json(accessory);
+    } catch (error) {
+      console.error("Update accessory error:", error);
+      res.status(500).json({ error: "Failed to update accessory" });
+    }
+  });
+
+  // Admin: Delete accessory
+  app.delete("/api/admin/accessories/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAccessory(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete accessory error:", error);
+      res.status(500).json({ error: "Failed to delete accessory" });
+    }
+  });
+
+  // Admin: Get all accessories (including inactive)
+  app.get("/api/admin/accessories", requireAdmin, async (req, res) => {
+    try {
+      const allAccessories = await storage.getAccessories();
+      res.json(allAccessories);
+    } catch (error) {
+      console.error("Admin get accessories error:", error);
+      res.status(500).json({ error: "Failed to get accessories" });
+    }
+  });
+
+  // Admin: Get all base bodies
+  app.get("/api/admin/base-bodies", requireAdmin, async (req, res) => {
+    try {
+      const bodies = await storage.getBaseBodies();
+      res.json(bodies);
+    } catch (error) {
+      console.error("Admin get base bodies error:", error);
+      res.status(500).json({ error: "Failed to get base bodies" });
+    }
+  });
+
   return httpServer;
 }
