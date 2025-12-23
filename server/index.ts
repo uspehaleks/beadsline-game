@@ -95,6 +95,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { storage } = await import("./storage");
+  await storage.ensureDefaultBaseBodies();
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

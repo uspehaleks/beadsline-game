@@ -49,7 +49,8 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Sparkles
+  Sparkles,
+  Upload
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -4332,6 +4333,8 @@ function CharactersTab() {
 
   const [newCategory, setNewCategory] = useState({ name: '', nameRu: '', slot: 'head', sortOrder: 0 });
   const [newBody, setNewBody] = useState({ gender: 'male', imageUrl: '', isDefault: false });
+  const [uploadingBody, setUploadingBody] = useState(false);
+  const [uploadingAccessory, setUploadingAccessory] = useState(false);
   const [newAccessory, setNewAccessory] = useState({
     categoryId: '',
     name: '',
@@ -4456,6 +4459,64 @@ function CharactersTab() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
     },
   });
+
+  const handleBodyImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingBody(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch('/api/admin/upload/character', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setNewBody({ ...newBody, imageUrl: data.imageUrl });
+        toast({ title: 'Изображение загружено' });
+      } else {
+        toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+    } finally {
+      setUploadingBody(false);
+    }
+  };
+
+  const handleAccessoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingAccessory(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch('/api/admin/upload/accessory', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setNewAccessory({ ...newAccessory, imageUrl: data.imageUrl });
+        toast({ title: 'Изображение загружено' });
+      } else {
+        toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+    } finally {
+      setUploadingAccessory(false);
+    }
+  };
 
   const slotOptions = [
     { value: 'head', label: 'Голова' },
@@ -4605,13 +4666,33 @@ function CharactersTab() {
                 </Select>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>URL изображения</Label>
-                <Input
-                  value={newBody.imageUrl}
-                  onChange={(e) => setNewBody({ ...newBody, imageUrl: e.target.value })}
-                  placeholder="https://..."
-                  data-testid="input-body-url"
-                />
+                <Label>Изображение</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newBody.imageUrl}
+                    onChange={(e) => setNewBody({ ...newBody, imageUrl: e.target.value })}
+                    placeholder="URL или загрузите файл"
+                    data-testid="input-body-url"
+                    className="flex-1"
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={handleBodyImageUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      data-testid="input-body-file"
+                    />
+                    <Button type="button" variant="outline" disabled={uploadingBody}>
+                      {uploadingBody ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {newBody.imageUrl && (
+                  <div className="w-16 h-16 bg-muted rounded overflow-hidden mt-2">
+                    <img src={newBody.imageUrl} alt="Preview" className="w-full h-full object-contain" />
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>По умолчанию</Label>
@@ -4721,13 +4802,33 @@ function CharactersTab() {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>URL изображения</Label>
-                <Input
-                  value={newAccessory.imageUrl}
-                  onChange={(e) => setNewAccessory({ ...newAccessory, imageUrl: e.target.value })}
-                  placeholder="https://..."
-                  data-testid="input-accessory-url"
-                />
+                <Label>Изображение</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newAccessory.imageUrl}
+                    onChange={(e) => setNewAccessory({ ...newAccessory, imageUrl: e.target.value })}
+                    placeholder="URL или загрузите файл"
+                    data-testid="input-accessory-url"
+                    className="flex-1"
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={handleAccessoryImageUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      data-testid="input-accessory-file"
+                    />
+                    <Button type="button" variant="outline" disabled={uploadingAccessory}>
+                      {uploadingAccessory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {newAccessory.imageUrl && (
+                  <div className="w-16 h-16 bg-muted rounded overflow-hidden mt-2">
+                    <img src={newAccessory.imageUrl} alt="Preview" className="w-full h-full object-contain" />
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Пол</Label>

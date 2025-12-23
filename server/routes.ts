@@ -3,6 +3,59 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
+const charactersDir = path.join(uploadsDir, 'characters');
+const accessoriesDir = path.join(uploadsDir, 'accessories');
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(charactersDir)) fs.mkdirSync(charactersDir, { recursive: true });
+if (!fs.existsSync(accessoriesDir)) fs.mkdirSync(accessoriesDir, { recursive: true });
+
+const characterStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, charactersDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const accessoryStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, accessoriesDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadCharacter = multer({ 
+  storage: characterStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WEBP, GIF images are allowed'));
+    }
+  }
+});
+
+const uploadAccessory = multer({ 
+  storage: accessoryStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, WEBP, GIF images are allowed'));
+    }
+  }
+});
 
 function formatNumbersInObject(obj: any): any {
   if (obj === null || obj === undefined) return obj;
@@ -425,6 +478,10 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  const express = await import('express');
+  app.use('/uploads', express.default.static(uploadsDir));
+
+  
   app.post("/api/auth/telegram", async (req, res) => {
     try {
       const { telegramId, username, firstName, lastName, photoUrl, startParam } = req.body;
@@ -830,6 +887,35 @@ export async function registerRoutes(
   });
 
   // Admin Routes
+  
+  // Admin: Upload character image
+  app.post("/api/admin/upload/character", requireAdmin, uploadCharacter.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const imageUrl = `/uploads/characters/${req.file.filename}`;
+      res.json({ imageUrl, filename: req.file.filename });
+    } catch (error) {
+      console.error("Upload character error:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
+  // Admin: Upload accessory image
+  app.post("/api/admin/upload/accessory", requireAdmin, uploadAccessory.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const imageUrl = `/uploads/accessories/${req.file.filename}`;
+      res.json({ imageUrl, filename: req.file.filename });
+    } catch (error) {
+      console.error("Upload accessory error:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
   app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
       const [userCount, scoreCount, activePrizePool] = await Promise.all([

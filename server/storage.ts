@@ -165,6 +165,7 @@ export interface IStorage {
   // Base Bodies
   getBaseBodies(gender?: string): Promise<BaseBody[]>;
   getDefaultBaseBody(gender: string): Promise<BaseBody | undefined>;
+  ensureDefaultBaseBodies(): Promise<void>;
   createBaseBody(body: InsertBaseBody): Promise<BaseBody>;
   updateBaseBody(id: string, updates: Partial<InsertBaseBody>): Promise<BaseBody | undefined>;
   deleteBaseBody(id: string): Promise<void>;
@@ -2064,6 +2065,18 @@ export class DatabaseStorage implements IStorage {
       .from(baseBodies)
       .where(and(eq(baseBodies.gender, gender), eq(baseBodies.isDefault, true)));
     return body || undefined;
+  }
+
+  async ensureDefaultBaseBodies(): Promise<void> {
+    const femaleDefault = await this.getDefaultBaseBody('female');
+    if (!femaleDefault) {
+      await db.insert(baseBodies).values({
+        gender: 'female',
+        imageUrl: '/uploads/characters/female_default.png',
+        isDefault: true,
+      });
+      console.log('Created default female base body');
+    }
   }
 
   async createBaseBody(body: InsertBaseBody): Promise<BaseBody> {
