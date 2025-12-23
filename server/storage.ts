@@ -2060,11 +2060,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDefaultBaseBody(gender: string): Promise<BaseBody | undefined> {
+    // First try to find the default body for this gender
     const [body] = await db
       .select()
       .from(baseBodies)
       .where(and(eq(baseBodies.gender, gender), eq(baseBodies.isDefault, true)));
-    return body || undefined;
+    if (body) return body;
+    
+    // Fallback to any body of this gender if no default set
+    const [fallbackBody] = await db
+      .select()
+      .from(baseBodies)
+      .where(eq(baseBodies.gender, gender))
+      .limit(1);
+    return fallbackBody || undefined;
   }
 
   async ensureDefaultBaseBodies(): Promise<void> {
