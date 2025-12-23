@@ -448,79 +448,80 @@ export default function Admin() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="users" className="space-y-4">
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full gap-1">
-              <TabsTrigger value="users" data-testid="tab-users" className="flex-shrink-0">
+        <Tabs defaultValue="users" className="flex flex-col md:flex-row gap-4" orientation="vertical">
+          <div className="md:w-48 flex-shrink-0">
+            <TabsList className="flex flex-col h-auto w-full bg-muted/50 p-1 gap-1">
+              <TabsTrigger value="users" data-testid="tab-users" className="w-full justify-start">
                 <Users className="w-4 h-4 mr-1.5" />
                 Игроки
               </TabsTrigger>
-              <TabsTrigger value="balances" data-testid="tab-balances" className="flex-shrink-0">
+              <TabsTrigger value="balances" data-testid="tab-balances" className="w-full justify-start">
                 <Wallet className="w-4 h-4 mr-1.5" />
                 Фонд
               </TabsTrigger>
-              <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund" className="flex-shrink-0">
+              <TabsTrigger value="usdt-fund" data-testid="tab-usdt-fund" className="w-full justify-start">
                 <SiTether className="w-4 h-4 mr-1.5" />
                 USDT
               </TabsTrigger>
-              <TabsTrigger value="pools" data-testid="tab-pools" className="flex-shrink-0">
+              <TabsTrigger value="pools" data-testid="tab-pools" className="w-full justify-start">
                 <Gift className="w-4 h-4 mr-1.5" />
                 Призы
               </TabsTrigger>
-              <TabsTrigger value="config" data-testid="tab-config" className="flex-shrink-0">
+              <TabsTrigger value="config" data-testid="tab-config" className="w-full justify-start">
                 <Settings className="w-4 h-4 mr-1.5" />
                 Настройки
               </TabsTrigger>
-              <TabsTrigger value="scores" data-testid="tab-scores" className="flex-shrink-0">
+              <TabsTrigger value="scores" data-testid="tab-scores" className="w-full justify-start">
                 <Trophy className="w-4 h-4 mr-1.5" />
                 Очки
               </TabsTrigger>
-              <TabsTrigger value="telegram" data-testid="tab-telegram" className="flex-shrink-0">
+              <TabsTrigger value="telegram" data-testid="tab-telegram" className="w-full justify-start">
                 <Bot className="w-4 h-4 mr-1.5" />
                 Бот
               </TabsTrigger>
-              <TabsTrigger value="beads-house" data-testid="tab-beads-house" className="flex-shrink-0">
+              <TabsTrigger value="beads-house" data-testid="tab-beads-house" className="w-full justify-start">
                 <Coins className="w-4 h-4 mr-1.5" />
                 Beads
               </TabsTrigger>
-              <TabsTrigger value="transactions" data-testid="tab-transactions" className="flex-shrink-0">
+              <TabsTrigger value="transactions" data-testid="tab-transactions" className="w-full justify-start">
                 <Activity className="w-4 h-4 mr-1.5" />
                 Транзакции
               </TabsTrigger>
-              <TabsTrigger value="crypto-rewards" data-testid="tab-crypto-rewards" className="flex-shrink-0">
+              <TabsTrigger value="crypto-rewards" data-testid="tab-crypto-rewards" className="w-full justify-start">
                 <Bitcoin className="w-4 h-4 mr-1.5" />
                 Криптошарики
               </TabsTrigger>
-              <TabsTrigger value="economy" data-testid="tab-economy" className="flex-shrink-0">
+              <TabsTrigger value="economy" data-testid="tab-economy" className="w-full justify-start">
                 <TrendingUp className="w-4 h-4 mr-1.5" />
                 Экономика
               </TabsTrigger>
-              <TabsTrigger value="referrals" data-testid="tab-referrals" className="flex-shrink-0">
+              <TabsTrigger value="referrals" data-testid="tab-referrals" className="w-full justify-start">
                 <Users2 className="w-4 h-4 mr-1.5" />
                 Рефералы
               </TabsTrigger>
-              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="flex-shrink-0">
+              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="w-full justify-start">
                 <Wrench className="w-4 h-4 mr-1.5" />
                 Обслуживание
               </TabsTrigger>
-              <TabsTrigger value="gameplay" data-testid="tab-gameplay" className="flex-shrink-0">
+              <TabsTrigger value="gameplay" data-testid="tab-gameplay" className="w-full justify-start">
                 <Gamepad2 className="w-4 h-4 mr-1.5" />
                 Геймплей
               </TabsTrigger>
-              <TabsTrigger value="debug-logs" data-testid="tab-debug-logs" className="flex-shrink-0">
+              <TabsTrigger value="debug-logs" data-testid="tab-debug-logs" className="w-full justify-start">
                 <FileText className="w-4 h-4 mr-1.5" />
                 Логи
               </TabsTrigger>
-              <TabsTrigger value="boosts" data-testid="tab-boosts" className="flex-shrink-0">
+              <TabsTrigger value="boosts" data-testid="tab-boosts" className="w-full justify-start">
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 Бусты
               </TabsTrigger>
-              <TabsTrigger value="characters" data-testid="tab-characters" className="flex-shrink-0">
+              <TabsTrigger value="characters" data-testid="tab-characters" className="w-full justify-start">
                 <Users className="w-4 h-4 mr-1.5" />
                 Персонажи
               </TabsTrigger>
             </TabsList>
           </div>
+          <div className="flex-1">
 
           <TabsContent value="users">
             <UsersTab users={usersData?.users || []} total={usersData?.total || 0} />
@@ -586,6 +587,7 @@ export default function Admin() {
           <TabsContent value="characters">
             <CharactersTab />
           </TabsContent>
+          </div>
         </Tabs>
       </div>
     </div>

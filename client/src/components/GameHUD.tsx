@@ -149,11 +149,6 @@ export function GameHUD({
         </div>
       </div>
 
-      <div className="absolute top-20 right-4 z-10 flex flex-col gap-1.5 backdrop-blur-md bg-background/60 rounded-lg px-2 py-2 border border-border/30">
-        <CryptoRewardCounter type="btc" value={btcSats} unit="sats" />
-        <CryptoRewardCounter type="eth" value={ethWei} unit="gwei" />
-        <CryptoRewardCounter type="usdt" value={usdtAmount} unit="$" />
-      </div>
     </>
   );
 }
