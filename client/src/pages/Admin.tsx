@@ -4675,18 +4675,20 @@ function CharactersTab() {
                     data-testid="input-body-url"
                     className="flex-1"
                   />
-                  <div className="relative">
+                  <label className="cursor-pointer">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
                       onChange={handleBodyImageUpload}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="hidden"
                       data-testid="input-body-file"
                     />
-                    <Button type="button" variant="outline" disabled={uploadingBody}>
-                      {uploadingBody ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <Button type="button" variant="outline" disabled={uploadingBody} asChild>
+                      <span>
+                        {uploadingBody ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      </span>
                     </Button>
-                  </div>
+                  </label>
                 </div>
                 {newBody.imageUrl && (
                   <div className="w-16 h-16 bg-muted rounded overflow-hidden mt-2">
@@ -4811,18 +4813,20 @@ function CharactersTab() {
                     data-testid="input-accessory-url"
                     className="flex-1"
                   />
-                  <div className="relative">
+                  <label className="cursor-pointer">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
                       onChange={handleAccessoryImageUpload}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="hidden"
                       data-testid="input-accessory-file"
                     />
-                    <Button type="button" variant="outline" disabled={uploadingAccessory}>
-                      {uploadingAccessory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <Button type="button" variant="outline" disabled={uploadingAccessory} asChild>
+                      <span>
+                        {uploadingAccessory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      </span>
                     </Button>
-                  </div>
+                  </label>
                 </div>
                 {newAccessory.imageUrl && (
                   <div className="w-16 h-16 bg-muted rounded overflow-hidden mt-2">
