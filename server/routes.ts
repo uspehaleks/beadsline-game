@@ -2398,6 +2398,17 @@ export async function registerRoutes(
 
   // ===== ADMIN CHARACTER MANAGEMENT =====
 
+  // Admin: Get accessory categories
+  app.get("/api/admin/accessory-categories", requireAdmin, async (req, res) => {
+    try {
+      const categories = await storage.getAccessoryCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Get accessory categories error:", error);
+      res.status(500).json({ error: "Failed to get categories" });
+    }
+  });
+
   // Admin: Create accessory category
   app.post("/api/admin/accessory-categories", requireAdmin, async (req, res) => {
     try {
