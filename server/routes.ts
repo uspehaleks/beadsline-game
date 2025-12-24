@@ -79,7 +79,36 @@ function formatNumbersInObject(obj: any): any {
   return obj;
 }
 
+async function initializeDefaultGameSkins(): Promise<string | null> {
+  // Check if Golden Boost skin already exists
+  let goldenSkin = await storage.getGameSkinByName('golden_boost');
+  
+  if (!goldenSkin) {
+    try {
+      goldenSkin = await storage.createGameSkin({
+        name: 'golden_boost',
+        nameRu: 'Золотой Буст',
+        descriptionRu: 'Эксклюзивный золотой скин для VIP-игроков. Превращает все шарики в золотые с особыми эффектами.',
+        previewImageUrl: null, // Will be set by admin later or use placeholder
+        skinType: 'game',
+        colorPrimary: '#FFD700', // Gold
+        colorSecondary: '#FFA500', // Orange-gold
+        isActive: true,
+      });
+      console.log('Created Golden Boost skin');
+    } catch (error) {
+      console.error('Failed to create Golden Boost skin:', error);
+      return null;
+    }
+  }
+  
+  return goldenSkin.id;
+}
+
 async function initializeDefaultBoostPackages() {
+  // First ensure Golden Boost skin exists
+  const goldenSkinId = await initializeDefaultGameSkins();
+  
   const existingPackages = await storage.getBoostPackages(false);
   const existingNames = new Set(existingPackages.map(p => p.name));
   
@@ -132,7 +161,7 @@ async function initializeDefaultBoostPackages() {
       badge: 'best_value',
       badgeText: 'VIP',
       bonusLives: 10,
-      bonusSkinId: null,
+      bonusSkinId: goldenSkinId, // Assign Golden Boost skin to VIP package
       sortOrder: 4,
       isActive: true,
     },
@@ -141,6 +170,14 @@ async function initializeDefaultBoostPackages() {
   let created = 0;
   for (const pkg of defaultPackages) {
     if (existingNames.has(pkg.name)) {
+      // Update VIP package to add skin if it wasn't set before
+      if (pkg.name === 'vip' && goldenSkinId) {
+        const vipPkg = existingPackages.find(p => p.name === 'vip');
+        if (vipPkg && !vipPkg.bonusSkinId) {
+          await storage.updateBoostPackage(vipPkg.id, { bonusSkinId: goldenSkinId });
+          console.log('Updated VIP package with Golden Boost skin');
+        }
+      }
       continue;
     }
     try {

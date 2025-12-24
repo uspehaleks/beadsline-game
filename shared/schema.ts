@@ -176,6 +176,44 @@ export const userBoostInventoryRelations = relations(userBoostInventory, ({ one 
   }),
 }));
 
+// Game Skins - visual themes for the game (snake/balls appearance)
+export const gameSkins = pgTable("game_skins", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  nameRu: text("name_ru").notNull(),
+  descriptionRu: text("description_ru"),
+  previewImageUrl: text("preview_image_url"),
+  skinType: varchar("skin_type", { length: 20 }).notNull().default("game"), // game, character
+  colorPrimary: varchar("color_primary", { length: 20 }), // hex color for primary elements
+  colorSecondary: varchar("color_secondary", { length: 20 }), // hex color for secondary elements
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User owned skins
+export const userSkins = pgTable("user_skins", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  skinId: varchar("skin_id", { length: 255 }).notNull().references(() => gameSkins.id),
+  isActive: boolean("is_active").default(false).notNull(), // currently active skin
+  acquiredAt: timestamp("acquired_at").defaultNow().notNull(),
+});
+
+export const gameSkinsRelations = relations(gameSkins, ({ many }) => ({
+  userSkins: many(userSkins),
+}));
+
+export const userSkinsRelations = relations(userSkins, ({ one }) => ({
+  user: one(users, {
+    fields: [userSkins.userId],
+    references: [users.id],
+  }),
+  skin: one(gameSkins, {
+    fields: [userSkins.skinId],
+    references: [gameSkins.id],
+  }),
+}));
+
 // Boost Packages - bundles of all 7 boost types for purchase with Telegram Stars
 export const boostPackages = pgTable("boost_packages", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
@@ -187,7 +225,7 @@ export const boostPackages = pgTable("boost_packages", {
   badge: varchar("badge", { length: 50 }), // бейдж: "hot", "best_value", null
   badgeText: text("badge_text"), // текст бейджа: "ХИТ ПРОДАЖ!", "ЛУЧШАЯ ЦЕНА!"
   bonusLives: integer("bonus_lives").default(0).notNull(), // бонусные жизни
-  bonusSkinId: varchar("bonus_skin_id", { length: 255 }), // ID бонусного скина
+  bonusSkinId: varchar("bonus_skin_id", { length: 255 }).references(() => gameSkins.id), // ID бонусного скина
   sortOrder: integer("sort_order").default(0).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -409,6 +447,16 @@ export const insertUserAccessorySchema = createInsertSchema(userAccessories).omi
 });
 
 // Boost Packages Insert Schemas
+export const insertGameSkinSchema = createInsertSchema(gameSkins).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserSkinSchema = createInsertSchema(userSkins).omit({
+  id: true,
+  acquiredAt: true,
+});
+
 export const insertBoostPackageSchema = createInsertSchema(boostPackages).omit({
   id: true,
   createdAt: true,
@@ -454,6 +502,10 @@ export type InsertUserAccessory = z.infer<typeof insertUserAccessorySchema>;
 export type UserAccessory = typeof userAccessories.$inferSelect;
 
 // Boost Package Types
+export type InsertGameSkin = z.infer<typeof insertGameSkinSchema>;
+export type GameSkin = typeof gameSkins.$inferSelect;
+export type InsertUserSkin = z.infer<typeof insertUserSkinSchema>;
+export type UserSkin = typeof userSkins.$inferSelect;
 export type InsertBoostPackage = z.infer<typeof insertBoostPackageSchema>;
 export type BoostPackage = typeof boostPackages.$inferSelect;
 export type InsertBoostPackagePurchase = z.infer<typeof insertBoostPackagePurchaseSchema>;

@@ -14,6 +14,8 @@ import {
   baseBodies,
   accessories,
   userAccessories,
+  gameSkins,
+  userSkins,
   boostPackages,
   boostPackagePurchases,
   type User, 
@@ -60,6 +62,10 @@ import {
   type UserAccessory,
   type InsertUserAccessory,
   type CharacterWithAccessories,
+  type GameSkin,
+  type InsertGameSkin,
+  type UserSkin,
+  type InsertUserSkin,
   type BoostPackage,
   type InsertBoostPackage,
   type BoostPackagePurchase,
@@ -203,6 +209,19 @@ export interface IStorage {
   deleteBoostPackage(id: string): Promise<void>;
   purchaseBoostPackage(userId: string, packageId: string, telegramPaymentId?: string): Promise<{ success: boolean; error?: string; purchase?: BoostPackagePurchase }>;
   getUserBoostPackagePurchases(userId: string): Promise<BoostPackagePurchase[]>;
+  
+  // Game Skins
+  getGameSkins(activeOnly?: boolean): Promise<GameSkin[]>;
+  getGameSkin(id: string): Promise<GameSkin | undefined>;
+  getGameSkinByName(name: string): Promise<GameSkin | undefined>;
+  createGameSkin(skin: InsertGameSkin): Promise<GameSkin>;
+  updateGameSkin(id: string, updates: Partial<InsertGameSkin>): Promise<GameSkin | undefined>;
+  deleteGameSkin(id: string): Promise<void>;
+  
+  // User Skins
+  getUserSkins(userId: string): Promise<Array<UserSkin & { skin: GameSkin }>>;
+  grantUserSkin(userId: string, skinId: string): Promise<UserSkin>;
+  setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2400,6 +2419,107 @@ export class DatabaseStorage implements IStorage {
       .from(boostPackagePurchases)
       .where(eq(boostPackagePurchases.userId, userId))
       .orderBy(desc(boostPackagePurchases.createdAt));
+  }
+
+  // Game Skins Methods
+  async getGameSkins(activeOnly: boolean = true): Promise<GameSkin[]> {
+    if (activeOnly) {
+      return db.select().from(gameSkins).where(eq(gameSkins.isActive, true));
+    }
+    return db.select().from(gameSkins);
+  }
+
+  async getGameSkin(id: string): Promise<GameSkin | undefined> {
+    const [skin] = await db.select().from(gameSkins).where(eq(gameSkins.id, id));
+    return skin || undefined;
+  }
+
+  async getGameSkinByName(name: string): Promise<GameSkin | undefined> {
+    const [skin] = await db.select().from(gameSkins).where(eq(gameSkins.name, name));
+    return skin || undefined;
+  }
+
+  async createGameSkin(skin: InsertGameSkin): Promise<GameSkin> {
+    const [newSkin] = await db.insert(gameSkins).values(skin).returning();
+    return newSkin;
+  }
+
+  async updateGameSkin(id: string, updates: Partial<InsertGameSkin>): Promise<GameSkin | undefined> {
+    const [skin] = await db
+      .update(gameSkins)
+      .set(updates)
+      .where(eq(gameSkins.id, id))
+      .returning();
+    return skin || undefined;
+  }
+
+  async deleteGameSkin(id: string): Promise<void> {
+    await db.delete(gameSkins).where(eq(gameSkins.id, id));
+  }
+
+  // User Skins Methods
+  async getUserSkins(userId: string): Promise<Array<UserSkin & { skin: GameSkin }>> {
+    const results = await db
+      .select()
+      .from(userSkins)
+      .innerJoin(gameSkins, eq(userSkins.skinId, gameSkins.id))
+      .where(eq(userSkins.userId, userId));
+    
+    return results.map(r => ({
+      ...r.user_skins,
+      skin: r.game_skins,
+    }));
+  }
+
+  async grantUserSkin(userId: string, skinId: string): Promise<UserSkin> {
+    // Check if user already has this skin
+    const [existing] = await db
+      .select()
+      .from(userSkins)
+      .where(and(
+        eq(userSkins.userId, userId),
+        eq(userSkins.skinId, skinId)
+      ));
+    
+    if (existing) {
+      return existing;
+    }
+
+    const [userSkin] = await db.insert(userSkins).values({
+      userId,
+      skinId,
+      isActive: false,
+    }).returning();
+    return userSkin;
+  }
+
+  async setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }> {
+    // Check if user owns this skin
+    const [owned] = await db
+      .select()
+      .from(userSkins)
+      .where(and(
+        eq(userSkins.userId, userId),
+        eq(userSkins.skinId, skinId)
+      ));
+    
+    if (!owned) {
+      return { success: false, error: 'У вас нет этого скина' };
+    }
+
+    // Deactivate all user skins first
+    await db
+      .update(userSkins)
+      .set({ isActive: false })
+      .where(eq(userSkins.userId, userId));
+    
+    // Activate the selected skin
+    await db
+      .update(userSkins)
+      .set({ isActive: true })
+      .where(eq(userSkins.id, owned.id));
+    
+    return { success: true };
   }
 }
 
