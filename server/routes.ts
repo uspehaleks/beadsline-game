@@ -2737,7 +2737,52 @@ export async function registerRoutes(
   app.patch("/api/admin/boost-packages/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const pkg = await storage.updateBoostPackage(id, req.body);
+      const { name, nameRu, boostsPerType, priceStars, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
+      
+      // Parse numeric - returns undefined for blank/invalid, allowing skip
+      const parseNumeric = (val: any): number | undefined => {
+        if (val === undefined || val === '' || val === null) return undefined;
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      };
+      
+      const updates: Record<string, any> = {};
+      
+      // String fields: only update if non-empty
+      if (name !== undefined && name !== '') updates.name = name;
+      if (nameRu !== undefined && nameRu !== '') updates.nameRu = nameRu;
+      
+      // Required numeric fields: only update if valid number provided
+      const parsedBoostsPerType = parseNumeric(boostsPerType);
+      if (parsedBoostsPerType !== undefined) updates.boostsPerType = parsedBoostsPerType;
+      
+      const parsedPriceStars = parseNumeric(priceStars);
+      if (parsedPriceStars !== undefined) updates.priceStars = parsedPriceStars;
+      
+      // Optional numeric: null if explicitly cleared, undefined to skip
+      const parsedOriginalPrice = parseNumeric(originalPriceStars);
+      if (parsedOriginalPrice !== undefined) {
+        updates.originalPriceStars = parsedOriginalPrice;
+      } else if (originalPriceStars === '' || originalPriceStars === null) {
+        updates.originalPriceStars = null;
+      }
+      
+      // Optional text fields: null if explicitly cleared
+      if (badge !== undefined) updates.badge = badge || null;
+      if (badgeText !== undefined) updates.badgeText = badgeText || null;
+      
+      // Optional numeric with defaults: only update if valid number, skip blank to preserve existing
+      const parsedBonusLives = parseNumeric(bonusLives);
+      if (parsedBonusLives !== undefined) updates.bonusLives = parsedBonusLives;
+      
+      if (bonusSkinId !== undefined) updates.bonusSkinId = bonusSkinId || null;
+      
+      const parsedSortOrder = parseNumeric(sortOrder);
+      if (parsedSortOrder !== undefined) updates.sortOrder = parsedSortOrder;
+      
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      const pkg = await storage.updateBoostPackage(id, updates);
       if (!pkg) {
         return res.status(404).json({ error: "Boost package not found" });
       }

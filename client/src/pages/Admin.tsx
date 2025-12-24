@@ -4792,11 +4792,11 @@ function CharactersTab() {
   const [selectedAccessoryId, setSelectedAccessoryId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [editedPositions, setEditedPositions] = useState<Record<string, { x: number; y: number; z: number }>>({});
+  const [editedPositions, setEditedPositions] = useState<Record<string, { x: number; y: number; z: number; scale: number }>>({});
 
   const updateAccessoryPositionMutation = useMutation({
-    mutationFn: async ({ id, positionX, positionY, zIndex }: { id: string; positionX: number; positionY: number; zIndex: number }) => {
-      return apiRequest('PATCH', `/api/admin/accessories/${id}`, { positionX, positionY, zIndex });
+    mutationFn: async ({ id, positionX, positionY, zIndex, scale }: { id: string; positionX: number; positionY: number; zIndex: number; scale: number }) => {
+      return apiRequest('PATCH', `/api/admin/accessories/${id}`, { positionX, positionY, zIndex, scale: String(scale) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
@@ -4820,6 +4820,7 @@ function CharactersTab() {
     x: selectedAccessory?.positionX || 0,
     y: selectedAccessory?.positionY || 0,
     z: selectedAccessory?.zIndex || 1,
+    scale: parseFloat(selectedAccessory?.scale || '1'),
   } : null;
 
   const handleEditorMouseDown = (e: React.MouseEvent, accessory: any) => {
@@ -4829,7 +4830,7 @@ function CharactersTab() {
     
     const rect = (e.target as HTMLElement).closest('.editor-preview')?.getBoundingClientRect();
     if (rect) {
-      const pos = editedPositions[accessory.id] || { x: accessory.positionX, y: accessory.positionY, z: accessory.zIndex };
+      const pos = editedPositions[accessory.id] || { x: accessory.positionX, y: accessory.positionY, z: accessory.zIndex, scale: parseFloat(accessory.scale || '1') };
       setDragOffset({
         x: e.clientX - rect.left - pos.x,
         y: e.clientY - rect.top - pos.y,
@@ -4848,6 +4849,7 @@ function CharactersTab() {
         x: selectedAccessory?.positionX || 0,
         y: selectedAccessory?.positionY || 0,
         z: selectedAccessory?.zIndex || 1,
+        scale: parseFloat(selectedAccessory?.scale || '1'),
       };
       setEditedPositions({
         ...editedPositions,
@@ -4863,7 +4865,7 @@ function CharactersTab() {
   const saveAccessoryPosition = (accId: string) => {
     const pos = editedPositions[accId];
     if (pos) {
-      updateAccessoryPositionMutation.mutate({ id: accId, positionX: pos.x, positionY: pos.y, zIndex: pos.z });
+      updateAccessoryPositionMutation.mutate({ id: accId, positionX: pos.x, positionY: pos.y, zIndex: pos.z, scale: pos.scale });
     }
   };
 
@@ -5554,8 +5556,9 @@ function CharactersTab() {
                     return posA.z - posB.z;
                   })
                   .map((acc: any) => {
-                    const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex };
+                    const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex, scale: parseFloat(acc.scale || '1') };
                     const isSelected = acc.id === selectedAccessoryId;
+                    const imgSize = 80 * (pos.scale || 1);
                     return (
                       <img
                         key={acc.id}
@@ -5566,8 +5569,8 @@ function CharactersTab() {
                           left: pos.x,
                           top: pos.y,
                           zIndex: pos.z + 1,
-                          width: 80,
-                          height: 80,
+                          width: imgSize,
+                          height: imgSize,
                           objectFit: 'contain',
                           opacity: isSelected ? 1 : 0.8,
                         }}
@@ -5588,7 +5591,7 @@ function CharactersTab() {
                 <ScrollArea className="h-[350px] border rounded-lg p-2">
                   <div className="space-y-2">
                     {filteredAccessories.map((acc: any) => {
-                      const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex };
+                      const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex, scale: parseFloat(acc.scale || '1') };
                       const hasChanges = editedPositions[acc.id] !== undefined;
                       const isSelected = acc.id === selectedAccessoryId;
                       
@@ -5607,7 +5610,7 @@ function CharactersTab() {
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate">{acc.nameRu}</div>
                             <div className="text-xs text-muted-foreground">
-                              X: {pos.x} | Y: {pos.y} | Z: {pos.z}
+                              X: {pos.x} | Y: {pos.y} | Z: {pos.z} | S: {pos.scale?.toFixed(1)}
                             </div>
                           </div>
                           {hasChanges && (
@@ -5631,7 +5634,7 @@ function CharactersTab() {
                   <Card className="p-4">
                     <div className="space-y-3">
                       <h4 className="font-medium">{selectedAccessory?.nameRu}</h4>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs">X</Label>
                           <Input
@@ -5666,6 +5669,21 @@ function CharactersTab() {
                               [selectedAccessoryId]: { ...currentPosition, z: parseInt(e.target.value) || 1 }
                             })}
                             data-testid="input-editor-z"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Масштаб</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            max="5"
+                            value={currentPosition.scale}
+                            onChange={(e) => setEditedPositions({
+                              ...editedPositions,
+                              [selectedAccessoryId]: { ...currentPosition, scale: parseFloat(e.target.value) || 1 }
+                            })}
+                            data-testid="input-editor-scale"
                           />
                         </div>
                       </div>

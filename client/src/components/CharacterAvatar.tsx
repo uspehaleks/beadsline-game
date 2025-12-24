@@ -55,6 +55,13 @@ export function CharacterAvatar({
     .filter(ua => ua.accessory)
     .sort((a, b) => (a.accessory?.zIndex || 0) - (b.accessory?.zIndex || 0));
 
+  // Editor uses 300x400 canvas. For square avatar containers with object-contain,
+  // the 4:3 aspect ratio image is limited by height, creating horizontal letterbox.
+  // Scale by height: size/400, horizontal offset: (size - 300*scaleRatio)/2
+  const scaleRatio = size / 400;
+  const scaledWidth = 300 * scaleRatio;
+  const offsetX = (size - scaledWidth) / 2;
+  
   return (
     <div 
       className={`relative overflow-hidden ${className}`}
@@ -82,9 +89,12 @@ export function CharacterAvatar({
         const accessory = userAccessory.accessory;
         if (!accessory) return null;
         
-        const scale = size / 200;
-        const posX = accessory.positionX * scale;
-        const posY = accessory.positionY * scale;
+        // Scale positions from 300x400 canvas to fit in square container with letterbox offset
+        const posX = accessory.positionX * scaleRatio + offsetX;
+        const posY = accessory.positionY * scaleRatio;
+        const accScale = parseFloat(String(accessory.scale || '1'));
+        // Accessory images in editor are 80px base size * scale
+        const imgSize = 80 * accScale * scaleRatio;
         
         return (
           <img
@@ -96,8 +106,8 @@ export function CharacterAvatar({
               zIndex: accessory.zIndex,
               left: posX,
               top: posY,
-              width: '100%',
-              height: '100%',
+              width: imgSize,
+              height: imgSize,
             }}
             data-testid={`character-accessory-${accessory.id}`}
           />
@@ -121,6 +131,12 @@ export function CharacterAvatarPreview({
   className = "",
 }: CharacterAvatarPreviewProps) {
   const sortedAccessories = [...accessories].sort((a, b) => a.zIndex - b.zIndex);
+  
+  // Editor uses 300x400 canvas. For square avatar containers with object-contain,
+  // the 4:3 aspect ratio image is limited by height, creating horizontal letterbox.
+  const scaleRatio = size / 400;
+  const scaledWidth = 300 * scaleRatio;
+  const offsetX = (size - scaledWidth) / 2;
 
   return (
     <div 
@@ -139,9 +155,12 @@ export function CharacterAvatarPreview({
       )}
       
       {sortedAccessories.map((accessory) => {
-        const scale = size / 200;
-        const posX = accessory.positionX * scale;
-        const posY = accessory.positionY * scale;
+        // Scale positions from 300x400 canvas to fit in square container with letterbox offset
+        const posX = accessory.positionX * scaleRatio + offsetX;
+        const posY = accessory.positionY * scaleRatio;
+        const accScale = parseFloat(String(accessory.scale || '1'));
+        // Accessory images in editor are 80px base size * scale
+        const imgSize = 80 * accScale * scaleRatio;
         
         return (
           <img
@@ -153,8 +172,8 @@ export function CharacterAvatarPreview({
               zIndex: accessory.zIndex,
               left: posX,
               top: posY,
-              width: '100%',
-              height: '100%',
+              width: imgSize,
+              height: imgSize,
             }}
             data-testid={`preview-accessory-${accessory.id}`}
           />

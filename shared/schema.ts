@@ -283,6 +283,7 @@ export const accessories = pgTable("accessories", {
   positionX: integer("position_x").default(0).notNull(),
   positionY: integer("position_y").default(0).notNull(),
   zIndex: integer("z_index").default(1).notNull(),
+  scale: numeric("scale", { precision: 5, scale: 2 }).default("1.0").notNull(),
   price: integer("price").default(100).notNull(),
   maxQuantity: integer("max_quantity"),
   soldCount: integer("sold_count").default(0).notNull(),
