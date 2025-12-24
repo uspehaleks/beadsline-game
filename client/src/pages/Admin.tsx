@@ -4536,12 +4536,12 @@ function BoostPackagesTab() {
                       </div>
                       <div className="space-y-2">
                         <Label>Бейдж</Label>
-                        <Select value={form.badge} onValueChange={(v) => setForm({ ...form, badge: v })}>
+                        <Select value={form.badge || "none"} onValueChange={(v) => setForm({ ...form, badge: v === "none" ? "" : v })}>
                           <SelectTrigger data-testid="select-pkg-badge">
                             <SelectValue placeholder="Без бейджа" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Без бейджа</SelectItem>
+                            <SelectItem value="none">Без бейджа</SelectItem>
                             <SelectItem value="hot">Хит продаж</SelectItem>
                             <SelectItem value="best_value">Лучшая цена</SelectItem>
                           </SelectContent>
@@ -4661,12 +4661,12 @@ function BoostPackagesTab() {
                           </div>
                           <div className="space-y-2">
                             <Label>Бейдж</Label>
-                            <Select value={form.badge} onValueChange={(v) => setForm({ ...form, badge: v })}>
+                            <Select value={form.badge || "none"} onValueChange={(v) => setForm({ ...form, badge: v === "none" ? "" : v })}>
                               <SelectTrigger data-testid={`select-edit-badge-${pkg.id}`}>
                                 <SelectValue placeholder="Без бейджа" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Без бейджа</SelectItem>
+                                <SelectItem value="none">Без бейджа</SelectItem>
                                 <SelectItem value="hot">Хит продаж</SelectItem>
                                 <SelectItem value="best_value">Лучшая цена</SelectItem>
                               </SelectContent>
