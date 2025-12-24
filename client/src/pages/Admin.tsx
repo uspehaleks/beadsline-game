@@ -4588,6 +4588,7 @@ function BoostPackagesTab() {
                     </div>
                     <div className="flex gap-2">
                       <Button 
+                        type="button"
                         onClick={() => createMutation.mutate(form)}
                         disabled={!form.name || !form.nameRu || createMutation.isPending}
                         data-testid="button-save-new-package"
@@ -4595,7 +4596,7 @@ function BoostPackagesTab() {
                         {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                         Создать
                       </Button>
-                      <Button variant="outline" onClick={() => setShowCreate(false)}>
+                      <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>
                         Отмена
                       </Button>
                     </div>
@@ -4701,13 +4702,14 @@ function BoostPackagesTab() {
                           </div>
                           <div className="flex gap-2 ml-auto">
                             <Button 
+                              type="button"
                               onClick={() => updateMutation.mutate({ id: pkg.id, data: form })}
                               disabled={updateMutation.isPending}
                               data-testid={`button-save-${pkg.id}`}
                             >
                               {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             </Button>
-                            <Button variant="outline" onClick={() => setEditingId(null)}>
+                            <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
                               Отмена
                             </Button>
                           </div>
@@ -5967,6 +5969,7 @@ function BoostsTab() {
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button
+                          type="button"
                           size="sm"
                           variant="outline"
                           onClick={() => handleEdit(boost)}
