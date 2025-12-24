@@ -516,6 +516,10 @@ export default function Admin() {
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 Бусты
               </TabsTrigger>
+              <TabsTrigger value="boost-packages" data-testid="tab-boost-packages" className="w-full justify-start">
+                <Gift className="w-4 h-4 mr-1.5" />
+                Пакеты бустов
+              </TabsTrigger>
               <TabsTrigger value="characters" data-testid="tab-characters" className="w-full justify-start">
                 <Users className="w-4 h-4 mr-1.5" />
                 Персонажи
@@ -584,6 +588,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="boosts">
             <BoostsTab />
+          </TabsContent>
+          <TabsContent value="boost-packages">
+            <BoostPackagesTab />
           </TabsContent>
           <TabsContent value="characters">
             <CharactersTab />
@@ -4315,9 +4322,459 @@ function GameplayTab() {
   );
 }
 
+interface BoostPackageForm {
+  name: string;
+  nameRu: string;
+  boostsPerType: number;
+  priceStars: number;
+  originalPriceStars: number | null;
+  badge: string;
+  badgeText: string;
+  bonusLives: number;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+function BoostPackagesTab() {
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState<BoostPackageForm>({
+    name: '',
+    nameRu: '',
+    boostsPerType: 10,
+    priceStars: 50,
+    originalPriceStars: null,
+    badge: '',
+    badgeText: '',
+    bonusLives: 0,
+    sortOrder: 0,
+    isActive: true,
+  });
+
+  const { data: packages = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/boost-packages'],
+  });
+
+  const { data: boosts = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/boosts'],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: BoostPackageForm) => {
+      return apiRequest('POST', '/api/admin/boost-packages', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/boost-packages'] });
+      toast({ title: 'Создано', description: 'Пакет бустов добавлен' });
+      setShowCreate(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось создать пакет', variant: 'destructive' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<BoostPackageForm> }) => {
+      return apiRequest('PATCH', `/api/admin/boost-packages/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/boost-packages'] });
+      toast({ title: 'Сохранено', description: 'Пакет бустов обновлён' });
+      setEditingId(null);
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить пакет', variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/admin/boost-packages/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/boost-packages'] });
+      toast({ title: 'Удалено', description: 'Пакет бустов удалён' });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось удалить пакет', variant: 'destructive' });
+    },
+  });
+
+  const resetForm = () => {
+    setForm({
+      name: '',
+      nameRu: '',
+      boostsPerType: 10,
+      priceStars: 50,
+      originalPriceStars: null,
+      badge: '',
+      badgeText: '',
+      bonusLives: 0,
+      sortOrder: 0,
+      isActive: true,
+    });
+  };
+
+  const startEdit = (pkg: any) => {
+    setEditingId(pkg.id);
+    setForm({
+      name: pkg.name,
+      nameRu: pkg.nameRu,
+      boostsPerType: pkg.boostsPerType,
+      priceStars: pkg.priceStars,
+      originalPriceStars: pkg.originalPriceStars,
+      badge: pkg.badge || '',
+      badgeText: pkg.badgeText || '',
+      bonusLives: pkg.bonusLives || 0,
+      sortOrder: pkg.sortOrder || 0,
+      isActive: pkg.isActive,
+    });
+  };
+
+  const totalBoostsInPackage = boosts.length * form.boostsPerType;
+  const pricePerBoost = form.priceStars > 0 ? (form.priceStars / totalBoostsInPackage).toFixed(4) : '0';
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5" />
+              Пакеты бустов
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Наборы бустов для покупки за Telegram Stars. Всего типов бустов: {boosts.length}
+            </p>
+          </div>
+          <Button onClick={() => { setShowCreate(true); resetForm(); }} data-testid="button-create-package">
+            <Plus className="w-4 h-4 mr-2" />
+            Добавить пакет
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {packages.length === 0 && !showCreate ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Пакеты ещё не созданы. Нажмите "Добавить пакет" для создания.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Create form */}
+              {showCreate && (
+                <Card className="border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-base">Новый пакет</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Название (EN)</Label>
+                        <Input
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          placeholder="starter"
+                          data-testid="input-pkg-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Название (RU)</Label>
+                        <Input
+                          value={form.nameRu}
+                          onChange={(e) => setForm({ ...form, nameRu: e.target.value })}
+                          placeholder="СТАРТОВЫЙ"
+                          data-testid="input-pkg-name-ru"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Бустов каждого типа</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={form.boostsPerType}
+                          onChange={(e) => setForm({ ...form, boostsPerType: parseInt(e.target.value) || 1 })}
+                          data-testid="input-pkg-boosts"
+                        />
+                        <p className="text-xs text-muted-foreground">Всего: {totalBoostsInPackage} бустов</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Цена (Stars)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={form.priceStars}
+                          onChange={(e) => setForm({ ...form, priceStars: parseInt(e.target.value) || 1 })}
+                          data-testid="input-pkg-price"
+                        />
+                        <p className="text-xs text-muted-foreground">{pricePerBoost} Stars/буст</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Старая цена (если скидка)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.originalPriceStars || ''}
+                          onChange={(e) => setForm({ ...form, originalPriceStars: parseInt(e.target.value) || null })}
+                          placeholder="Пусто = нет скидки"
+                          data-testid="input-pkg-original-price"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Бейдж</Label>
+                        <Select value={form.badge} onValueChange={(v) => setForm({ ...form, badge: v })}>
+                          <SelectTrigger data-testid="select-pkg-badge">
+                            <SelectValue placeholder="Без бейджа" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Без бейджа</SelectItem>
+                            <SelectItem value="hot">Хит продаж</SelectItem>
+                            <SelectItem value="best_value">Лучшая цена</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Текст бейджа</Label>
+                        <Input
+                          value={form.badgeText}
+                          onChange={(e) => setForm({ ...form, badgeText: e.target.value })}
+                          placeholder="ХИТ ПРОДАЖ!"
+                          data-testid="input-pkg-badge-text"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Бонус жизней</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.bonusLives}
+                          onChange={(e) => setForm({ ...form, bonusLives: parseInt(e.target.value) || 0 })}
+                          data-testid="input-pkg-bonus-lives"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Порядок сортировки</Label>
+                        <Input
+                          type="number"
+                          value={form.sortOrder}
+                          onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
+                          data-testid="input-pkg-sort"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2 pt-6">
+                        <Switch
+                          checked={form.isActive}
+                          onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+                          data-testid="toggle-pkg-active"
+                        />
+                        <Label>Активен</Label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => createMutation.mutate(form)}
+                        disabled={!form.name || !form.nameRu || createMutation.isPending}
+                        data-testid="button-save-new-package"
+                      >
+                        {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                        Создать
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowCreate(false)}>
+                        Отмена
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Packages list */}
+              {packages.map((pkg: any) => (
+                <Card key={pkg.id} className={!pkg.isActive ? 'opacity-50' : ''}>
+                  <CardContent className="pt-4">
+                    {editingId === pkg.id ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <Label>Название (EN)</Label>
+                            <Input
+                              value={form.name}
+                              onChange={(e) => setForm({ ...form, name: e.target.value })}
+                              data-testid={`input-edit-name-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Название (RU)</Label>
+                            <Input
+                              value={form.nameRu}
+                              onChange={(e) => setForm({ ...form, nameRu: e.target.value })}
+                              data-testid={`input-edit-name-ru-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Бустов каждого типа</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={form.boostsPerType}
+                              onChange={(e) => setForm({ ...form, boostsPerType: parseInt(e.target.value) || 1 })}
+                              data-testid={`input-edit-boosts-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Цена (Stars)</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={form.priceStars}
+                              onChange={(e) => setForm({ ...form, priceStars: parseInt(e.target.value) || 1 })}
+                              data-testid={`input-edit-price-${pkg.id}`}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <Label>Старая цена</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={form.originalPriceStars || ''}
+                              onChange={(e) => setForm({ ...form, originalPriceStars: parseInt(e.target.value) || null })}
+                              data-testid={`input-edit-original-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Бейдж</Label>
+                            <Select value={form.badge} onValueChange={(v) => setForm({ ...form, badge: v })}>
+                              <SelectTrigger data-testid={`select-edit-badge-${pkg.id}`}>
+                                <SelectValue placeholder="Без бейджа" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Без бейджа</SelectItem>
+                                <SelectItem value="hot">Хит продаж</SelectItem>
+                                <SelectItem value="best_value">Лучшая цена</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Текст бейджа</Label>
+                            <Input
+                              value={form.badgeText}
+                              onChange={(e) => setForm({ ...form, badgeText: e.target.value })}
+                              data-testid={`input-edit-badge-text-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Бонус жизней</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={form.bonusLives}
+                              onChange={(e) => setForm({ ...form, bonusLives: parseInt(e.target.value) || 0 })}
+                              data-testid={`input-edit-lives-${pkg.id}`}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={form.isActive}
+                              onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+                              data-testid={`toggle-edit-active-${pkg.id}`}
+                            />
+                            <Label>Активен</Label>
+                          </div>
+                          <div className="flex gap-2 ml-auto">
+                            <Button 
+                              onClick={() => updateMutation.mutate({ id: pkg.id, data: form })}
+                              disabled={updateMutation.isPending}
+                              data-testid={`button-save-${pkg.id}`}
+                            >
+                              {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" onClick={() => setEditingId(null)}>
+                              Отмена
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="text-3xl">
+                            {pkg.badge === 'hot' ? '🔥' : pkg.badge === 'best_value' ? '👑' : '📦'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{pkg.nameRu}</span>
+                              <span className="text-muted-foreground text-sm">({pkg.name})</span>
+                              {pkg.badge && (
+                                <Badge variant={pkg.badge === 'hot' ? 'destructive' : 'default'}>
+                                  {pkg.badgeText || (pkg.badge === 'hot' ? 'ХИТ' : 'VIP')}
+                                </Badge>
+                              )}
+                              {!pkg.isActive && <Badge variant="outline">Неактивен</Badge>}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {pkg.boostsPerType} x {boosts.length} типов = {pkg.boostsPerType * boosts.length} бустов | 
+                              {pkg.originalPriceStars && (
+                                <span className="line-through mx-1">{pkg.originalPriceStars} ⭐</span>
+                              )}
+                              <span className="font-medium text-foreground"> {pkg.priceStars} ⭐</span>
+                              {pkg.bonusLives > 0 && <span className="ml-2">+{pkg.bonusLives} жизней</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => startEdit(pkg)}
+                            data-testid={`button-edit-${pkg.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(pkg.id)}
+                            disabled={deleteMutation.isPending}
+                            data-testid={`button-delete-${pkg.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function CharactersTab() {
   const { toast } = useToast();
-  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'bodies' | 'accessories'>('categories');
+  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'bodies' | 'accessories' | 'editor'>('categories');
   
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/accessory-categories'],
@@ -4330,6 +4787,85 @@ function CharactersTab() {
   const { data: accessories = [], isLoading: accessoriesLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/accessories'],
   });
+
+  const [editorGender, setEditorGender] = useState<'male' | 'female'>('male');
+  const [selectedAccessoryId, setSelectedAccessoryId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [editedPositions, setEditedPositions] = useState<Record<string, { x: number; y: number; z: number }>>({});
+
+  const updateAccessoryPositionMutation = useMutation({
+    mutationFn: async ({ id, positionX, positionY, zIndex }: { id: string; positionX: number; positionY: number; zIndex: number }) => {
+      return apiRequest('PATCH', `/api/admin/accessories/${id}`, { positionX, positionY, zIndex });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/accessories'] });
+      toast({ title: 'Позиция сохранена' });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка сохранения', variant: 'destructive' });
+    },
+  });
+
+  const getDefaultBody = (gender: 'male' | 'female') => {
+    return baseBodies.find((b: any) => b.gender === gender && b.isDefault) || baseBodies.find((b: any) => b.gender === gender);
+  };
+
+  const filteredAccessories = accessories.filter((acc: any) => 
+    acc.gender === 'both' || acc.gender === editorGender
+  );
+
+  const selectedAccessory = accessories.find((a: any) => a.id === selectedAccessoryId);
+  const currentPosition = selectedAccessoryId ? editedPositions[selectedAccessoryId] || {
+    x: selectedAccessory?.positionX || 0,
+    y: selectedAccessory?.positionY || 0,
+    z: selectedAccessory?.zIndex || 1,
+  } : null;
+
+  const handleEditorMouseDown = (e: React.MouseEvent, accessory: any) => {
+    e.preventDefault();
+    setSelectedAccessoryId(accessory.id);
+    setIsDragging(true);
+    
+    const rect = (e.target as HTMLElement).closest('.editor-preview')?.getBoundingClientRect();
+    if (rect) {
+      const pos = editedPositions[accessory.id] || { x: accessory.positionX, y: accessory.positionY, z: accessory.zIndex };
+      setDragOffset({
+        x: e.clientX - rect.left - pos.x,
+        y: e.clientY - rect.top - pos.y,
+      });
+    }
+  };
+
+  const handleEditorMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !selectedAccessoryId) return;
+    
+    const rect = (e.target as HTMLElement).closest('.editor-preview')?.getBoundingClientRect();
+    if (rect) {
+      const x = Math.round(e.clientX - rect.left - dragOffset.x);
+      const y = Math.round(e.clientY - rect.top - dragOffset.y);
+      const current = editedPositions[selectedAccessoryId] || {
+        x: selectedAccessory?.positionX || 0,
+        y: selectedAccessory?.positionY || 0,
+        z: selectedAccessory?.zIndex || 1,
+      };
+      setEditedPositions({
+        ...editedPositions,
+        [selectedAccessoryId]: { ...current, x, y },
+      });
+    }
+  };
+
+  const handleEditorMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const saveAccessoryPosition = (accId: string) => {
+    const pos = editedPositions[accId];
+    if (pos) {
+      updateAccessoryPositionMutation.mutate({ id: accId, positionX: pos.x, positionY: pos.y, zIndex: pos.z });
+    }
+  };
 
   const [newCategory, setNewCategory] = useState({ name: '', nameRu: '', slot: 'head', sortOrder: 0 });
   const [newBody, setNewBody] = useState({ gender: 'male', imageUrl: '', isDefault: false });
@@ -4555,6 +5091,13 @@ function CharactersTab() {
           data-testid="subtab-accessories"
         >
           Аксессуары
+        </Button>
+        <Button
+          variant={activeSubTab === 'editor' ? 'default' : 'outline'}
+          onClick={() => setActiveSubTab('editor')}
+          data-testid="subtab-editor"
+        >
+          Редактор
         </Button>
       </div>
 
@@ -4952,6 +5495,198 @@ function CharactersTab() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSubTab === 'editor' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Визуальный редактор аксессуаров</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Перетаскивайте аксессуары мышью для настройки позиции
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4 items-center">
+              <Label>Пол персонажа:</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={editorGender === 'male' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditorGender('male')}
+                  data-testid="button-editor-male"
+                >
+                  Мужской
+                </Button>
+                <Button
+                  variant={editorGender === 'female' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEditorGender('female')}
+                  data-testid="button-editor-female"
+                >
+                  Женский
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div 
+                className="editor-preview relative bg-muted rounded-lg overflow-hidden select-none"
+                style={{ width: 300, height: 400 }}
+                onMouseMove={handleEditorMouseMove}
+                onMouseUp={handleEditorMouseUp}
+                onMouseLeave={handleEditorMouseUp}
+              >
+                {getDefaultBody(editorGender) && (
+                  <img 
+                    src={getDefaultBody(editorGender).imageUrl}
+                    alt="Base body"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                    style={{ zIndex: 0 }}
+                  />
+                )}
+                
+                {filteredAccessories
+                  .sort((a: any, b: any) => {
+                    const posA = editedPositions[a.id] || { z: a.zIndex };
+                    const posB = editedPositions[b.id] || { z: b.zIndex };
+                    return posA.z - posB.z;
+                  })
+                  .map((acc: any) => {
+                    const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex };
+                    const isSelected = acc.id === selectedAccessoryId;
+                    return (
+                      <img
+                        key={acc.id}
+                        src={acc.imageUrl}
+                        alt={acc.nameRu}
+                        className={`absolute cursor-move ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                        style={{
+                          left: pos.x,
+                          top: pos.y,
+                          zIndex: pos.z + 1,
+                          width: 80,
+                          height: 80,
+                          objectFit: 'contain',
+                          opacity: isSelected ? 1 : 0.8,
+                        }}
+                        onMouseDown={(e) => handleEditorMouseDown(e, acc)}
+                        draggable={false}
+                        data-testid={`editor-accessory-${acc.id}`}
+                      />
+                    );
+                  })}
+
+                <div className="absolute bottom-2 left-2 text-xs bg-background/80 px-2 py-1 rounded">
+                  {editorGender === 'male' ? 'М' : 'Ж'} | 300x400
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium">Выберите аксессуар для редактирования:</h3>
+                <ScrollArea className="h-[350px] border rounded-lg p-2">
+                  <div className="space-y-2">
+                    {filteredAccessories.map((acc: any) => {
+                      const pos = editedPositions[acc.id] || { x: acc.positionX, y: acc.positionY, z: acc.zIndex };
+                      const hasChanges = editedPositions[acc.id] !== undefined;
+                      const isSelected = acc.id === selectedAccessoryId;
+                      
+                      return (
+                        <div 
+                          key={acc.id}
+                          className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
+                          }`}
+                          onClick={() => setSelectedAccessoryId(acc.id)}
+                          data-testid={`editor-select-${acc.id}`}
+                        >
+                          <div className="w-10 h-10 bg-muted rounded overflow-hidden flex-shrink-0">
+                            <img src={acc.imageUrl} alt="" className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{acc.nameRu}</div>
+                            <div className="text-xs text-muted-foreground">
+                              X: {pos.x} | Y: {pos.y} | Z: {pos.z}
+                            </div>
+                          </div>
+                          {hasChanges && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => { e.stopPropagation(); saveAccessoryPosition(acc.id); }}
+                              disabled={updateAccessoryPositionMutation.isPending}
+                              data-testid={`button-save-pos-${acc.id}`}
+                            >
+                              <Save className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+
+                {selectedAccessoryId && currentPosition && (
+                  <Card className="p-4">
+                    <div className="space-y-3">
+                      <h4 className="font-medium">{selectedAccessory?.nameRu}</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">X</Label>
+                          <Input
+                            type="number"
+                            value={currentPosition.x}
+                            onChange={(e) => setEditedPositions({
+                              ...editedPositions,
+                              [selectedAccessoryId]: { ...currentPosition, x: parseInt(e.target.value) || 0 }
+                            })}
+                            data-testid="input-editor-x"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Y</Label>
+                          <Input
+                            type="number"
+                            value={currentPosition.y}
+                            onChange={(e) => setEditedPositions({
+                              ...editedPositions,
+                              [selectedAccessoryId]: { ...currentPosition, y: parseInt(e.target.value) || 0 }
+                            })}
+                            data-testid="input-editor-y"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Z-index</Label>
+                          <Input
+                            type="number"
+                            value={currentPosition.z}
+                            onChange={(e) => setEditedPositions({
+                              ...editedPositions,
+                              [selectedAccessoryId]: { ...currentPosition, z: parseInt(e.target.value) || 1 }
+                            })}
+                            data-testid="input-editor-z"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => saveAccessoryPosition(selectedAccessoryId)}
+                        disabled={updateAccessoryPositionMutation.isPending || !editedPositions[selectedAccessoryId]}
+                        data-testid="button-save-position"
+                      >
+                        {updateAccessoryPositionMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Сохранить позицию
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

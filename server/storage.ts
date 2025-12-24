@@ -14,6 +14,8 @@ import {
   baseBodies,
   accessories,
   userAccessories,
+  boostPackages,
+  boostPackagePurchases,
   type User, 
   type InsertUser,
   type GameScore,
@@ -58,6 +60,10 @@ import {
   type UserAccessory,
   type InsertUserAccessory,
   type CharacterWithAccessories,
+  type BoostPackage,
+  type InsertBoostPackage,
+  type BoostPackagePurchase,
+  type InsertBoostPackagePurchase,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -188,6 +194,15 @@ export interface IStorage {
   purchaseAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string; userAccessory?: UserAccessory }>;
   equipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
   unequipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
+  
+  // Boost Packages
+  getBoostPackages(activeOnly?: boolean): Promise<BoostPackage[]>;
+  getBoostPackage(id: string): Promise<BoostPackage | undefined>;
+  createBoostPackage(pkg: InsertBoostPackage): Promise<BoostPackage>;
+  updateBoostPackage(id: string, updates: Partial<InsertBoostPackage>): Promise<BoostPackage | undefined>;
+  deleteBoostPackage(id: string): Promise<void>;
+  purchaseBoostPackage(userId: string, packageId: string, telegramPaymentId?: string): Promise<{ success: boolean; error?: string; purchase?: BoostPackagePurchase }>;
+  getUserBoostPackagePurchases(userId: string): Promise<BoostPackagePurchase[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2285,6 +2300,106 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userAccessories.id, userAccessory.id));
 
     return { success: true };
+  }
+
+  // Boost Packages
+  async getBoostPackages(activeOnly: boolean = true): Promise<BoostPackage[]> {
+    if (activeOnly) {
+      return db
+        .select()
+        .from(boostPackages)
+        .where(eq(boostPackages.isActive, true))
+        .orderBy(boostPackages.sortOrder);
+    }
+    return db.select().from(boostPackages).orderBy(boostPackages.sortOrder);
+  }
+
+  async getBoostPackage(id: string): Promise<BoostPackage | undefined> {
+    const [pkg] = await db.select().from(boostPackages).where(eq(boostPackages.id, id));
+    return pkg || undefined;
+  }
+
+  async createBoostPackage(pkg: InsertBoostPackage): Promise<BoostPackage> {
+    const [newPkg] = await db.insert(boostPackages).values(pkg).returning();
+    return newPkg;
+  }
+
+  async updateBoostPackage(id: string, updates: Partial<InsertBoostPackage>): Promise<BoostPackage | undefined> {
+    const [pkg] = await db
+      .update(boostPackages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(boostPackages.id, id))
+      .returning();
+    return pkg || undefined;
+  }
+
+  async deleteBoostPackage(id: string): Promise<void> {
+    await db.delete(boostPackages).where(eq(boostPackages.id, id));
+  }
+
+  async purchaseBoostPackage(
+    userId: string,
+    packageId: string,
+    telegramPaymentId?: string
+  ): Promise<{ success: boolean; error?: string; purchase?: BoostPackagePurchase }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, error: 'Пользователь не найден' };
+
+    const pkg = await this.getBoostPackage(packageId);
+    if (!pkg) return { success: false, error: 'Пакет не найден' };
+    if (!pkg.isActive) return { success: false, error: 'Пакет недоступен' };
+
+    // Create purchase record
+    const [purchase] = await db.insert(boostPackagePurchases).values({
+      userId,
+      packageId,
+      telegramPaymentId,
+      priceStars: pkg.priceStars,
+      boostsPerType: pkg.boostsPerType,
+      bonusLives: pkg.bonusLives,
+      status: 'completed',
+    }).returning();
+
+    // Add boosts to user inventory (all 7 types)
+    const allBoosts = await this.getBoosts();
+    for (const boost of allBoosts) {
+      const [existing] = await db
+        .select()
+        .from(userBoostInventory)
+        .where(and(
+          eq(userBoostInventory.userId, userId),
+          eq(userBoostInventory.boostId, boost.id)
+        ));
+
+      if (existing) {
+        await db
+          .update(userBoostInventory)
+          .set({ 
+            quantity: existing.quantity + pkg.boostsPerType,
+            updatedAt: new Date()
+          })
+          .where(eq(userBoostInventory.id, existing.id));
+      } else {
+        await db.insert(userBoostInventory).values({
+          userId,
+          boostId: boost.id,
+          quantity: pkg.boostsPerType,
+        });
+      }
+    }
+
+    // Add bonus lives if any (as extra lives inventory or config)
+    // TODO: implement bonus lives tracking if needed
+
+    return { success: true, purchase };
+  }
+
+  async getUserBoostPackagePurchases(userId: string): Promise<BoostPackagePurchase[]> {
+    return db
+      .select()
+      .from(boostPackagePurchases)
+      .where(eq(boostPackagePurchases.userId, userId))
+      .orderBy(desc(boostPackagePurchases.createdAt));
   }
 }
 

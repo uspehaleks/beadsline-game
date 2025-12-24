@@ -79,6 +79,84 @@ function formatNumbersInObject(obj: any): any {
   return obj;
 }
 
+async function initializeDefaultBoostPackages() {
+  const existingPackages = await storage.getBoostPackages(false);
+  const existingNames = new Set(existingPackages.map(p => p.name));
+  
+  const defaultPackages = [
+    {
+      name: 'starter',
+      nameRu: 'СТАРТОВЫЙ',
+      boostsPerType: 3,
+      priceStars: 50,
+      originalPriceStars: null,
+      badge: null,
+      badgeText: null,
+      bonusLives: 0,
+      bonusSkinId: null,
+      sortOrder: 1,
+      isActive: true,
+    },
+    {
+      name: 'basic',
+      nameRu: 'БАЗОВЫЙ',
+      boostsPerType: 7,
+      priceStars: 100,
+      originalPriceStars: 117,
+      badge: null,
+      badgeText: null,
+      bonusLives: 0,
+      bonusSkinId: null,
+      sortOrder: 2,
+      isActive: true,
+    },
+    {
+      name: 'mega',
+      nameRu: 'МЕГА-НАБОР',
+      boostsPerType: 15,
+      priceStars: 200,
+      originalPriceStars: 250,
+      badge: 'hot',
+      badgeText: 'ХИТ ПРОДАЖ!',
+      bonusLives: 3,
+      bonusSkinId: null,
+      sortOrder: 3,
+      isActive: true,
+    },
+    {
+      name: 'vip',
+      nameRu: 'VIP-НАБОР',
+      boostsPerType: 40,
+      priceStars: 350,
+      originalPriceStars: 500,
+      badge: 'best_value',
+      badgeText: 'VIP',
+      bonusLives: 10,
+      bonusSkinId: null,
+      sortOrder: 4,
+      isActive: true,
+    },
+  ];
+  
+  let created = 0;
+  for (const pkg of defaultPackages) {
+    if (existingNames.has(pkg.name)) {
+      continue;
+    }
+    try {
+      await storage.createBoostPackage(pkg);
+      console.log(`Created boost package: ${pkg.nameRu}`);
+      created++;
+    } catch (error) {
+      console.error(`Failed to create package ${pkg.name}:`, error);
+    }
+  }
+  
+  if (created > 0) {
+    console.log(`Initialized ${created} default boost packages`);
+  }
+}
+
 // Debug Logs Storage (in-memory, for game debugging)
 const MAX_DEBUG_LOGS = 200;
 const serverDebugLogs: string[] = [];
@@ -481,6 +559,9 @@ export async function registerRoutes(
   const express = await import('express');
   app.use('/uploads', express.default.static(uploadsDir));
 
+  initializeDefaultBoostPackages().catch(err => {
+    console.error('Failed to initialize default boost packages:', err);
+  });
   
   app.post("/api/auth/telegram", async (req, res) => {
     try {
@@ -2562,6 +2643,120 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Admin get base bodies error:", error);
       res.status(500).json({ error: "Failed to get base bodies" });
+    }
+  });
+
+  // ===== BOOST PACKAGES API =====
+
+  // Get all active boost packages (public)
+  app.get("/api/boost-packages", async (req, res) => {
+    try {
+      const packages = await storage.getBoostPackages(true);
+      res.json(packages);
+    } catch (error) {
+      console.error("Get boost packages error:", error);
+      res.status(500).json({ error: "Failed to get boost packages" });
+    }
+  });
+
+  // Purchase a boost package (requires auth)
+  app.post("/api/boost-packages/:id/purchase", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { telegramPaymentId } = req.body;
+
+      const result = await storage.purchaseBoostPackage(userId, id, telegramPaymentId);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true, purchase: result.purchase });
+    } catch (error) {
+      console.error("Purchase boost package error:", error);
+      res.status(500).json({ error: "Failed to purchase boost package" });
+    }
+  });
+
+  // Get user's package purchases (requires auth)
+  app.get("/api/user/boost-package-purchases", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const purchases = await storage.getUserBoostPackagePurchases(userId);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Get user boost package purchases error:", error);
+      res.status(500).json({ error: "Failed to get purchases" });
+    }
+  });
+
+  // Admin: Get all boost packages (including inactive)
+  app.get("/api/admin/boost-packages", requireAdmin, async (req, res) => {
+    try {
+      const packages = await storage.getBoostPackages(false);
+      res.json(packages);
+    } catch (error) {
+      console.error("Admin get boost packages error:", error);
+      res.status(500).json({ error: "Failed to get boost packages" });
+    }
+  });
+
+  // Admin: Create boost package
+  app.post("/api/admin/boost-packages", requireAdmin, async (req, res) => {
+    try {
+      const { name, nameRu, boostsPerType, priceStars, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
+      
+      if (!name || !nameRu || !boostsPerType || !priceStars) {
+        return res.status(400).json({ error: "name, nameRu, boostsPerType, and priceStars are required" });
+      }
+
+      const pkg = await storage.createBoostPackage({
+        name,
+        nameRu,
+        boostsPerType,
+        priceStars,
+        originalPriceStars: originalPriceStars || null,
+        badge: badge || null,
+        badgeText: badgeText || null,
+        bonusLives: bonusLives || 0,
+        bonusSkinId: bonusSkinId || null,
+        sortOrder: sortOrder || 0,
+        isActive: isActive !== false,
+      });
+      res.json(pkg);
+    } catch (error) {
+      console.error("Create boost package error:", error);
+      res.status(500).json({ error: "Failed to create boost package" });
+    }
+  });
+
+  // Admin: Update boost package
+  app.patch("/api/admin/boost-packages/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const pkg = await storage.updateBoostPackage(id, req.body);
+      if (!pkg) {
+        return res.status(404).json({ error: "Boost package not found" });
+      }
+      res.json(pkg);
+    } catch (error) {
+      console.error("Update boost package error:", error);
+      res.status(500).json({ error: "Failed to update boost package" });
+    }
+  });
+
+  // Admin: Delete boost package
+  app.delete("/api/admin/boost-packages/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBoostPackage(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete boost package error:", error);
+      res.status(500).json({ error: "Failed to delete boost package" });
     }
   });
 

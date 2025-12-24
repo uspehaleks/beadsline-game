@@ -176,6 +176,52 @@ export const userBoostInventoryRelations = relations(userBoostInventory, ({ one 
   }),
 }));
 
+// Boost Packages - bundles of all 7 boost types for purchase with Telegram Stars
+export const boostPackages = pgTable("boost_packages", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  nameRu: text("name_ru").notNull(),
+  boostsPerType: integer("boosts_per_type").notNull(), // количество каждого типа буста
+  priceStars: integer("price_stars").notNull(), // цена в Telegram Stars
+  originalPriceStars: integer("original_price_stars"), // перечёркнутая цена (если есть скидка)
+  badge: varchar("badge", { length: 50 }), // бейдж: "hot", "best_value", null
+  badgeText: text("badge_text"), // текст бейджа: "ХИТ ПРОДАЖ!", "ЛУЧШАЯ ЦЕНА!"
+  bonusLives: integer("bonus_lives").default(0).notNull(), // бонусные жизни
+  bonusSkinId: varchar("bonus_skin_id", { length: 255 }), // ID бонусного скина
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Purchase history for boost packages
+export const boostPackagePurchases = pgTable("boost_package_purchases", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  packageId: varchar("package_id", { length: 255 }).notNull().references(() => boostPackages.id),
+  telegramPaymentId: varchar("telegram_payment_id", { length: 255 }),
+  priceStars: integer("price_stars").notNull(),
+  boostsPerType: integer("boosts_per_type").notNull(),
+  bonusLives: integer("bonus_lives").default(0).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, completed, failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const boostPackagesRelations = relations(boostPackages, ({ many }) => ({
+  purchases: many(boostPackagePurchases),
+}));
+
+export const boostPackagePurchasesRelations = relations(boostPackagePurchases, ({ one }) => ({
+  user: one(users, {
+    fields: [boostPackagePurchases.userId],
+    references: [users.id],
+  }),
+  package: one(boostPackages, {
+    fields: [boostPackagePurchases.packageId],
+    references: [boostPackages.id],
+  }),
+}));
+
 export const beadsTransactions = pgTable("beads_transactions", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id", { length: 255 }).references(() => users.id),
@@ -361,6 +407,18 @@ export const insertUserAccessorySchema = createInsertSchema(userAccessories).omi
   purchasedAt: true,
 });
 
+// Boost Packages Insert Schemas
+export const insertBoostPackageSchema = createInsertSchema(boostPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBoostPackagePurchaseSchema = createInsertSchema(boostPackagePurchases).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertGameScore = z.infer<typeof insertGameScoreSchema>;
@@ -393,6 +451,12 @@ export type InsertAccessory = z.infer<typeof insertAccessorySchema>;
 export type Accessory = typeof accessories.$inferSelect;
 export type InsertUserAccessory = z.infer<typeof insertUserAccessorySchema>;
 export type UserAccessory = typeof userAccessories.$inferSelect;
+
+// Boost Package Types
+export type InsertBoostPackage = z.infer<typeof insertBoostPackageSchema>;
+export type BoostPackage = typeof boostPackages.$inferSelect;
+export type InsertBoostPackagePurchase = z.infer<typeof insertBoostPackagePurchaseSchema>;
+export type BoostPackagePurchase = typeof boostPackagePurchases.$inferSelect;
 
 export type GenderType = 'male' | 'female';
 export type AccessoryGenderType = 'male' | 'female' | 'both';

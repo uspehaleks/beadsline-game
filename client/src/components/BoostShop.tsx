@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import type { Boost } from '@shared/schema';
+import type { Boost, BoostPackage } from '@shared/schema';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info } from 'lucide-react';
+import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info, Star, Gift, Heart, Crown, Flame, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +53,158 @@ const BOOST_FULL_DESCRIPTIONS: Record<string, string> = {
   magnet: 'При следующем выстреле притягивает все шары того же цвета ближе к месту попадания. Помогает собрать разбросанные шары одного цвета для создания комбинации.',
   laser: 'Следующий выстрел становится лазерным лучом, который пробивает насквозь до 3 шаров подряд, уничтожая их. Не вставляет шар в цепочку, а просто удаляет шары на пути.',
 };
+
+const PACKAGE_STYLES: Record<string, { gradient: string; border: string; glow: string }> = {
+  default: { 
+    gradient: 'linear-gradient(135deg, hsl(230 30% 15%) 0%, hsl(230 30% 20%) 100%)',
+    border: 'hsl(230 30% 30%)',
+    glow: 'none'
+  },
+  hot: { 
+    gradient: 'linear-gradient(135deg, hsl(15 80% 15%) 0%, hsl(30 70% 20%) 100%)',
+    border: 'hsl(25 100% 50%)',
+    glow: '0 0 30px hsl(25 100% 50% / 0.3)'
+  },
+  best_value: { 
+    gradient: 'linear-gradient(135deg, hsl(45 80% 10%) 0%, hsl(35 70% 15%) 100%)',
+    border: 'hsl(45 100% 50%)',
+    glow: '0 0 40px hsl(45 100% 50% / 0.4)'
+  },
+};
+
+function PackageCard({
+  pkg,
+  boostCount,
+  onBuy,
+  isPurchasing,
+  isHighlighted,
+}: {
+  pkg: BoostPackage;
+  boostCount: number;
+  onBuy: (pkgId: string) => void;
+  isPurchasing: boolean;
+  isHighlighted?: boolean;
+}) {
+  const style = PACKAGE_STYLES[pkg.badge || 'default'] || PACKAGE_STYLES.default;
+  const totalBoosts = pkg.boostsPerType * boostCount;
+  const hasDiscount = pkg.originalPriceStars && pkg.originalPriceStars > pkg.priceStars;
+  const discountPercent = hasDiscount 
+    ? Math.round((1 - pkg.priceStars / (pkg.originalPriceStars || pkg.priceStars)) * 100) 
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.98 }}
+      className={`relative ${isHighlighted ? 'z-10' : ''}`}
+    >
+      <Card
+        className={`relative overflow-hidden p-4 ${isHighlighted ? 'ring-2 ring-offset-2 ring-offset-background' : ''}`}
+        style={{
+          background: style.gradient,
+          borderColor: style.border,
+          borderWidth: pkg.badge ? '2px' : '1px',
+          boxShadow: style.glow,
+        }}
+      >
+        {pkg.badge && (
+          <div 
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full text-xs font-bold"
+            style={{
+              backgroundColor: pkg.badge === 'hot' ? 'hsl(25 100% 50%)' : 'hsl(45 100% 50%)',
+              color: '#000',
+              boxShadow: `0 0 15px ${pkg.badge === 'hot' ? 'hsl(25 100% 50% / 0.5)' : 'hsl(45 100% 50% / 0.5)'}`,
+            }}
+          >
+            {pkg.badge === 'hot' ? (
+              <span className="flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                {pkg.badgeText || 'ХИТ ПРОДАЖ'}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <Crown className="w-3 h-3" />
+                {pkg.badgeText || 'VIP'}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="text-center pt-2">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Package className="w-5 h-5" style={{ color: pkg.badge === 'best_value' ? '#ffd700' : pkg.badge === 'hot' ? '#ff6b35' : '#00ff88' }} />
+            <h3 className="font-bold text-lg">{pkg.nameRu}</h3>
+          </div>
+          
+          <div className="text-3xl font-black my-3" style={{ 
+            color: pkg.badge === 'best_value' ? '#ffd700' : pkg.badge === 'hot' ? '#ff6b35' : '#00ff88',
+            textShadow: `0 0 20px ${pkg.badge === 'best_value' ? '#ffd70050' : pkg.badge === 'hot' ? '#ff6b3550' : '#00ff8850'}`,
+          }}>
+            {totalBoosts} бустов
+          </div>
+
+          <p className="text-xs text-muted-foreground mb-3">
+            {pkg.boostsPerType} шт. каждого типа
+          </p>
+
+          {pkg.bonusLives > 0 && (
+            <div className="flex items-center justify-center gap-1.5 mb-3 text-rose-400">
+              <Heart className="w-4 h-4 fill-current" />
+              <span className="text-sm font-medium">+{pkg.bonusLives} жизней</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <div className="flex items-center gap-2">
+            {hasDiscount && (
+              <span className="text-muted-foreground line-through text-sm">
+                {pkg.originalPriceStars} ⭐
+              </span>
+            )}
+            <span className="text-2xl font-bold flex items-center gap-1">
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              {pkg.priceStars}
+            </span>
+            {hasDiscount && (
+              <Badge variant="destructive" className="text-xs">
+                -{discountPercent}%
+              </Badge>
+            )}
+          </div>
+
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => onBuy(pkg.id)}
+            disabled={isPurchasing}
+            style={{
+              background: pkg.badge === 'best_value' 
+                ? 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)'
+                : pkg.badge === 'hot'
+                  ? 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)'
+                  : 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)',
+              color: '#000',
+              fontWeight: 'bold',
+            }}
+            data-testid={`button-buy-package-${pkg.name}`}
+          >
+            {isPurchasing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Gift className="w-5 h-5 mr-2" />
+                Купить за {pkg.priceStars} ⭐
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
 
 function MiniBeadsLogo({ size = 18 }: { size?: number }) {
   return (
@@ -191,10 +344,16 @@ export function BoostShop({ onBack }: BoostShopProps) {
   const { user, refreshUser } = useUser();
   const { toast } = useToast();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const [selectedBoost, setSelectedBoost] = useState<Boost | null>(null);
+  const [activeTab, setActiveTab] = useState<'packages' | 'single'>('packages');
 
   const { data: boosts = [], isLoading: boostsLoading } = useQuery<Boost[]>({
     queryKey: ['/api/boosts'],
+  });
+
+  const { data: packages = [], isLoading: packagesLoading } = useQuery<BoostPackage[]>({
+    queryKey: ['/api/boost-packages'],
   });
 
   const { data: inventory = [] } = useQuery<InventoryItem[]>({
@@ -207,7 +366,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
       const response = await apiRequest('POST', '/api/boosts/buy', { boostId });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
       refreshUser();
       toast({
@@ -227,15 +386,48 @@ export function BoostShop({ onBack }: BoostShopProps) {
     },
   });
 
+  const buyPackageMutation = useMutation({
+    mutationFn: async (packageId: string) => {
+      const response = await apiRequest('POST', `/api/boost-packages/${packageId}/purchase`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
+      refreshUser();
+      toast({
+        title: "Пакет куплен!",
+        description: data.message || "Бусты добавлены в инвентарь",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось купить пакет",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setPurchasingPackageId(null);
+    },
+  });
+
   const handleBuy = (boostId: string) => {
     setPurchasingId(boostId);
     buyMutation.mutate(boostId);
+  };
+
+  const handleBuyPackage = (packageId: string) => {
+    setPurchasingPackageId(packageId);
+    buyPackageMutation.mutate(packageId);
   };
 
   const getOwnedQuantity = (boostId: string): number => {
     const item = inventory.find(i => i.boostId === boostId);
     return item?.quantity || 0;
   };
+
+  const activePackages = packages.filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+  const hotPackageIndex = activePackages.findIndex(p => p.badge === 'hot');
 
   return (
     <div 
@@ -245,7 +437,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-6"
+        className="flex items-center gap-3 mb-4"
       >
         <Button 
           variant="ghost" 
@@ -273,42 +465,97 @@ export function BoostShop({ onBack }: BoostShopProps) {
         )}
       </motion.div>
 
-      <div className="flex-1 overflow-y-auto">
-        {boostsLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-32 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : boosts.length === 0 ? (
-          <Card className="p-6 text-center">
-            <Zap className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-muted-foreground">Бусты пока недоступны</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            <AnimatePresence>
-              {boosts.map((boost, index) => (
-                <motion.div
-                  key={boost.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <BoostCard
-                    boost={boost}
-                    ownedQuantity={getOwnedQuantity(boost.id)}
-                    userBalance={user?.totalPoints || 0}
-                    onBuy={handleBuy}
-                    isPurchasing={purchasingId === boost.id}
-                    onShowDetails={setSelectedBoost}
-                  />
-                </motion.div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'packages' | 'single')} className="flex-1 flex flex-col">
+        <TabsList className="grid grid-cols-2 mb-4">
+          <TabsTrigger value="packages" className="gap-2" data-testid="tab-packages">
+            <Gift className="w-4 h-4" />
+            Наборы
+          </TabsTrigger>
+          <TabsTrigger value="single" className="gap-2" data-testid="tab-single">
+            <Zap className="w-4 h-4" />
+            Поштучно
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="packages" className="flex-1 overflow-y-auto mt-0">
+          {packagesLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map(i => (
+                <Skeleton key={i} className="h-48 w-full rounded-xl" />
               ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
+            </div>
+          ) : activePackages.length === 0 ? (
+            <Card className="p-6 text-center">
+              <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-muted-foreground">Пакеты пока недоступны</p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Покупайте наборы за <Star className="w-4 h-4 inline text-yellow-400 fill-yellow-400" /> Telegram Stars
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <AnimatePresence>
+                  {activePackages.map((pkg, index) => (
+                    <PackageCard
+                      key={pkg.id}
+                      pkg={pkg}
+                      boostCount={boosts.length || 7}
+                      onBuy={handleBuyPackage}
+                      isPurchasing={purchasingPackageId === pkg.id}
+                      isHighlighted={index === hotPackageIndex}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="single" className="flex-1 overflow-y-auto mt-0">
+          {boostsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map(i => (
+                <Skeleton key={i} className="h-32 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : boosts.length === 0 ? (
+            <Card className="p-6 text-center">
+              <Zap className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-muted-foreground">Бусты пока недоступны</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-center mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Покупайте отдельные бусты за <MiniBeadsLogo size={16} /> Beads
+                </p>
+              </div>
+              <AnimatePresence>
+                {boosts.map((boost, index) => (
+                  <motion.div
+                    key={boost.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <BoostCard
+                      boost={boost}
+                      ownedQuantity={getOwnedQuantity(boost.id)}
+                      userBalance={user?.totalPoints || 0}
+                      onBuy={handleBuy}
+                      isPurchasing={purchasingId === boost.id}
+                      onShowDetails={setSelectedBoost}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {inventory.length > 0 && (
         <motion.div
