@@ -4742,6 +4742,7 @@ function BoostPackagesTab() {
                         </div>
                         <div className="flex gap-2">
                           <Button 
+                            type="button"
                             variant="outline" 
                             size="icon"
                             onClick={() => startEdit(pkg)}
@@ -4750,6 +4751,7 @@ function BoostPackagesTab() {
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button 
+                            type="button"
                             variant="destructive" 
                             size="icon"
                             onClick={() => deleteMutation.mutate(pkg.id)}
