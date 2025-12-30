@@ -188,6 +188,11 @@ function PackageCard({
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               {pkg.priceStars}
             </span>
+            {pkg.priceUsd && (
+              <span className="text-lg font-semibold text-green-400">
+                / ${parseFloat(pkg.priceUsd).toFixed(2)}
+              </span>
+            )}
             {hasDiscount && (
               <Badge variant="destructive" className="text-xs">
                 -{discountPercent}%
@@ -882,7 +887,10 @@ export function BoostShop({ onBack }: BoostShopProps) {
                     <div className="text-left flex-1">
                       <div className="font-semibold">Криптовалюта</div>
                       <div className="text-xs text-muted-foreground">
-                        ~${((selectedPackageForPayment?.priceStars || 0) / 50).toFixed(2)} USD
+                        {selectedPackageForPayment?.priceUsd 
+                          ? `$${parseFloat(selectedPackageForPayment.priceUsd).toFixed(2)} USD`
+                          : `~$${((selectedPackageForPayment?.priceStars || 0) / 50).toFixed(2)} USD`
+                        }
                       </div>
                     </div>
                   </>
