@@ -2929,6 +2929,181 @@ export async function registerRoutes(
     }
   });
 
+  // ===== NOWPAYMENTS CRYPTO PAYMENTS =====
+  
+  // Create crypto payment via NOWPayments
+  app.post("/api/boost-packages/:id/create-crypto-payment", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { payCurrency } = req.body; // e.g., 'btc', 'eth', 'usdt', 'ltc'
+      
+      const apiKey = process.env.NOWPAYMENTS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "NOWPayments not configured" });
+      }
+
+      const pkg = await storage.getBoostPackage(id);
+      if (!pkg) {
+        return res.status(404).json({ error: "Package not found" });
+      }
+
+      if (!pkg.isActive) {
+        return res.status(400).json({ error: "Package is not available" });
+      }
+
+      // Calculate USD price (Stars / 50 = approximate USD)
+      const priceUsd = pkg.priceUsd ? parseFloat(pkg.priceUsd) : (pkg.priceStars / 50);
+
+      // Get the webhook URL
+      const webhookUrl = `${req.protocol}://${req.get('host')}/api/nowpayments/webhook`;
+
+      // Create payment via NOWPayments API
+      const response = await fetch('https://api.nowpayments.io/v1/payment', {
+        method: 'POST',
+        headers: { 
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          price_amount: priceUsd,
+          price_currency: 'usd',
+          pay_currency: payCurrency || 'btc',
+          ipn_callback_url: webhookUrl,
+          order_id: `pkg_${id}_${userId}_${Date.now()}`,
+          order_description: `${pkg.nameRu} - ${pkg.boostsPerType}x каждого буста`,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!result.payment_id) {
+        console.error("NOWPayments error:", result);
+        return res.status(500).json({ error: result.message || "Failed to create payment" });
+      }
+
+      // Save payment to database
+      const cryptoPayment = await storage.createCryptoPayment({
+        userId,
+        packageId: id,
+        nowPaymentId: result.payment_id.toString(),
+        payAddress: result.pay_address,
+        payCurrency: result.pay_currency,
+        payAmount: result.pay_amount?.toString(),
+        priceAmount: priceUsd.toFixed(2),
+        priceCurrency: 'usd',
+        status: 'waiting',
+      });
+
+      res.json({
+        paymentId: cryptoPayment.id,
+        nowPaymentId: result.payment_id,
+        payAddress: result.pay_address,
+        payAmount: result.pay_amount,
+        payCurrency: result.pay_currency,
+        priceAmount: priceUsd,
+        priceCurrency: 'usd',
+        expirationEstimateDate: result.expiration_estimate_date,
+      });
+    } catch (error) {
+      console.error("Create crypto payment error:", error);
+      res.status(500).json({ error: "Failed to create crypto payment" });
+    }
+  });
+
+  // NOWPayments IPN webhook
+  app.post("/api/nowpayments/webhook", async (req, res) => {
+    // Respond 200 immediately
+    res.status(200).json({ ok: true });
+    
+    try {
+      const payload = req.body;
+      console.log("NOWPayments IPN received:", payload.payment_status, payload.payment_id);
+      
+      if (!payload.payment_id) {
+        console.error("Invalid IPN payload - no payment_id");
+        return;
+      }
+
+      const paymentId = payload.payment_id.toString();
+      const status = payload.payment_status;
+      const actuallyPaid = payload.actually_paid?.toString();
+
+      // Update payment status
+      await storage.updateCryptoPaymentStatus(paymentId, status, actuallyPaid);
+
+      // Process successful payments
+      if (status === 'finished' || status === 'confirmed') {
+        const result = await storage.processCryptoPaymentSuccess(paymentId);
+        if (result.success) {
+          console.log(`Crypto payment ${paymentId} processed successfully`);
+        } else {
+          console.error(`Failed to process crypto payment ${paymentId}: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error("NOWPayments webhook error:", error);
+    }
+  });
+
+  // Get crypto payment status
+  app.get("/api/crypto-payments/:id/status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const payment = await storage.getCryptoPayment(id);
+      
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      if (payment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        payAddress: payment.payAddress,
+        payAmount: payment.payAmount,
+        payCurrency: payment.payCurrency,
+        actuallyPaid: payment.actuallyPaid,
+      });
+    } catch (error) {
+      console.error("Get crypto payment status error:", error);
+      res.status(500).json({ error: "Failed to get payment status" });
+    }
+  });
+
+  // Get available crypto currencies from NOWPayments
+  app.get("/api/nowpayments/currencies", async (req, res) => {
+    try {
+      const apiKey = process.env.NOWPAYMENTS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "NOWPayments not configured" });
+      }
+
+      const response = await fetch('https://api.nowpayments.io/v1/currencies', {
+        headers: { 'x-api-key': apiKey }
+      });
+
+      const result = await response.json();
+      
+      // Return only popular currencies
+      const popular = ['btc', 'eth', 'usdt', 'ltc', 'doge', 'trx', 'bnb', 'sol', 'xrp', 'ton'];
+      const currencies = result.currencies?.filter((c: string) => popular.includes(c.toLowerCase())) || popular;
+      
+      res.json({ currencies });
+    } catch (error) {
+      console.error("Get currencies error:", error);
+      res.status(500).json({ error: "Failed to get currencies" });
+    }
+  });
+
   // Purchase a boost package (requires auth) - called after successful payment
   app.post("/api/boost-packages/:id/purchase", requireAuth, async (req, res) => {
     try {
