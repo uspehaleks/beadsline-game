@@ -18,7 +18,7 @@ import { isTelegramWebApp, openTelegramInvoice, showTelegramAlert } from '@/lib/
 const CRYPTO_CURRENCIES = [
   { id: 'btc', name: 'Bitcoin', symbol: 'BTC' },
   { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
-  { id: 'usdt', name: 'Tether', symbol: 'USDT' },
+  { id: 'usdttrc20', name: 'Tether (TRC-20)', symbol: 'USDT' },
   { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
   { id: 'trx', name: 'Tron', symbol: 'TRX' },
   { id: 'ton', name: 'TON', symbol: 'TON' },
