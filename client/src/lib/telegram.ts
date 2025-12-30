@@ -15,6 +15,8 @@ interface TelegramUser {
   photo_url?: string;
 }
 
+type InvoiceStatus = 'paid' | 'cancelled' | 'failed' | 'pending';
+
 interface TelegramWebApp {
   initData: string;
   initDataUnsafe: {
@@ -57,6 +59,9 @@ interface TelegramWebApp {
     notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
     selectionChanged: () => void;
   };
+  openInvoice: (url: string, callback?: (status: InvoiceStatus) => void) => void;
+  showAlert: (message: string, callback?: () => void) => void;
+  showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void;
   ready: () => void;
   expand: () => void;
   close: () => void;
@@ -101,6 +106,29 @@ export function hapticFeedback(type: 'light' | 'medium' | 'heavy' | 'success' | 
 export function isTelegramWebApp(): boolean {
   return getTelegramWebApp() !== null;
 }
+
+export function openTelegramInvoice(
+  invoiceUrl: string, 
+  callback?: (status: InvoiceStatus) => void
+): boolean {
+  const webApp = getTelegramWebApp();
+  if (webApp?.openInvoice) {
+    webApp.openInvoice(invoiceUrl, callback);
+    return true;
+  }
+  return false;
+}
+
+export function showTelegramAlert(message: string, callback?: () => void): boolean {
+  const webApp = getTelegramWebApp();
+  if (webApp?.showAlert) {
+    webApp.showAlert(message, callback);
+    return true;
+  }
+  return false;
+}
+
+export type { InvoiceStatus };
 
 export function getStartParam(): string | null {
   // First try Telegram's native start_param (works for direct Mini App links)

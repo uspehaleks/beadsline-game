@@ -237,9 +237,26 @@ interface TelegramMessage {
   }>;
 }
 
+interface TelegramPreCheckoutQuery {
+  id: string;
+  from: { id: number; first_name: string; username?: string };
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+}
+
+interface TelegramSuccessfulPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id: string;
+}
+
 interface TelegramUpdate {
   update_id: number;
-  message?: TelegramMessage;
+  message?: TelegramMessage & { successful_payment?: TelegramSuccessfulPayment };
+  pre_checkout_query?: TelegramPreCheckoutQuery;
 }
 
 // Production Mini App URL - HARDCODED to avoid dev domain issues
@@ -442,7 +459,7 @@ async function setTelegramWebhook(webhookUrl: string): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: webhookUrl,
-        allowed_updates: ['message']
+        allowed_updates: ['message', 'pre_checkout_query']
       })
     });
     
@@ -451,6 +468,34 @@ async function setTelegramWebhook(webhookUrl: string): Promise<boolean> {
     return result.ok;
   } catch (error) {
     console.error("Failed to set webhook:", error);
+    return false;
+  }
+}
+
+async function answerPreCheckoutQuery(preCheckoutQueryId: string, ok: boolean, errorMessage?: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) return false;
+  
+  try {
+    const body: { pre_checkout_query_id: string; ok: boolean; error_message?: string } = {
+      pre_checkout_query_id: preCheckoutQueryId,
+      ok,
+    };
+    if (!ok && errorMessage) {
+      body.error_message = errorMessage;
+    }
+    
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/answerPreCheckoutQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    
+    const result = await response.json();
+    console.log("Answer pre-checkout query result:", result);
+    return result.ok;
+  } catch (error) {
+    console.error("Failed to answer pre-checkout query:", error);
     return false;
   }
 }
@@ -2160,21 +2205,81 @@ export async function registerRoutes(
   });
 
   app.post("/api/telegram/webhook", async (req, res) => {
-    // Always respond with 200 OK immediately to prevent Telegram from retrying
-    // Process the update asynchronously
-    res.status(200).json({ ok: true });
-    
     try {
       const update: TelegramUpdate = req.body;
       
+      // Handle pre-checkout query (must respond synchronously!)
+      if (update?.pre_checkout_query) {
+        const preCheckout = update.pre_checkout_query;
+        console.log("Pre-checkout query received:", preCheckout.id);
+        
+        try {
+          // Validate the payment payload
+          const payload = JSON.parse(preCheckout.invoice_payload);
+          const pkg = await storage.getBoostPackage(payload.packageId);
+          
+          if (!pkg || !pkg.isActive) {
+            await answerPreCheckoutQuery(preCheckout.id, false, "Пакет недоступен");
+          } else if (preCheckout.total_amount !== pkg.priceStars) {
+            await answerPreCheckoutQuery(preCheckout.id, false, "Неверная сумма");
+          } else {
+            await answerPreCheckoutQuery(preCheckout.id, true);
+          }
+        } catch (e) {
+          console.error("Pre-checkout validation error:", e);
+          await answerPreCheckoutQuery(preCheckout.id, false, "Ошибка проверки");
+        }
+        
+        return res.status(200).json({ ok: true });
+      }
+      
+      // Handle successful payment
+      if (update?.message?.successful_payment && update.message.from) {
+        const payment = update.message.successful_payment;
+        const telegramUserId = update.message.from.id;
+        console.log("Successful payment received:", payment.telegram_payment_charge_id);
+        
+        try {
+          const payload = JSON.parse(payment.invoice_payload);
+          
+          // Find user by Telegram ID
+          const user = await storage.getUserByTelegramId(telegramUserId.toString());
+          if (user) {
+            // Process the purchase
+            const result = await storage.purchaseBoostPackage(
+              user.id,
+              payload.packageId,
+              payment.telegram_payment_charge_id
+            );
+            
+            if (result.success) {
+              console.log(`Payment processed successfully for user ${user.id}`);
+            } else {
+              console.error(`Payment processing failed: ${result.error}`);
+            }
+          } else {
+            console.error(`User not found for Telegram ID: ${telegramUserId}`);
+          }
+        } catch (e) {
+          console.error("Payment processing error:", e);
+        }
+        
+        return res.status(200).json({ ok: true });
+      }
+      
+      // Handle regular message commands
       if (update?.message) {
-        // Process in background after sending response
+        res.status(200).json({ ok: true });
         handleTelegramCommand(update.message).catch(err => {
           console.error("Telegram command processing error:", err);
         });
+        return;
       }
+      
+      res.status(200).json({ ok: true });
     } catch (error) {
       console.error("Telegram webhook error:", error);
+      res.status(200).json({ ok: true });
     }
   });
 
@@ -2743,7 +2848,62 @@ export async function registerRoutes(
     }
   });
 
-  // Purchase a boost package (requires auth)
+  // Create invoice for boost package purchase (requires auth)
+  app.post("/api/boost-packages/:id/create-invoice", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      
+      if (!botToken) {
+        return res.status(500).json({ error: "Bot token not configured" });
+      }
+
+      const pkg = await storage.getBoostPackage(id);
+      if (!pkg) {
+        return res.status(404).json({ error: "Package not found" });
+      }
+
+      if (!pkg.isActive) {
+        return res.status(400).json({ error: "Package is not available" });
+      }
+
+      const payload = JSON.stringify({
+        userId,
+        packageId: id,
+        timestamp: Date.now(),
+      });
+
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/createInvoiceLink`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: pkg.nameRu,
+          description: `${pkg.boostsPerType}x каждого буста${pkg.bonusLives > 0 ? ` + ${pkg.bonusLives} жизней` : ''}`,
+          payload,
+          provider_token: "", // Empty for Telegram Stars
+          currency: "XTR",
+          prices: [{ label: pkg.nameRu, amount: pkg.priceStars }],
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!result.ok) {
+        console.error("Failed to create invoice:", result);
+        return res.status(500).json({ error: "Failed to create invoice" });
+      }
+
+      res.json({ invoiceUrl: result.result });
+    } catch (error) {
+      console.error("Create invoice error:", error);
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+
+  // Purchase a boost package (requires auth) - called after successful payment
   app.post("/api/boost-packages/:id/purchase", requireAuth, async (req, res) => {
     try {
       const userId = req.session?.userId;

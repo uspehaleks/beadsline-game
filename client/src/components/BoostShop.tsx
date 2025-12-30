@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { isTelegramWebApp, openTelegramInvoice, showTelegramAlert } from '@/lib/telegram';
 
 interface BoostShopProps {
   onBack: () => void;
@@ -386,27 +387,55 @@ export function BoostShop({ onBack }: BoostShopProps) {
     },
   });
 
-  const buyPackageMutation = useMutation({
+  const createInvoiceMutation = useMutation({
     mutationFn: async (packageId: string) => {
-      const response = await apiRequest('POST', `/api/boost-packages/${packageId}/purchase`);
+      const response = await apiRequest('POST', `/api/boost-packages/${packageId}/create-invoice`);
       return response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
-      refreshUser();
-      toast({
-        title: "Пакет куплен!",
-        description: data.message || "Бусты добавлены в инвентарь",
-      });
+    onSuccess: (data, packageId) => {
+      if (data.invoiceUrl) {
+        // Open Telegram Stars payment dialog
+        if (isTelegramWebApp()) {
+          openTelegramInvoice(data.invoiceUrl, (status) => {
+            setPurchasingPackageId(null);
+            if (status === 'paid') {
+              // Payment successful - refresh data
+              queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
+              refreshUser();
+              toast({
+                title: "Оплата успешна!",
+                description: "Бусты добавлены в ваш инвентарь",
+              });
+            } else if (status === 'cancelled') {
+              toast({
+                title: "Оплата отменена",
+                description: "Вы можете попробовать снова",
+              });
+            } else if (status === 'failed') {
+              toast({
+                title: "Ошибка оплаты",
+                description: "Попробуйте ещё раз",
+                variant: "destructive",
+              });
+            }
+          });
+        } else {
+          // Not in Telegram - show error
+          toast({
+            title: "Недоступно",
+            description: "Оплата Stars доступна только в Telegram",
+            variant: "destructive",
+          });
+          setPurchasingPackageId(null);
+        }
+      }
     },
     onError: (error: Error) => {
       toast({
         title: "Ошибка",
-        description: error.message || "Не удалось купить пакет",
+        description: error.message || "Не удалось создать счёт",
         variant: "destructive",
       });
-    },
-    onSettled: () => {
       setPurchasingPackageId(null);
     },
   });
@@ -417,8 +446,16 @@ export function BoostShop({ onBack }: BoostShopProps) {
   };
 
   const handleBuyPackage = (packageId: string) => {
+    if (!isTelegramWebApp()) {
+      toast({
+        title: "Недоступно",
+        description: "Покупка за Stars доступна только в Telegram",
+        variant: "destructive",
+      });
+      return;
+    }
     setPurchasingPackageId(packageId);
-    buyPackageMutation.mutate(packageId);
+    createInvoiceMutation.mutate(packageId);
   };
 
   const getOwnedQuantity = (boostId: string): number => {
