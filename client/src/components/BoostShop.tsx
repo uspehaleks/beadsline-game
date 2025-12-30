@@ -16,11 +16,9 @@ import { useUser } from '@/contexts/UserContext';
 import { isTelegramWebApp, openTelegramInvoice, showTelegramAlert } from '@/lib/telegram';
 
 const CRYPTO_CURRENCIES = [
-  { id: 'btc', name: 'Bitcoin', symbol: 'BTC' },
-  { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
-  { id: 'usdttrc20', name: 'Tether (TRC-20)', symbol: 'USDT' },
-  { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
-  { id: 'trx', name: 'Tron', symbol: 'TRX' },
+  { id: 'usdttrc20', name: 'USDT (TRC-20)', symbol: 'USDT' },
+  { id: 'usdtbsc', name: 'USDT (BEP-20)', symbol: 'USDT' },
+  { id: 'usdterc20', name: 'USDT (ERC-20)', symbol: 'USDT' },
   { id: 'ton', name: 'TON', symbol: 'TON' },
 ];
 
@@ -376,7 +374,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
   // Payment method selection
   const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
   const [selectedPackageForPayment, setSelectedPackageForPayment] = useState<BoostPackage | null>(null);
-  const [selectedCrypto, setSelectedCrypto] = useState('btc');
+  const [selectedCrypto, setSelectedCrypto] = useState('usdttrc20');
   
   // Crypto payment flow
   const [cryptoPaymentDialogOpen, setCryptoPaymentDialogOpen] = useState(false);
