@@ -507,18 +507,37 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
         >
           <Card className="p-4 border-primary/20" style={{ boxShadow: '0 0 30px hsl(155 100% 50% / 0.1)' }}>
             <div className="flex items-center gap-3">
-              <Avatar className="w-14 h-14 border-2" style={{ borderColor: '#00ff88' }}>
-                <AvatarImage src={user.photoUrl || undefined} alt={user.username} />
-                <AvatarFallback 
-                  className="font-display text-lg font-bold"
-                  style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}
-                >
-                  {user.username?.substring(0, 2).toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <div 
+                className="cursor-pointer rounded-full overflow-hidden border-2 hover-elevate"
+                style={{ borderColor: '#00ff88' }}
+                onClick={onCustomize}
+                data-testid="button-character-avatar"
+              >
+                {isCharacterLoading ? (
+                  <div className="w-14 h-14 rounded-full bg-muted animate-pulse" />
+                ) : characterData ? (
+                  <CharacterAvatar 
+                    characterData={characterData} 
+                    size={56}
+                    showPlaceholder={true}
+                  />
+                ) : (
+                  <Avatar className="w-14 h-14">
+                    <AvatarImage src={user.photoUrl || undefined} alt={user.username} />
+                    <AvatarFallback 
+                      className="font-display text-lg font-bold"
+                      style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}
+                    >
+                      {user.username?.substring(0, 2).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-semibold text-lg truncate" data-testid="text-username">
-                  {user.firstName || user.username}
+                  {isCharacterLoading ? (
+                    <span className="text-muted-foreground">Загрузка...</span>
+                  ) : characterData?.character?.name || user.firstName || user.username}
                 </h3>
                 <div className="flex items-center gap-2">
                   <Medal className="w-4 h-4" style={{ color: '#f7931a' }} />
@@ -649,57 +668,6 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
         </Card>
       </motion.div>
       */}
-
-      {user && onCustomize && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="w-full max-w-sm mb-4"
-        >
-          <Card 
-            className="p-3 border-primary/20"
-            style={{ boxShadow: '0 0 20px hsl(155 100% 50% / 0.1)' }}
-          >
-            <div className="flex items-center gap-3">
-              <div 
-                className="cursor-pointer rounded-full overflow-hidden border-2 hover-elevate"
-                style={{ borderColor: '#00ff88' }}
-                onClick={onCustomize}
-                data-testid="button-character-avatar"
-              >
-                {isCharacterLoading ? (
-                  <div className="w-14 h-14 rounded-full bg-muted animate-pulse" />
-                ) : (
-                  <CharacterAvatar 
-                    characterData={characterData || null} 
-                    size={56}
-                    showPlaceholder={true}
-                  />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Персонаж</div>
-                {isCharacterLoading ? (
-                  <div className="h-6 w-24 bg-muted rounded animate-pulse" />
-                ) : (
-                  <h4 className="font-display font-semibold text-lg truncate" style={{ color: '#00ff88' }} data-testid="text-character-name">
-                    {characterData?.character?.name || 'Настроить'}
-                  </h4>
-                )}
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={onCustomize}
-                data-testid="button-customize-character"
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-      )}
 
       {user && (
         <motion.div
