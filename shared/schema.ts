@@ -214,13 +214,14 @@ export const userSkinsRelations = relations(userSkins, ({ one }) => ({
   }),
 }));
 
-// Boost Packages - bundles of all 7 boost types for purchase with Telegram Stars
+// Boost Packages - bundles of all 7 boost types for purchase with Telegram Stars or Crypto
 export const boostPackages = pgTable("boost_packages", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   nameRu: text("name_ru").notNull(),
   boostsPerType: integer("boosts_per_type").notNull(), // количество каждого типа буста
   priceStars: integer("price_stars").notNull(), // цена в Telegram Stars
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }), // цена в USD для криптоплатежей
   originalPriceStars: integer("original_price_stars"), // перечёркнутая цена (если есть скидка)
   badge: varchar("badge", { length: 50 }), // бейдж: "hot", "best_value", null
   badgeText: text("badge_text"), // текст бейджа: "ХИТ ПРОДАЖ!", "ЛУЧШАЯ ЦЕНА!"
@@ -244,6 +245,34 @@ export const boostPackagePurchases = pgTable("boost_package_purchases", {
   status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, completed, failed
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// NOWPayments crypto payment records
+export const cryptoPayments = pgTable("crypto_payments", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  packageId: varchar("package_id", { length: 255 }).notNull().references(() => boostPackages.id),
+  nowPaymentId: varchar("now_payment_id", { length: 255 }).unique(), // NOWPayments payment_id
+  payAddress: text("pay_address"), // crypto address to pay to
+  payCurrency: varchar("pay_currency", { length: 20 }), // btc, eth, usdt, etc.
+  payAmount: numeric("pay_amount", { precision: 30, scale: 18 }), // amount in crypto
+  priceAmount: numeric("price_amount", { precision: 10, scale: 2 }).notNull(), // price in USD
+  priceCurrency: varchar("price_currency", { length: 10 }).default("usd").notNull(),
+  actuallyPaid: numeric("actually_paid", { precision: 30, scale: 18 }), // amount actually paid
+  status: varchar("status", { length: 30 }).default("waiting").notNull(), // waiting, confirming, confirmed, sending, finished, failed, expired
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const cryptoPaymentsRelations = relations(cryptoPayments, ({ one }) => ({
+  user: one(users, {
+    fields: [cryptoPayments.userId],
+    references: [users.id],
+  }),
+  package: one(boostPackages, {
+    fields: [cryptoPayments.packageId],
+    references: [boostPackages.id],
+  }),
+}));
 
 export const boostPackagesRelations = relations(boostPackages, ({ many }) => ({
   purchases: many(boostPackagePurchases),
@@ -510,6 +539,14 @@ export type InsertBoostPackage = z.infer<typeof insertBoostPackageSchema>;
 export type BoostPackage = typeof boostPackages.$inferSelect;
 export type InsertBoostPackagePurchase = z.infer<typeof insertBoostPackagePurchaseSchema>;
 export type BoostPackagePurchase = typeof boostPackagePurchases.$inferSelect;
+
+export const insertCryptoPaymentSchema = createInsertSchema(cryptoPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCryptoPayment = z.infer<typeof insertCryptoPaymentSchema>;
+export type CryptoPayment = typeof cryptoPayments.$inferSelect;
 
 export type GenderType = 'male' | 'female';
 export type AccessoryGenderType = 'male' | 'female' | 'both';
