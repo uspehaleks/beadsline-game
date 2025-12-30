@@ -3050,6 +3050,40 @@ export async function registerRoutes(
 
   // ===== NOWPAYMENTS CRYPTO PAYMENTS =====
   
+  // Test NOWPayments API status
+  app.get("/api/nowpayments/status", async (req, res) => {
+    try {
+      const apiKey = process.env.NOWPAYMENTS_API_KEY;
+      if (!apiKey) {
+        return res.json({ configured: false, error: "API key not set" });
+      }
+      
+      // Test API status endpoint
+      const statusResponse = await fetch('https://api.nowpayments.io/v1/status', {
+        headers: { 'x-api-key': apiKey }
+      });
+      const statusData = await statusResponse.json();
+      
+      // Test currencies endpoint to verify API key works
+      const currenciesResponse = await fetch('https://api.nowpayments.io/v1/currencies', {
+        headers: { 'x-api-key': apiKey }
+      });
+      const currenciesData = await currenciesResponse.json();
+      
+      res.json({
+        configured: true,
+        apiKeyLength: apiKey.length,
+        apiKeyPrefix: apiKey.substring(0, 8) + '...',
+        status: statusData,
+        currenciesOk: Array.isArray(currenciesData.currencies),
+        currenciesError: currenciesData.message || null,
+      });
+    } catch (error) {
+      console.error("NOWPayments status check error:", error);
+      res.json({ configured: false, error: String(error) });
+    }
+  });
+  
   // Create crypto payment via NOWPayments
   app.post("/api/boost-packages/:id/create-crypto-payment", requireAuth, async (req, res) => {
     try {
