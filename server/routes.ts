@@ -658,6 +658,7 @@ export async function registerRoutes(
       
       let user = await storage.getUserByTelegramId(telegramId);
       let isNewUser = false;
+      let signupBonusAwarded = 0;
       
       if (!user) {
         user = await storage.createUser({
@@ -668,6 +669,25 @@ export async function registerRoutes(
           photoUrl,
         });
         isNewUser = true;
+        
+        // Check and award signup bonus for new users
+        const signupBonusConfig = await storage.getGameConfig('signup_bonus');
+        if (signupBonusConfig) {
+          const config = signupBonusConfig.value as { enabled: boolean; amount: number; endDate: string };
+          const now = new Date();
+          const endDate = config.endDate ? new Date(config.endDate) : null;
+          
+          // Validate: enabled, valid amount, and either no end date or not expired
+          const isValidDate = endDate && !isNaN(endDate.getTime());
+          const isNotExpired = !isValidDate || now <= endDate;
+          
+          if (config.enabled && config.amount > 0 && isNotExpired) {
+            await storage.awardSignupBonus(user.id, config.amount);
+            signupBonusAwarded = config.amount;
+            user = await storage.getUser(user.id) || user;
+            console.log(`Signup bonus ${config.amount} Beads awarded to new user ${username}`);
+          }
+        }
         
         if (startParam && typeof startParam === 'string' && startParam.length > 0) {
           try {
@@ -684,7 +704,7 @@ export async function registerRoutes(
       
       req.session.userId = user.id;
       
-      res.json({ ...user, isNewUser });
+      res.json({ ...user, isNewUser, signupBonusAwarded });
     } catch (error) {
       console.error("Telegram auth error:", error);
       res.status(500).json({ error: "Failed to authenticate" });
@@ -700,17 +720,39 @@ export async function registerRoutes(
       }
       
       let user = await storage.getUserByUsername(guestId);
+      let isNewUser = false;
+      let signupBonusAwarded = 0;
       
       if (!user) {
         user = await storage.createUser({
           username: guestId,
           firstName: "Guest",
         });
+        isNewUser = true;
+        
+        // Check and award signup bonus for new guest users
+        const signupBonusConfig = await storage.getGameConfig('signup_bonus');
+        if (signupBonusConfig) {
+          const config = signupBonusConfig.value as { enabled: boolean; amount: number; endDate: string };
+          const now = new Date();
+          const endDate = config.endDate ? new Date(config.endDate) : null;
+          
+          // Validate: enabled, valid amount, and either no end date or not expired
+          const isValidDate = endDate && !isNaN(endDate.getTime());
+          const isNotExpired = !isValidDate || now <= endDate;
+          
+          if (config.enabled && config.amount > 0 && isNotExpired) {
+            await storage.awardSignupBonus(user.id, config.amount);
+            signupBonusAwarded = config.amount;
+            user = await storage.getUser(user.id) || user;
+            console.log(`Signup bonus ${config.amount} Beads awarded to new guest ${guestId}`);
+          }
+        }
       }
       
       req.session.userId = user.id;
       
-      res.json(user);
+      res.json({ ...user, isNewUser, signupBonusAwarded });
     } catch (error) {
       console.error("Guest auth error:", error);
       res.status(500).json({ error: "Failed to create guest user" });

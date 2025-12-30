@@ -165,6 +165,7 @@ export interface IStorage {
   }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }>;
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
+  awardSignupBonus(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
   recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void>;
   
   getBoosts(): Promise<Boost[]>;
@@ -1840,6 +1841,60 @@ export class DatabaseStorage implements IStorage {
       houseBalanceBefore,
       houseBalanceAfter,
       description,
+    });
+    
+    return { success: true, newBalance: userBalanceAfter };
+  }
+
+  async awardSignupBonus(
+    userId: string,
+    amount: number
+  ): Promise<{ success: boolean; newBalance: number }> {
+    const user = await this.getUser(userId);
+    if (!user) return { success: false, newBalance: 0 };
+    
+    // Check if user already received signup bonus
+    if (user.signupBonusReceived) {
+      return { success: false, newBalance: user.totalPoints };
+    }
+    
+    // Atomic update: only update if signupBonusReceived is still false
+    // This prevents race conditions with parallel requests
+    const userBalanceBefore = user.totalPoints;
+    const userBalanceAfter = userBalanceBefore + amount;
+    
+    const updateResult = await db.update(users)
+      .set({ 
+        totalPoints: userBalanceAfter,
+        signupBonusReceived: true,
+      })
+      .where(and(eq(users.id, userId), eq(users.signupBonusReceived, false)))
+      .returning({ id: users.id });
+    
+    // If no rows updated, bonus was already given (race condition prevented)
+    if (updateResult.length === 0) {
+      const updatedUser = await this.getUser(userId);
+      return { success: false, newBalance: updatedUser?.totalPoints ?? user.totalPoints };
+    }
+    
+    const house = await this.getHouseAccount();
+    const houseBalanceBefore = house.balance;
+    const houseBalanceAfter = houseBalanceBefore - amount;
+    
+    await this.updateHouseAccount({
+      balance: houseBalanceAfter,
+      totalDistributed: house.totalDistributed + amount,
+    });
+    
+    await this.createBeadsTransaction({
+      userId,
+      type: 'signup_bonus',
+      amount,
+      balanceBefore: userBalanceBefore,
+      balanceAfter: userBalanceAfter,
+      houseBalanceBefore,
+      houseBalanceAfter,
+      description: `Приветственный бонус: ${amount} Beads`,
     });
     
     return { success: true, newBalance: userBalanceAfter };

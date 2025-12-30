@@ -1433,6 +1433,129 @@ function PrizePoolsTab({ pools }: { pools: PrizePool[] }) {
   );
 }
 
+function SignupBonusCard({ configs }: { configs: GameConfig[] }) {
+  const { toast } = useToast();
+  const signupBonusConfig = configs.find(c => c.key === 'signup_bonus');
+  const config = signupBonusConfig?.value as { enabled: boolean; amount: number; endDate: string } | undefined;
+  
+  const [enabled, setEnabled] = useState(config?.enabled ?? false);
+  const [amount, setAmount] = useState(config?.amount?.toString() ?? '150');
+  const [endDate, setEndDate] = useState(config?.endDate?.split('T')[0] ?? '');
+  
+  useEffect(() => {
+    if (config) {
+      setEnabled(config.enabled);
+      setAmount(config.amount.toString());
+      setEndDate(config.endDate.split('T')[0]);
+    }
+  }, [config]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (newConfig: { enabled: boolean; amount: number; endDate: string }) => {
+      return apiRequest("POST", "/api/admin/configs", {
+        key: 'signup_bonus',
+        value: newConfig,
+        description: 'Бонус Beads при первой регистрации (акция)'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/configs"] });
+      toast({ title: "Сохранено", description: "Настройки акции обновлены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось сохранить настройки", variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    const parsedAmount = parseInt(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      toast({ title: "Ошибка", description: "Укажите корректную сумму бонуса", variant: "destructive" });
+      return;
+    }
+    if (!endDate) {
+      toast({ title: "Ошибка", description: "Укажите дату окончания акции", variant: "destructive" });
+      return;
+    }
+    updateMutation.mutate({
+      enabled,
+      amount: parsedAmount,
+      endDate: `${endDate}T23:59:59.000Z`
+    });
+  };
+
+  const isExpired = endDate && new Date(`${endDate}T23:59:59.000Z`) < new Date();
+  const parsedAmount = parseInt(amount) || 0;
+  const isValid = parsedAmount > 0 && endDate;
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="flex items-center gap-2">
+          <Gift className="w-5 h-5 text-amber-500" />
+          Приветственный бонус
+          {enabled && !isExpired && isValid && (
+            <Badge variant="default" className="bg-green-500">Активна</Badge>
+          )}
+          {enabled && !isValid && (
+            <Badge variant="outline" className="border-amber-500 text-amber-500">Не настроена</Badge>
+          )}
+          {isExpired && (
+            <Badge variant="destructive">Истекла</Badge>
+          )}
+        </CardTitle>
+        <Switch
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          data-testid="toggle-signup-bonus"
+        />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Новые пользователи получат бонус Beads при первой регистрации
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="bonus-amount">Сумма бонуса *</Label>
+            <Input
+              id="bonus-amount"
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="150"
+              data-testid="input-bonus-amount"
+            />
+          </div>
+          <div>
+            <Label htmlFor="bonus-end-date">Дата окончания *</Label>
+            <Input
+              id="bonus-end-date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              data-testid="input-bonus-end-date"
+            />
+          </div>
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending || !isValid}
+          className="w-full"
+          data-testid="button-save-signup-bonus"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Сохранить
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ConfigTab({ configs }: { configs: GameConfig[] }) {
   const { toast } = useToast();
   const [newConfig, setNewConfig] = useState({ key: "", value: "", description: "" });
@@ -1472,12 +1595,17 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
     },
   });
 
+  // Filter out signup_bonus from general configs since it has its own card
+  const otherConfigs = configs.filter(c => c.key !== 'signup_bonus');
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          Настройки игры ({configs.length})
+    <div className="space-y-4">
+      <SignupBonusCard configs={configs} />
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Настройки игры ({otherConfigs.length})
         </CardTitle>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -1537,10 +1665,10 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
       <CardContent>
         <ScrollArea className="h-[400px]">
           <div className="space-y-3">
-            {configs.length === 0 ? (
+            {otherConfigs.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Пока нет настроек</p>
             ) : (
-              configs.map((config) => (
+              otherConfigs.map((config) => (
                 <div
                   key={config.id}
                   className="flex items-center justify-between p-3 rounded-lg border"
@@ -1570,7 +1698,8 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
           </div>
         </ScrollArea>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
 

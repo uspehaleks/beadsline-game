@@ -624,7 +624,8 @@ export type TransactionType =
   | 'referral_reward'
   | 'admin_adjustment'
   | 'house_deposit'
-  | 'house_withdrawal';
+  | 'house_withdrawal'
+  | 'signup_bonus';
 
 export interface HouseAccountConfig {
   balance: number;
