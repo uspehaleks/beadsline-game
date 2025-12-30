@@ -392,9 +392,11 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
   });
 
-  const { data: characterData } = useQuery<CharacterWithAccessories>({
+  const { data: characterData, isLoading: isCharacterLoading } = useQuery<CharacterWithAccessories>({
     queryKey: ["/api/character"],
     enabled: !!user,
+    retry: 3,
+    staleTime: 30000,
   });
 
   // Проверка новых реферальных наград
@@ -648,7 +650,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
       </motion.div>
       */}
 
-      {user && characterData && (
+      {user && onCustomize && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -666,17 +668,25 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                 onClick={onCustomize}
                 data-testid="button-character-avatar"
               >
-                <CharacterAvatar 
-                  characterData={characterData} 
-                  size={56}
-                  showPlaceholder={true}
-                />
+                {isCharacterLoading ? (
+                  <div className="w-14 h-14 rounded-full bg-muted animate-pulse" />
+                ) : (
+                  <CharacterAvatar 
+                    characterData={characterData || null} 
+                    size={56}
+                    showPlaceholder={true}
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-muted-foreground uppercase tracking-wide">Персонаж</div>
-                <h4 className="font-display font-semibold text-lg truncate" style={{ color: '#00ff88' }} data-testid="text-character-name">
-                  {characterData.character.name}
-                </h4>
+                {isCharacterLoading ? (
+                  <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+                ) : (
+                  <h4 className="font-display font-semibold text-lg truncate" style={{ color: '#00ff88' }} data-testid="text-character-name">
+                    {characterData?.character?.name || 'Настроить'}
+                  </h4>
+                )}
               </div>
               <Button
                 size="icon"
