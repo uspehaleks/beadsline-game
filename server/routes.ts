@@ -3271,7 +3271,7 @@ export async function registerRoutes(
   // Admin: Create boost package
   app.post("/api/admin/boost-packages", requireAdmin, async (req, res) => {
     try {
-      const { name, nameRu, boostsPerType, priceStars, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
+      const { name, nameRu, boostsPerType, priceStars, priceUsd, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
       
       if (!name || !nameRu || !boostsPerType || !priceStars) {
         return res.status(400).json({ error: "name, nameRu, boostsPerType, and priceStars are required" });
@@ -3282,6 +3282,7 @@ export async function registerRoutes(
         nameRu,
         boostsPerType,
         priceStars,
+        priceUsd: priceUsd ? String(priceUsd) : null,
         originalPriceStars: originalPriceStars || null,
         badge: badge || null,
         badgeText: badgeText || null,
@@ -3301,7 +3302,7 @@ export async function registerRoutes(
   app.patch("/api/admin/boost-packages/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, nameRu, boostsPerType, priceStars, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
+      const { name, nameRu, boostsPerType, priceStars, priceUsd, originalPriceStars, badge, badgeText, bonusLives, bonusSkinId, sortOrder, isActive } = req.body;
       
       // Parse numeric - returns undefined for blank/invalid, allowing skip
       const parseNumeric = (val: any): number | undefined => {
@@ -3322,6 +3323,14 @@ export async function registerRoutes(
       
       const parsedPriceStars = parseNumeric(priceStars);
       if (parsedPriceStars !== undefined) updates.priceStars = parsedPriceStars;
+      
+      // priceUsd: optional numeric, stored as string
+      const parsedPriceUsd = parseNumeric(priceUsd);
+      if (parsedPriceUsd !== undefined) {
+        updates.priceUsd = String(parsedPriceUsd);
+      } else if (priceUsd === '' || priceUsd === null) {
+        updates.priceUsd = null;
+      }
       
       // Optional numeric: null if explicitly cleared, undefined to skip
       const parsedOriginalPrice = parseNumeric(originalPriceStars);

@@ -4334,6 +4334,7 @@ interface BoostPackageForm {
   nameRu: string;
   boostsPerType: number;
   priceStars: number;
+  priceUsd: number | null;
   originalPriceStars: number | null;
   badge: string;
   badgeText: string;
@@ -4351,6 +4352,7 @@ function BoostPackagesTab() {
     nameRu: '',
     boostsPerType: 10,
     priceStars: 50,
+    priceUsd: null,
     originalPriceStars: null,
     badge: '',
     badgeText: '',
@@ -4415,6 +4417,7 @@ function BoostPackagesTab() {
       nameRu: '',
       boostsPerType: 10,
       priceStars: 50,
+      priceUsd: null,
       originalPriceStars: null,
       badge: '',
       badgeText: '',
@@ -4431,6 +4434,7 @@ function BoostPackagesTab() {
       nameRu: pkg.nameRu,
       boostsPerType: pkg.boostsPerType,
       priceStars: pkg.priceStars,
+      priceUsd: pkg.priceUsd ? parseFloat(pkg.priceUsd) : null,
       originalPriceStars: pkg.originalPriceStars,
       badge: pkg.badge || '',
       badgeText: pkg.badgeText || '',
@@ -4530,6 +4534,18 @@ function BoostPackagesTab() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Цена (USDT)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={form.priceUsd || ''}
+                          onChange={(e) => setForm({ ...form, priceUsd: parseFloat(e.target.value) || null })}
+                          placeholder="Для крипто-платежей"
+                          data-testid="input-pkg-price-usd"
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label>Старая цена (если скидка)</Label>
                         <Input
@@ -4657,6 +4673,18 @@ function BoostPackagesTab() {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="space-y-2">
+                            <Label>Цена (USDT)</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={form.priceUsd || ''}
+                              onChange={(e) => setForm({ ...form, priceUsd: parseFloat(e.target.value) || null })}
+                              placeholder="Для крипто-платежей"
+                              data-testid={`input-edit-price-usd-${pkg.id}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
                             <Label>Старая цена</Label>
                             <Input
                               type="number"
@@ -4745,6 +4773,7 @@ function BoostPackagesTab() {
                                 <span className="line-through mx-1">{pkg.originalPriceStars} ⭐</span>
                               )}
                               <span className="font-medium text-foreground"> {pkg.priceStars} ⭐</span>
+                              {pkg.priceUsd && <span className="font-medium text-green-500 ml-1">/ ${parseFloat(pkg.priceUsd).toFixed(2)}</span>}
                               {pkg.bonusLives > 0 && <span className="ml-2">+{pkg.bonusLives} жизней</span>}
                             </div>
                           </div>
