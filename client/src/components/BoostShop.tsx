@@ -111,7 +111,7 @@ function PackageCard({
       >
         {pkg.badge && (
           <div 
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full text-xs font-bold"
+            className="absolute top-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold z-10"
             style={{
               backgroundColor: pkg.badge === 'hot' ? 'hsl(25 100% 50%)' : 'hsl(45 100% 50%)',
               color: '#000',
@@ -132,7 +132,7 @@ function PackageCard({
           </div>
         )}
 
-        <div className="text-center pt-2">
+        <div className={`text-center ${pkg.badge ? 'pt-8' : 'pt-2'}`}>
           <div className="flex items-center justify-center gap-2 mb-1">
             <Package className="w-5 h-5" style={{ color: pkg.badge === 'best_value' ? '#ffd700' : pkg.badge === 'hot' ? '#ff6b35' : '#00ff88' }} />
             <h3 className="font-bold text-lg">{pkg.nameRu}</h3>

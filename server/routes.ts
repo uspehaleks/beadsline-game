@@ -6,6 +6,9 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+
+const objectStorageService = new ObjectStorageService();
 
 const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const charactersDir = path.join(uploadsDir, 'characters');
@@ -1006,31 +1009,75 @@ export async function registerRoutes(
 
   // Admin Routes
   
-  // Admin: Upload character image
-  app.post("/api/admin/upload/character", requireAdmin, uploadCharacter.single('image'), async (req: Request, res: Response) => {
+  // Serve uploaded objects from Object Storage (with ACL enforcement)
+  app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      
+      // Check if user can access this object (enforces ACL policy)
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        requestedPermission: undefined, // defaults to READ
+      });
+      
+      if (!canAccess) {
+        return res.status(403).json({ error: "Access denied" });
       }
-      const imageUrl = `/uploads/characters/${req.file.filename}`;
-      res.json({ imageUrl, filename: req.file.filename });
+      
+      await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
-      console.error("Upload character error:", error);
-      res.status(500).json({ error: "Failed to upload image" });
+      console.error("Error serving object:", error);
+      return res.status(404).json({ error: "Object not found" });
     }
   });
 
-  // Admin: Upload accessory image
-  app.post("/api/admin/upload/accessory", requireAdmin, uploadAccessory.single('image'), async (req: Request, res: Response) => {
+  // Admin: Request upload URL for character/accessory images (public assets)
+  app.post("/api/admin/upload/request-url", requireAdmin, async (req: Request, res: Response) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+      const { name, contentType, uploadType } = req.body;
+      
+      if (!name || !contentType) {
+        return res.status(400).json({ error: "Missing name or contentType" });
       }
-      const imageUrl = `/uploads/accessories/${req.file.filename}`;
-      res.json({ imageUrl, filename: req.file.filename });
+      
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(contentType)) {
+        return res.status(400).json({ error: "Only PNG, JPG, WEBP, GIF images are allowed" });
+      }
+      
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+      
+      res.json({ 
+        uploadURL, 
+        objectPath,
+        metadata: { name, contentType, uploadType }
+      });
     } catch (error) {
-      console.error("Upload accessory error:", error);
-      res.status(500).json({ error: "Failed to upload image" });
+      console.error("Request upload URL error:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Admin: Set ACL for uploaded object (make it public after upload)
+  app.post("/api/admin/upload/set-public", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { objectPath } = req.body;
+      
+      if (!objectPath) {
+        return res.status(400).json({ error: "Missing objectPath" });
+      }
+      
+      // Set ACL to public for character/accessory images
+      const finalPath = await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+        owner: 'admin',
+        visibility: 'public',
+      });
+      
+      res.json({ objectPath: finalPath, visibility: 'public' });
+    } catch (error) {
+      console.error("Set public ACL error:", error);
+      res.status(500).json({ error: "Failed to set public access" });
     }
   });
 

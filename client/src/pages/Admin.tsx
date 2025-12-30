@@ -5008,21 +5008,48 @@ function CharactersTab() {
     
     setUploadingBody(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const res = await fetch('/api/admin/upload/character', {
+      // Step 1: Request presigned URL from backend
+      const urlRes = await fetch('/api/admin/upload/request-url', {
         method: 'POST',
         credentials: 'include',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: file.name,
+          contentType: file.type,
+          uploadType: 'character'
+        }),
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        setNewBody({ ...newBody, imageUrl: data.imageUrl });
+      if (!urlRes.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+      
+      const { uploadURL, objectPath } = await urlRes.json();
+      
+      // Step 2: Upload file directly to Object Storage
+      const uploadRes = await fetch(uploadURL, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload file');
+      }
+      
+      // Step 3: Set ACL to public
+      const aclRes = await fetch('/api/admin/upload/set-public', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectPath }),
+      });
+      
+      if (aclRes.ok) {
+        setNewBody({ ...newBody, imageUrl: objectPath });
         toast({ title: 'Изображение загружено' });
       } else {
-        toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+        toast({ title: 'Ошибка настройки доступа', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Ошибка загрузки', variant: 'destructive' });
@@ -5037,21 +5064,48 @@ function CharactersTab() {
     
     setUploadingAccessory(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const res = await fetch('/api/admin/upload/accessory', {
+      // Step 1: Request presigned URL from backend
+      const urlRes = await fetch('/api/admin/upload/request-url', {
         method: 'POST',
         credentials: 'include',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: file.name,
+          contentType: file.type,
+          uploadType: 'accessory'
+        }),
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        setNewAccessory({ ...newAccessory, imageUrl: data.imageUrl });
+      if (!urlRes.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+      
+      const { uploadURL, objectPath } = await urlRes.json();
+      
+      // Step 2: Upload file directly to Object Storage
+      const uploadRes = await fetch(uploadURL, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload file');
+      }
+      
+      // Step 3: Set ACL to public
+      const aclRes = await fetch('/api/admin/upload/set-public', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectPath }),
+      });
+      
+      if (aclRes.ok) {
+        setNewAccessory({ ...newAccessory, imageUrl: objectPath });
         toast({ title: 'Изображение загружено' });
       } else {
-        toast({ title: 'Ошибка загрузки', variant: 'destructive' });
+        toast({ title: 'Ошибка настройки доступа', variant: 'destructive' });
       }
     } catch (error) {
       toast({ title: 'Ошибка загрузки', variant: 'destructive' });
