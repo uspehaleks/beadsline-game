@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { User } from '@shared/schema';
+import type { User, CharacterWithAccessories } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { CharacterAvatar } from '@/components/CharacterAvatar';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
@@ -391,6 +392,11 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     enabled: !!user && !user.username?.startsWith('guest_') && showReferralStats,
   });
 
+  const { data: characterData } = useQuery<CharacterWithAccessories>({
+    queryKey: ["/api/character"],
+    enabled: !!user,
+  });
+
   // Проверка новых реферальных наград
   useEffect(() => {
     if (referralInfo?.lastRewardId && lastSeenRewardId === null) {
@@ -597,6 +603,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
         </motion.div>
       )}
 
+      {/* Prize Fund block - temporarily disabled
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -639,6 +646,50 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           </div>
         </Card>
       </motion.div>
+      */}
+
+      {user && characterData && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="w-full max-w-sm mb-4"
+        >
+          <Card 
+            className="p-3 border-primary/20"
+            style={{ boxShadow: '0 0 20px hsl(155 100% 50% / 0.1)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div 
+                className="cursor-pointer rounded-full overflow-hidden border-2 hover-elevate"
+                style={{ borderColor: '#00ff88' }}
+                onClick={onCustomize}
+                data-testid="button-character-avatar"
+              >
+                <CharacterAvatar 
+                  characterData={characterData} 
+                  size={56}
+                  showPlaceholder={true}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Персонаж</div>
+                <h4 className="font-display font-semibold text-lg truncate" style={{ color: '#00ff88' }} data-testid="text-character-name">
+                  {characterData.character.name}
+                </h4>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onCustomize}
+                data-testid="button-customize-character"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {user && (
         <motion.div
