@@ -782,46 +782,39 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
         </div>
 
         {user && (
-          <Button
-            size="lg"
-            className="w-full font-display mt-3 border-0"
-            onClick={onShop}
-            data-testid="button-shop"
-            style={{
-              background: 'linear-gradient(135deg, #f7931a 0%, #ffcc00 100%)',
-              boxShadow: '0 0 20px rgba(247, 147, 26, 0.4)',
-              color: '#000',
-            }}
-          >
-            <Zap className="w-5 h-5 mr-2" />
-            Магазин бустов
-          </Button>
-        )}
-
-        {user && onAccessoryShop && (
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full font-display mt-3"
-            onClick={onAccessoryShop}
-            data-testid="button-accessory-shop"
-          >
-            <Gift className="w-5 h-5 mr-2" />
-            Магазин аксессуаров
-          </Button>
-        )}
-
-        {user && onCustomize && (
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full font-display mt-3"
-            onClick={onCustomize}
-            data-testid="button-customize"
-          >
-            <Award className="w-5 h-5 mr-2" />
-            Персонаж
-          </Button>
+          <div className="flex gap-2 mt-3">
+            <Card 
+              className="flex-1 p-3 cursor-pointer hover-elevate active-elevate-2 border-0"
+              onClick={onShop}
+              data-testid="button-shop"
+              style={{
+                background: 'linear-gradient(135deg, #f7931a 0%, #ffcc00 100%)',
+                boxShadow: '0 0 15px rgba(247, 147, 26, 0.3)',
+              }}
+            >
+              <div className="flex flex-col items-center gap-1 text-center">
+                <Zap className="w-6 h-6" style={{ color: '#000' }} />
+                <span className="font-display text-sm font-semibold" style={{ color: '#000' }}>Бусты</span>
+              </div>
+            </Card>
+            
+            {onAccessoryShop && (
+              <Card 
+                className="flex-1 p-3 cursor-pointer hover-elevate active-elevate-2 border-primary/30"
+                onClick={onAccessoryShop}
+                data-testid="button-accessory-shop"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(270 60% 55% / 0.3) 0%, hsl(195 100% 50% / 0.2) 100%)',
+                  boxShadow: '0 0 15px hsl(270 60% 55% / 0.2)',
+                }}
+              >
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <Gift className="w-6 h-6" style={{ color: '#a855f7' }} />
+                  <span className="font-display text-sm font-semibold" style={{ color: '#a855f7' }}>Аксессуары</span>
+                </div>
+              </Card>
+            )}
+          </div>
         )}
 
         {user?.isAdmin && (
