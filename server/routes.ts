@@ -3134,7 +3134,18 @@ export async function registerRoutes(
       
       if (!result.payment_id) {
         console.error("NOWPayments error:", result);
-        return res.status(500).json({ error: result.message || "Failed to create payment" });
+        
+        // Handle specific errors with user-friendly messages
+        const errorMsg = result.message || "Failed to create payment";
+        
+        if (errorMsg.includes("less than minimal")) {
+          return res.status(400).json({ 
+            error: `Сумма слишком мала для ${(payCurrency || 'btc').toUpperCase()}. Попробуйте USDT, TRX или LTC - у них ниже минимальный порог.`,
+            code: "AMOUNT_TOO_LOW"
+          });
+        }
+        
+        return res.status(500).json({ error: errorMsg });
       }
 
       // Save payment to database
