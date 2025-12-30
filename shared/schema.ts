@@ -30,6 +30,7 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by", { length: 255 }),
   directReferralsCount: integer("direct_referrals_count").default(0).notNull(),
   completedLevels: integer("completed_levels").array().default([]).notNull(),
+  signupBonusReceived: boolean("signup_bonus_received").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
