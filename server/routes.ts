@@ -946,6 +946,9 @@ export async function registerRoutes(
       // Atomically update games_played, best_score, and completed_levels
       await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory);
       
+      // Get updated user to return gamesPlayed
+      const updatedUser = await storage.getUser(userId);
+      
       res.json({ 
         ...score, 
         beadsAwarded,
@@ -953,6 +956,7 @@ export async function registerRoutes(
         usdtAwarded: rewardResult.usdtAwarded,
         rewardId: rewardResult.rewardId,
         cryptoRewards,
+        gamesPlayed: updatedUser?.gamesPlayed ?? 0,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2458,6 +2462,50 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Setup webhook error:", error);
       res.status(500).json({ error: "Failed to setup webhook" });
+    }
+  });
+
+  // Check user membership in channel and chat
+  app.get("/api/telegram/check-membership", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !user.telegramId) {
+        return res.status(400).json({ error: "User has no Telegram ID" });
+      }
+      
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(400).json({ error: "Bot not configured" });
+      }
+      
+      const channelUsername = "@Beads_Lines";
+      const chatUsername = "@Beads_Line_chat";
+      
+      // Check membership in both channel and chat
+      const [channelResult, chatResult] = await Promise.all([
+        fetch(`https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${channelUsername}&user_id=${user.telegramId}`).then(r => r.json()),
+        fetch(`https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${chatUsername}&user_id=${user.telegramId}`).then(r => r.json())
+      ]);
+      
+      const memberStatuses = ['member', 'administrator', 'creator'];
+      
+      const inChannel = channelResult.ok && memberStatuses.includes(channelResult.result?.status);
+      const inChat = chatResult.ok && memberStatuses.includes(chatResult.result?.status);
+      
+      res.json({
+        inChannel,
+        inChat,
+        channelLink: "https://t.me/Beads_Lines",
+        chatLink: "https://t.me/Beads_Line_chat"
+      });
+    } catch (error) {
+      console.error("Check membership error:", error);
+      res.status(500).json({ error: "Failed to check membership" });
     }
   });
 

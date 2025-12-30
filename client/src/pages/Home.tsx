@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { GameState, LeaderboardEntry } from '@shared/schema';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { MainMenu } from '@/components/MainMenu';
@@ -8,6 +8,7 @@ import { LevelSelect } from '@/components/LevelSelect';
 import { BoostShop } from '@/components/BoostShop';
 import { AccessoryShop } from '@/components/AccessoryShop';
 import { CharacterCustomize } from '@/components/CharacterCustomize';
+import { CommunityInviteDialog } from '@/components/CommunityInviteDialog';
 import CharacterCreation from '@/pages/CharacterCreation';
 import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -19,6 +20,7 @@ type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop' | 'access
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig>(LEVELS[0]);
+  const [showCommunityInvite, setShowCommunityInvite] = useState(false);
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
 
   const { data: characterExists, isLoading: isCharacterLoading, refetch: refetchCharacter } = useQuery<{ exists: boolean }>({
@@ -51,9 +53,14 @@ export default function Home() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
       refreshUser();
+      
+      // Show community invite after first game for Telegram users
+      if (data?.gamesPlayed === 1) {
+        setTimeout(() => setShowCommunityInvite(true), 2000);
+      }
     },
   });
 
@@ -102,65 +109,77 @@ export default function Home() {
     return <CharacterCreation onComplete={handleCharacterCreated} />;
   }
 
-  switch (currentScreen) {
-    case 'levelSelect':
-      return (
-        <LevelSelect
-          completedLevels={user?.completedLevels ?? []}
-          onSelectLevel={handleSelectLevel}
-          onBack={handleMainMenu}
-        />
-      );
-    
-    case 'game':
-      return (
-        <GameScreen
-          level={selectedLevel}
-          isLevelCompleted={(user?.completedLevels ?? []).includes(selectedLevel.id)}
-          onGameEnd={handleGameEnd}
-          onViewLeaderboard={handleViewLeaderboard}
-          onMainMenu={handleMainMenu}
-        />
-      );
-    
-    case 'leaderboard':
-      return (
-        <Leaderboard
-          entries={leaderboard}
-          currentUserId={user?.id}
-          isLoading={isLeaderboardLoading}
-          onBack={handleMainMenu}
-        />
-      );
-    
-    case 'shop':
-      return (
-        <BoostShop onBack={handleMainMenu} />
-      );
-    
-    case 'accessoryShop':
-      return (
-        <AccessoryShop onBack={handleMainMenu} />
-      );
-    
-    case 'customize':
-      return (
-        <CharacterCustomize onBack={handleMainMenu} />
-      );
-    
-    default:
-      return (
-        <MainMenu
-          user={user}
-          onPlay={handlePlay}
-          onLeaderboard={handleViewLeaderboard}
-          onShop={handleShop}
-          onAccessoryShop={handleAccessoryShop}
-          onCustomize={handleCustomize}
-          isLoading={submitScoreMutation.isPending}
-        />
-      );
-  }
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'levelSelect':
+        return (
+          <LevelSelect
+            completedLevels={user?.completedLevels ?? []}
+            onSelectLevel={handleSelectLevel}
+            onBack={handleMainMenu}
+          />
+        );
+      
+      case 'game':
+        return (
+          <GameScreen
+            level={selectedLevel}
+            isLevelCompleted={(user?.completedLevels ?? []).includes(selectedLevel.id)}
+            onGameEnd={handleGameEnd}
+            onViewLeaderboard={handleViewLeaderboard}
+            onMainMenu={handleMainMenu}
+          />
+        );
+      
+      case 'leaderboard':
+        return (
+          <Leaderboard
+            entries={leaderboard}
+            currentUserId={user?.id}
+            isLoading={isLeaderboardLoading}
+            onBack={handleMainMenu}
+          />
+        );
+      
+      case 'shop':
+        return (
+          <BoostShop onBack={handleMainMenu} />
+        );
+      
+      case 'accessoryShop':
+        return (
+          <AccessoryShop onBack={handleMainMenu} />
+        );
+      
+      case 'customize':
+        return (
+          <CharacterCustomize onBack={handleMainMenu} />
+        );
+      
+      default:
+        return (
+          <MainMenu
+            user={user}
+            onPlay={handlePlay}
+            onLeaderboard={handleViewLeaderboard}
+            onShop={handleShop}
+            onAccessoryShop={handleAccessoryShop}
+            onCustomize={handleCustomize}
+            isLoading={submitScoreMutation.isPending}
+          />
+        );
+    }
+  };
+
+  return (
+    <>
+      {renderScreen()}
+      <CommunityInviteDialog 
+        open={showCommunityInvite} 
+        onOpenChange={setShowCommunityInvite} 
+      />
+    </>
+  );
 }
 
 function LoadingScreen() {
