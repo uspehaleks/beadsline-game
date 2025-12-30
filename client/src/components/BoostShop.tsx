@@ -659,7 +659,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
                   Покупайте наборы за <Star className="w-4 h-4 inline text-yellow-400 fill-yellow-400" /> Telegram Stars
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 items-end">
                 <AnimatePresence>
                   {activePackages.map((pkg, index) => (
                     <PackageCard
