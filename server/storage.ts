@@ -19,6 +19,8 @@ import {
   boostPackages,
   boostPackagePurchases,
   cryptoPayments,
+  teamMembers,
+  revenueShares,
   type User, 
   type InsertUser,
   type GameScore,
@@ -73,6 +75,11 @@ import {
   type InsertBoostPackagePurchase,
   type CryptoPayment,
   type InsertCryptoPayment,
+  type TeamMember,
+  type InsertTeamMember,
+  type RevenueShare,
+  type InsertRevenueShare,
+  type RevenueSummary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -232,6 +239,16 @@ export interface IStorage {
   getCryptoPaymentByNowPaymentId(nowPaymentId: string): Promise<CryptoPayment | undefined>;
   updateCryptoPaymentStatus(nowPaymentId: string, status: string, actuallyPaid?: string): Promise<CryptoPayment | undefined>;
   processCryptoPaymentSuccess(nowPaymentId: string): Promise<{ success: boolean; error?: string }>;
+  
+  // Team Members & Revenue
+  getTeamMembers(activeOnly?: boolean): Promise<TeamMember[]>;
+  getTeamMember(id: string): Promise<TeamMember | undefined>;
+  createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
+  deleteTeamMember(id: string): Promise<void>;
+  createRevenueShare(share: InsertRevenueShare): Promise<RevenueShare>;
+  getRevenueSummary(): Promise<RevenueSummary>;
+  recordRevenueFromPurchase(purchaseId: string, priceStars: number, priceUsd: number, paymentType: 'stars' | 'crypto'): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2587,9 +2604,182 @@ export class DatabaseStorage implements IStorage {
     if (result.success) {
       // Update payment status to finished
       await this.updateCryptoPaymentStatus(nowPaymentId, 'finished');
+      
+      // Record revenue for accounting
+      const priceUsd = Number(payment.priceAmount) || 0;
+      await this.recordRevenueFromPurchase(payment.id, 0, priceUsd, 'crypto');
     }
 
     return result;
+  }
+
+  // Team Members & Revenue
+  async getTeamMembers(activeOnly = false): Promise<TeamMember[]> {
+    if (activeOnly) {
+      return await db.select().from(teamMembers).where(eq(teamMembers.isActive, true));
+    }
+    return await db.select().from(teamMembers);
+  }
+
+  async getTeamMember(id: string): Promise<TeamMember | undefined> {
+    const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, id));
+    return member || undefined;
+  }
+
+  async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
+    const [created] = await db.insert(teamMembers).values(member).returning();
+    return created;
+  }
+
+  async updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const [updated] = await db
+      .update(teamMembers)
+      .set(updates)
+      .where(eq(teamMembers.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteTeamMember(id: string): Promise<void> {
+    await db.delete(teamMembers).where(eq(teamMembers.id, id));
+  }
+
+  async createRevenueShare(share: InsertRevenueShare): Promise<RevenueShare> {
+    const [created] = await db.insert(revenueShares).values(share).returning();
+    return created;
+  }
+
+  async getRevenueSummary(): Promise<RevenueSummary> {
+    // Get all revenue shares
+    const shares = await db.select().from(revenueShares);
+    
+    // Get team members
+    const members = await this.getTeamMembers(true);
+    
+    // Calculate totals
+    let totalSalesStars = 0;
+    let totalSalesUsd = 0;
+    let developmentStars = 0;
+    let developmentUsd = 0;
+    let advertisingStars = 0;
+    let advertisingUsd = 0;
+    let starsSalesCount = 0;
+    let cryptoSalesCount = 0;
+    
+    const memberTotals: Record<string, { stars: number; usd: number }> = {};
+    
+    for (const share of shares) {
+      totalSalesStars += share.totalStars;
+      totalSalesUsd += Number(share.totalUsd);
+      developmentStars += share.developmentStars;
+      developmentUsd += Number(share.developmentUsd);
+      advertisingStars += share.advertisingStars;
+      advertisingUsd += Number(share.advertisingUsd);
+      
+      if (share.paymentType === 'stars') {
+        starsSalesCount++;
+      } else {
+        cryptoSalesCount++;
+      }
+      
+      // Parse team shares JSON
+      const teamSharesJson = share.teamSharesJson as Record<string, { stars: number; usd: number }>;
+      for (const [memberId, amounts] of Object.entries(teamSharesJson)) {
+        if (!memberTotals[memberId]) {
+          memberTotals[memberId] = { stars: 0, usd: 0 };
+        }
+        memberTotals[memberId].stars += amounts.stars || 0;
+        memberTotals[memberId].usd += amounts.usd || 0;
+      }
+    }
+    
+    // Build team shares array
+    const teamShares = members.map(m => ({
+      memberId: m.id,
+      name: m.name,
+      stars: memberTotals[m.id]?.stars || 0,
+      usd: memberTotals[m.id]?.usd || 0,
+    }));
+    
+    return {
+      totalSalesStars,
+      totalSalesUsd,
+      developmentStars,
+      developmentUsd,
+      advertisingStars,
+      advertisingUsd,
+      teamShares,
+      salesCount: shares.length,
+      starsSalesCount,
+      cryptoSalesCount,
+    };
+  }
+
+  async recordRevenueFromPurchase(
+    purchaseId: string, 
+    priceStars: number, 
+    priceUsd: number, 
+    paymentType: 'stars' | 'crypto'
+  ): Promise<void> {
+    // Fixed revenue distribution: 10% development, 15% advertising
+    // Remaining 75% split among active team members based on their sharePercent
+    const devPercent = 0.10;
+    const adPercent = 0.15;
+    const teamPoolPercent = 0.75; // Total pool for team members
+    
+    const developmentStars = Math.floor(priceStars * devPercent);
+    const developmentUsd = (priceUsd * devPercent).toFixed(2);
+    const advertisingStars = Math.floor(priceStars * adPercent);
+    const advertisingUsd = (priceUsd * adPercent).toFixed(2);
+    
+    // Get active team members and calculate their share of the team pool
+    const members = await this.getTeamMembers(true);
+    const teamSharesJson: Record<string, { stars: number; usd: number }> = {};
+    
+    // Edge case: if no active members, skip team distribution (revenue goes unallocated)
+    // This should not happen due to API validation preventing deactivation of all members
+    if (members.length === 0) {
+      console.warn("No active team members for revenue distribution - 75% team pool unallocated");
+    }
+    
+    // Calculate total share percent of active members to normalize distribution
+    const totalMemberSharePercent = members.reduce((sum, m) => sum + m.sharePercent, 0);
+    
+    for (const member of members) {
+      // Each member gets their proportional share of the 75% team pool
+      // If total member shares = 75% (5 members at 15% each), they each get their full share
+      // If fewer/more members, proportionally adjust
+      const memberPoolShare = totalMemberSharePercent > 0 
+        ? (member.sharePercent / totalMemberSharePercent) * teamPoolPercent
+        : 0;
+      
+      const memberStars = Math.floor(priceStars * memberPoolShare);
+      const memberUsd = priceUsd * memberPoolShare;
+      teamSharesJson[member.id] = { stars: memberStars, usd: memberUsd };
+      
+      // Update team member totals
+      await db
+        .update(teamMembers)
+        .set({
+          totalEarnedStars: sql`${teamMembers.totalEarnedStars} + ${memberStars}`,
+          totalEarnedUsd: sql`CAST(${teamMembers.totalEarnedUsd} AS NUMERIC) + ${memberUsd}`,
+        })
+        .where(eq(teamMembers.id, member.id));
+    }
+    
+    // Create revenue share record
+    await this.createRevenueShare({
+      purchaseId: paymentType === 'stars' ? purchaseId : null,
+      cryptoPaymentId: paymentType === 'crypto' ? purchaseId : null,
+      paymentType,
+      totalStars: priceStars,
+      totalUsd: priceUsd.toFixed(2),
+      developmentStars,
+      developmentUsd,
+      advertisingStars,
+      advertisingUsd,
+      teamSharesJson,
+    });
   }
 }
 

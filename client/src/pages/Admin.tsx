@@ -520,6 +520,10 @@ export default function Admin() {
                 <Gift className="w-4 h-4 mr-1.5" />
                 Пакеты бустов
               </TabsTrigger>
+              <TabsTrigger value="accounting" data-testid="tab-accounting" className="w-full justify-start">
+                <Coins className="w-4 h-4 mr-1.5" />
+                Бухгалтерия
+              </TabsTrigger>
               <TabsTrigger value="characters" data-testid="tab-characters" className="w-full justify-start">
                 <Users className="w-4 h-4 mr-1.5" />
                 Персонажи
@@ -591,6 +595,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="boost-packages">
             <BoostPackagesTab />
+          </TabsContent>
+          <TabsContent value="accounting">
+            <AccountingTab />
           </TabsContent>
           <TabsContent value="characters">
             <CharactersTab />
@@ -4768,6 +4775,278 @@ function BoostPackagesTab() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Types for Accounting
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string | null;
+  sharePercent: number;
+  totalEarnedStars: number;
+  totalEarnedUsd: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface RevenueSummary {
+  totalSalesStars: number;
+  totalSalesUsd: number;
+  developmentStars: number;
+  developmentUsd: number;
+  advertisingStars: number;
+  advertisingUsd: number;
+  teamShares: { memberId: string; name: string; stars: number; usd: number }[];
+  salesCount: number;
+  starsSalesCount: number;
+  cryptoSalesCount: number;
+}
+
+function AccountingTab() {
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
+
+  const { data: teamMembers = [], isLoading: membersLoading } = useQuery<TeamMember[]>({
+    queryKey: ['/api/admin/team-members'],
+  });
+
+  const { data: revenue, isLoading: revenueLoading } = useQuery<RevenueSummary>({
+    queryKey: ['/api/admin/revenue-summary'],
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ id, name, role }: { id: string; name: string; role: string }) => {
+      return apiRequest('PUT', `/api/admin/team-members/${id}`, { name, role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/team-members'] });
+      toast({ title: 'Сохранено', description: 'Член команды обновлён' });
+      setEditingId(null);
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить', variant: 'destructive' });
+    },
+  });
+
+  const startEdit = (member: TeamMember) => {
+    setEditingId(member.id);
+    setEditName(member.name);
+    setEditRole(member.role || '');
+  };
+
+  const saveEdit = () => {
+    if (editingId) {
+      updateMemberMutation.mutate({ id: editingId, name: editName, role: editRole });
+    }
+  };
+
+  const formatStars = (stars: number) => {
+    return `${stars.toLocaleString()} ⭐`;
+  };
+
+  const formatUsd = (usd: number | string) => {
+    const num = typeof usd === 'string' ? parseFloat(usd) : usd;
+    return `$${num.toFixed(2)}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="w-5 h-5" />
+            Статистика продаж
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {revenueLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
+          ) : revenue ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="text-sm text-muted-foreground">Всего продаж</div>
+                  <div className="text-2xl font-bold">{revenue.salesCount}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Stars: {revenue.starsSalesCount} | Crypto: {revenue.cryptoSalesCount}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-yellow-500/10">
+                  <div className="text-sm text-muted-foreground">Доход (Stars)</div>
+                  <div className="text-2xl font-bold text-yellow-500">{formatStars(revenue.totalSalesStars)}</div>
+                </div>
+                <div className="p-4 rounded-lg bg-green-500/10">
+                  <div className="text-sm text-muted-foreground">Доход (USD)</div>
+                  <div className="text-2xl font-bold text-green-500">{formatUsd(revenue.totalSalesUsd)}</div>
+                </div>
+                <div className="p-4 rounded-lg bg-blue-500/10">
+                  <div className="text-sm text-muted-foreground">Всего доход</div>
+                  <div className="text-xl font-bold text-blue-500">
+                    {formatStars(revenue.totalSalesStars)} + {formatUsd(revenue.totalSalesUsd)}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="font-semibold mb-4">Распределение дохода</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wrench className="w-4 h-4 text-primary" />
+                      <span className="font-medium">Разработка (10%)</span>
+                    </div>
+                    <div className="text-lg">{formatStars(revenue.developmentStars)} + {formatUsd(revenue.developmentUsd)}</div>
+                  </div>
+                  <div className="p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="w-4 h-4 text-orange-500" />
+                      <span className="font-medium">Реклама (15%)</span>
+                    </div>
+                    <div className="text-lg">{formatStars(revenue.advertisingStars)} + {formatUsd(revenue.advertisingUsd)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">Нет данных о продажах</div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Команда (5 членов, по 15% каждому)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {membersLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Загрузка...</div>
+          ) : (
+            <div className="space-y-3">
+              {teamMembers.map((member, index) => (
+                <div key={member.id} className="p-4 rounded-lg border flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="flex-1">
+                    {editingId === member.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Имя"
+                          data-testid={`input-member-name-${member.id}`}
+                        />
+                        <Input
+                          value={editRole}
+                          onChange={(e) => setEditRole(e.target.value)}
+                          placeholder="Роль"
+                          data-testid={`input-member-role-${member.id}`}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          <Badge variant="outline">{index + 1}</Badge>
+                          {member.name}
+                        </div>
+                        {member.role && (
+                          <div className="text-sm text-muted-foreground">{member.role}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">Заработано</div>
+                      <div className="font-medium">
+                        {formatStars(member.totalEarnedStars)}
+                      </div>
+                      <div className="text-sm text-green-500">
+                        {formatUsd(member.totalEarnedUsd)}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      {editingId === member.id ? (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={saveEdit}
+                            disabled={updateMemberMutation.isPending}
+                            data-testid={`button-save-member-${member.id}`}
+                          >
+                            {updateMemberMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingId(null)}
+                            data-testid={`button-cancel-member-${member.id}`}
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => startEdit(member)}
+                          data-testid={`button-edit-member-${member.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {teamMembers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Нет членов команды. Добавьте их в базу данных.
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Распределение дохода по членам команды</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {revenue && revenue.teamShares.length > 0 ? (
+            <div className="space-y-2">
+              {revenue.teamShares.map((share) => (
+                <div key={share.memberId} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <span className="font-medium">{share.name}</span>
+                  <div className="text-right">
+                    <span className="text-yellow-500">{formatStars(share.stars)}</span>
+                    <span className="mx-2">+</span>
+                    <span className="text-green-500">{formatUsd(share.usd)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              Пока нет продаж для распределения
             </div>
           )}
         </CardContent>

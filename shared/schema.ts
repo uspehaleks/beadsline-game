@@ -548,6 +548,62 @@ export const insertCryptoPaymentSchema = createInsertSchema(cryptoPayments).omit
 export type InsertCryptoPayment = z.infer<typeof insertCryptoPaymentSchema>;
 export type CryptoPayment = typeof cryptoPayments.$inferSelect;
 
+// Team members for revenue distribution
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  role: text("role"),
+  sharePercent: real("share_percent").default(15).notNull(),
+  totalEarnedStars: integer("total_earned_stars").default(0).notNull(),
+  totalEarnedUsd: numeric("total_earned_usd", { precision: 12, scale: 2 }).default("0").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
+
+// Revenue distribution shares tracking
+export const revenueShares = pgTable("revenue_shares", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  purchaseId: varchar("purchase_id", { length: 255 }),
+  cryptoPaymentId: varchar("crypto_payment_id", { length: 255 }),
+  paymentType: varchar("payment_type", { length: 20 }).notNull(), // 'stars' or 'crypto'
+  totalStars: integer("total_stars").default(0).notNull(),
+  totalUsd: numeric("total_usd", { precision: 12, scale: 2 }).default("0").notNull(),
+  developmentStars: integer("development_stars").default(0).notNull(),
+  developmentUsd: numeric("development_usd", { precision: 12, scale: 2 }).default("0").notNull(),
+  advertisingStars: integer("advertising_stars").default(0).notNull(),
+  advertisingUsd: numeric("advertising_usd", { precision: 12, scale: 2 }).default("0").notNull(),
+  teamSharesJson: jsonb("team_shares_json").default({}).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertRevenueShareSchema = createInsertSchema(revenueShares).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertRevenueShare = z.infer<typeof insertRevenueShareSchema>;
+export type RevenueShare = typeof revenueShares.$inferSelect;
+
+// Revenue summary config
+export interface RevenueSummary {
+  totalSalesStars: number;
+  totalSalesUsd: number;
+  developmentStars: number;
+  developmentUsd: number;
+  advertisingStars: number;
+  advertisingUsd: number;
+  teamShares: { memberId: string; name: string; stars: number; usd: number }[];
+  salesCount: number;
+  starsSalesCount: number;
+  cryptoSalesCount: number;
+}
+
 export type GenderType = 'male' | 'female';
 export type AccessoryGenderType = 'male' | 'female' | 'both';
 export type SlotType = 'head' | 'eyes' | 'face' | 'body' | 'background';

@@ -21,6 +21,13 @@ Key features include:
 -   **Referral System**: A 2-level referral program rewarding referrers with Beads when their direct and indirect referrals play games.
 -   **Telegram Bot Integration**: Commands for game launch, leaderboard, and help, all in Russian.
 -   **Telegram Stars Payments**: In-app purchases for boost packages using Telegram Stars currency. Invoice creation via Bot API, pre-checkout validation, and async payment processing with userId verification from authenticated session payload.
+-   **Cryptocurrency Payments**: NOWPayments integration for crypto payments (BTC, ETH, USDT, LTC, TRX, TON). Payment method selection dialog in BoostShop with address display and status polling.
+-   **Team Accounting System**: Mini-bookkeeping in admin panel with 5 team members and automatic revenue distribution:
+    - 10% to Development
+    - 15% to Advertising
+    - 75% split among active team members proportionally (based on sharePercent, default 15% each)
+    - Tracks both Stars and USD revenue from all purchases
+    - Editable team member names and roles
 
 The system uses a `game_config` table for dynamic configuration, allowing admins to adjust economy parameters like points, combo multipliers, crypto spawn chances, and referral rewards at runtime.
 

@@ -2071,6 +2071,113 @@ export async function registerRoutes(
     }
   });
 
+  // Team Members & Revenue API endpoints
+  app.get("/api/admin/team-members", requireAdmin, async (req, res) => {
+    try {
+      const members = await storage.getTeamMembers();
+      res.json(members);
+    } catch (error) {
+      console.error("Get team members error:", error);
+      res.status(500).json({ error: "Failed to get team members" });
+    }
+  });
+
+  app.post("/api/admin/team-members", requireAdmin, async (req, res) => {
+    try {
+      const { name, role, sharePercent } = req.body;
+      
+      // Validate sharePercent
+      const parsedSharePercent = sharePercent !== undefined ? Number(sharePercent) : 15;
+      if (parsedSharePercent < 1 || parsedSharePercent > 100) {
+        return res.status(400).json({ error: "sharePercent must be between 1 and 100" });
+      }
+      
+      const member = await storage.createTeamMember({
+        name,
+        role: role || null,
+        sharePercent: parsedSharePercent,
+        isActive: true,
+      });
+      res.json(member);
+    } catch (error) {
+      console.error("Create team member error:", error);
+      res.status(500).json({ error: "Failed to create team member" });
+    }
+  });
+
+  app.put("/api/admin/team-members/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, role, sharePercent, isActive } = req.body;
+      const updates: { name?: string; role?: string | null; sharePercent?: number; isActive?: boolean } = {};
+      
+      if (name !== undefined) updates.name = name;
+      if (role !== undefined) updates.role = role;
+      
+      // Validate sharePercent
+      if (sharePercent !== undefined) {
+        const parsedSharePercent = Number(sharePercent);
+        if (parsedSharePercent < 1 || parsedSharePercent > 100) {
+          return res.status(400).json({ error: "sharePercent must be between 1 and 100" });
+        }
+        updates.sharePercent = parsedSharePercent;
+      }
+      
+      // Prevent deactivating all team members
+      if (isActive !== undefined && !Boolean(isActive)) {
+        const allMembers = await storage.getTeamMembers();
+        const otherActiveMembers = allMembers.filter(m => m.id !== id && m.isActive);
+        if (otherActiveMembers.length === 0) {
+          return res.status(400).json({ error: "Cannot deactivate last active team member" });
+        }
+        updates.isActive = false;
+      } else if (isActive !== undefined) {
+        updates.isActive = Boolean(isActive);
+      }
+      
+      const member = await storage.updateTeamMember(id, updates);
+      if (!member) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ error: "Failed to update team member" });
+    }
+  });
+
+  app.delete("/api/admin/team-members/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prevent deleting last active member
+      const allMembers = await storage.getTeamMembers();
+      const memberToDelete = allMembers.find(m => m.id === id);
+      if (memberToDelete?.isActive) {
+        const otherActiveMembers = allMembers.filter(m => m.id !== id && m.isActive);
+        if (otherActiveMembers.length === 0) {
+          return res.status(400).json({ error: "Cannot delete last active team member" });
+        }
+      }
+      
+      await storage.deleteTeamMember(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete team member error:", error);
+      res.status(500).json({ error: "Failed to delete team member" });
+    }
+  });
+
+  app.get("/api/admin/revenue-summary", requireAdmin, async (req, res) => {
+    try {
+      const summary = await storage.getRevenueSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error("Get revenue summary error:", error);
+      res.status(500).json({ error: "Failed to get revenue summary" });
+    }
+  });
+
   // Lives Config API endpoints
   app.get("/api/lives-config", async (req, res) => {
     try {
@@ -2282,6 +2389,18 @@ export async function registerRoutes(
                 
                 if (result.success) {
                   console.log(`Payment processed successfully for user ${user.id}`);
+                  
+                  // Record revenue for accounting (Stars payments)
+                  const pkg = await storage.getBoostPackage(payload.packageId);
+                  if (pkg && result.purchase) {
+                    const priceUsd = pkg.priceStars / 50; // 1 USD ≈ 50 Stars
+                    await storage.recordRevenueFromPurchase(
+                      result.purchase.id,
+                      pkg.priceStars,
+                      priceUsd,
+                      'stars'
+                    );
+                  }
                 } else {
                   console.error(`Payment processing failed: ${result.error}`);
                 }
