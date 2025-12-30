@@ -116,10 +116,10 @@ function PackageCard({
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative ${isHighlighted ? 'z-10' : ''}`}
+      className={`relative h-full ${isHighlighted ? 'z-10' : ''}`}
     >
       <Card
-        className={`relative overflow-hidden p-4 ${isHighlighted ? 'ring-2 ring-offset-2 ring-offset-background' : ''}`}
+        className={`relative overflow-hidden p-4 h-full flex flex-col ${isHighlighted ? 'ring-2 ring-offset-2 ring-offset-background' : ''}`}
         style={{
           background: style.gradient,
           borderColor: style.border,
@@ -150,7 +150,7 @@ function PackageCard({
           </div>
         )}
 
-        <div className={`text-center ${pkg.badge ? 'pt-8' : 'pt-2'}`}>
+        <div className={`text-center flex-1 ${pkg.badge ? 'pt-8' : 'pt-2'}`}>
           <div className="flex items-center justify-center gap-2 mb-1">
             <Package className="w-5 h-5" style={{ color: pkg.badge === 'best_value' ? '#ffd700' : pkg.badge === 'hot' ? '#ff6b35' : '#00ff88' }} />
             <h3 className="font-bold text-lg">{pkg.nameRu}</h3>
@@ -175,7 +175,7 @@ function PackageCard({
           )}
         </div>
 
-        <div className="flex flex-col items-center gap-2 mt-4">
+        <div className="flex flex-col items-center gap-2 mt-auto pt-4">
           <div className="flex items-center gap-2">
             {hasDiscount && (
               <span className="text-muted-foreground line-through text-sm">
