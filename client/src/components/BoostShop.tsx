@@ -866,48 +866,47 @@ export function BoostShop({ onBack }: BoostShopProps) {
               </div>
             </Button>
 
-            {/* Crypto option */}
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full h-auto py-4 justify-start gap-3"
-                onClick={handlePayWithCrypto}
-                disabled={purchasingPackageId !== null || createCryptoPaymentMutation.isPending}
-                data-testid="button-pay-crypto"
-              >
-                {createCryptoPaymentMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                      <Bitcoin className="w-5 h-5 text-orange-400" />
-                    </div>
-                    <div className="text-left flex-1">
-                      <div className="font-semibold">Криптовалюта</div>
-                      <div className="text-xs text-muted-foreground">
-                        {selectedPackageForPayment?.priceUsd 
-                          ? `$${parseFloat(selectedPackageForPayment.priceUsd).toFixed(2)} USD`
-                          : `~$${((selectedPackageForPayment?.priceStars || 0) / 50).toFixed(2)} USD`
-                        }
+            {/* Crypto option - only show if priceUsd is set */}
+            {selectedPackageForPayment?.priceUsd && (
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full h-auto py-4 justify-start gap-3"
+                  onClick={handlePayWithCrypto}
+                  disabled={purchasingPackageId !== null || createCryptoPaymentMutation.isPending}
+                  data-testid="button-pay-crypto"
+                >
+                  {createCryptoPaymentMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                        <Bitcoin className="w-5 h-5 text-orange-400" />
                       </div>
-                    </div>
-                  </>
-                )}
-              </Button>
-              
-              <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                <SelectTrigger className="w-full" data-testid="select-crypto">
-                  <SelectValue placeholder="Выберите криптовалюту" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CRYPTO_CURRENCIES.map((crypto) => (
-                    <SelectItem key={crypto.id} value={crypto.id}>
-                      {crypto.name} ({crypto.symbol})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                      <div className="text-left flex-1">
+                        <div className="font-semibold">Криптовалюта</div>
+                        <div className="text-xs text-muted-foreground">
+                          ${parseFloat(selectedPackageForPayment.priceUsd).toFixed(2)} USD
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </Button>
+                
+                <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                  <SelectTrigger className="w-full" data-testid="select-crypto">
+                    <SelectValue placeholder="Выберите криптовалюту" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CRYPTO_CURRENCIES.map((crypto) => (
+                      <SelectItem key={crypto.id} value={crypto.id}>
+                        {crypto.name} ({crypto.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
