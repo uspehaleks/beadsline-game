@@ -1034,36 +1034,20 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 
 let rollbackLogCounter = 0;
 
-export function processRollback(balls: Ball[], deltaTime: number, spawnFinished: boolean = false): Ball[] {
+export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished: boolean = false): Ball[] {
   if (balls.length < 2) return balls;
   
   const spacing = getBallSpacing();
   // Fast gap-closure - close gaps almost instantly for smooth chain cohesion
-  const smoothingSpeed = 0.5; // Much faster gap closure
+  const smoothingSpeed = 0.5;
   const maxCorrection = smoothingSpeed * deltaTime * 0.001;
   
-  let newBalls = [...balls];
+  const newBalls = [...balls];
   let totalCorrections = 0;
   let maxGapExcess = 0;
   
-  // Check if head ball is near exit portal (about to win)
-  const headBall = newBalls.reduce((max, b) => b.pathProgress > max.pathProgress ? b : max, newBalls[0]);
-  const isNearExit = headBall.pathProgress > 0.85;
-  
-  // PHASE 1: Pull the entire chain BACKWARD toward the portal if tail is too far
-  // Skip this when spawn is finished or chain is near exit (to avoid jittering at the end)
-  const tailBall = newBalls.reduce((min, b) => b.pathProgress < min.pathProgress ? b : min, newBalls[0]);
-  const targetTailPosition = spacing; // Tail should be at spacing distance from portal
-  
-  if (!spawnFinished && !isNearExit && tailBall.pathProgress > targetTailPosition * 1.5) {
-    const pullbackAmount = Math.min((tailBall.pathProgress - targetTailPosition) * 0.3, maxCorrection * 2);
-    newBalls = newBalls.map(ball => ({
-      ...ball,
-      pathProgress: Math.max(0, ball.pathProgress - pullbackAmount),
-    }));
-  }
-  
-  // PHASE 2: Close internal gaps by moving back balls forward
+  // Only close internal gaps - no pullback to avoid jittering
+  // When balls are removed, remaining balls close the gap by moving forward
   // Process from front (highest progress) to back (lowest progress)
   for (let i = newBalls.length - 2; i >= 0; i--) {
     const currentBall = newBalls[i];
