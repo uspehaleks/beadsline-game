@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
 import { LeagueBadge } from '@/components/LeagueBadge';
@@ -55,6 +55,23 @@ interface ReferralRewardWithUser {
 interface ReferralRewardsResponse {
   rewards: ReferralRewardWithUser[];
   total: number;
+}
+
+interface League {
+  id: string;
+  slug: string;
+  nameRu: string;
+  nameEn: string;
+  icon: string;
+  minBeads: number;
+  maxRank: number | null;
+  themeColor: string;
+  sortOrder: number;
+}
+
+interface UserLeagueResponse {
+  league: League;
+  rank: number;
 }
 
 interface ReferralListItem {
@@ -345,6 +362,7 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
 }
 
 export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop, onCustomize, isLoading }: MainMenuProps) {
+  const [, navigate] = useLocation();
   const [showReferral, setShowReferral] = useState(false);
   const [showReferralStats, setShowReferralStats] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -399,6 +417,54 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     retry: 3,
     staleTime: 30000,
   });
+
+  const { data: userLeague } = useQuery<UserLeagueResponse>({
+    queryKey: ['/api/user/league'],
+    enabled: !!user && !user.username?.startsWith('guest_'),
+    staleTime: 30000,
+  });
+
+  const { data: allLeagues = [] } = useQuery<League[]>({
+    queryKey: ['/api/leagues'],
+    staleTime: 60000,
+  });
+
+  // Calculate progress to next league
+  const getLeagueProgress = () => {
+    if (!userLeague || allLeagues.length === 0) return null;
+    
+    const currentIndex = allLeagues.findIndex(l => l.slug === userLeague.league.slug);
+    const nextLeague = currentIndex < allLeagues.length - 1 ? allLeagues[currentIndex + 1] : null;
+    
+    if (!nextLeague) {
+      return {
+        isMax: true,
+        progress: 100,
+        nextLeagueName: 'MAX',
+        nextLeagueIcon: '',
+        pointsToNext: 0,
+        themeColor: userLeague.league.themeColor,
+      };
+    }
+    
+    const currentMinBeads = userLeague.league.minBeads;
+    const nextMinBeads = nextLeague.minBeads;
+    const userBeads = user?.totalPoints || 0;
+    
+    const progress = Math.min(100, Math.max(0, ((userBeads - currentMinBeads) / (nextMinBeads - currentMinBeads)) * 100));
+    const pointsToNext = Math.max(0, nextMinBeads - userBeads);
+    
+    return {
+      isMax: false,
+      progress,
+      nextLeagueName: nextLeague.nameRu,
+      nextLeagueIcon: nextLeague.icon,
+      pointsToNext,
+      themeColor: nextLeague.themeColor,
+    };
+  };
+
+  const leagueProgress = getLeagueProgress();
 
   // Проверка новых реферальных наград
   useEffect(() => {
@@ -556,19 +622,31 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
               </div>
             </div>
             
-            <div className="mt-3 space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{rankInfo.isMaxLevel ? 'Максимальный уровень' : `Прогресс до ${rankInfo.nextRankLabel}`}</span>
-                <span>{Math.round(rankInfo.progress)}%</span>
+            {leagueProgress && (
+              <div className="mt-3 space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {leagueProgress.isMax 
+                      ? 'Максимальная лига' 
+                      : `До ${leagueProgress.nextLeagueIcon} ${leagueProgress.nextLeagueName}`
+                    }
+                  </span>
+                  <span>{Math.round(leagueProgress.progress)}%</span>
+                </div>
+                <Progress 
+                  value={leagueProgress.progress} 
+                  className="h-2"
+                  style={{ 
+                    background: 'hsl(230 30% 15%)',
+                  }}
+                />
+                {!leagueProgress.isMax && leagueProgress.pointsToNext > 0 && (
+                  <p className="text-xs text-muted-foreground text-right">
+                    Ещё {leagueProgress.pointsToNext.toLocaleString()} Beads
+                  </p>
+                )}
               </div>
-              <Progress 
-                value={rankInfo.progress} 
-                className="h-2"
-                style={{ 
-                  background: 'hsl(230 30% 15%)',
-                }}
-              />
-            </div>
+            )}
           </Card>
         </motion.div>
       )}
@@ -1223,16 +1301,23 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           </button>
           <button 
             className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors relative"
+            onClick={() => navigate(userLeague ? `/league/${userLeague.league.slug}` : '/league/bronze')}
             data-testid="nav-leagues"
           >
             <div className="relative">
-              <Award className="w-5 h-5" style={{ color: '#c0c0c0' }} />
-              <span 
-                className="absolute -top-1 -right-2 text-[10px] font-bold"
-                style={{ color: '#c0c0c0' }}
-              >
-                II
-              </span>
+              {userLeague ? (
+                <span className="text-xl" style={{ color: userLeague.league.themeColor }}>{userLeague.league.icon}</span>
+              ) : (
+                <>
+                  <Award className="w-5 h-5" style={{ color: '#c0c0c0' }} />
+                  <span 
+                    className="absolute -top-1 -right-2 text-[10px] font-bold"
+                    style={{ color: '#c0c0c0' }}
+                  >
+                    ?
+                  </span>
+                </>
+              )}
             </div>
             <span className="text-xs">Лиги</span>
           </button>
