@@ -2957,7 +2957,7 @@ export class DatabaseStorage implements IStorage {
           u.photo_url,
           RANK() OVER (ORDER BY u.total_points DESC) as rank,
           c.name as character_name,
-          c.character_type
+          c.gender as character_gender
         FROM users u
         LEFT JOIN characters c ON c.user_id = u.id
         WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
@@ -2975,7 +2975,7 @@ export class DatabaseStorage implements IStorage {
       name: row.character_name || 'Игрок',
       totalPoints: Number(row.total_points),
       photoUrl: row.photo_url,
-      characterType: row.character_type || null,
+      characterType: row.character_gender || null,
     }));
   }
 

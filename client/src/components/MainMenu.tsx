@@ -774,7 +774,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Лига</div>
-                      <div className="font-bold tabular-nums text-xs" style={{ color: '#f7931a' }} data-testid="stats-rank">{rankInfo?.name} {rankInfo?.level}</div>
+                      <div className="font-bold tabular-nums text-xs" style={{ color: userLeague?.league.themeColor || '#f7931a' }} data-testid="stats-rank">
+                        {userLeague ? `${userLeague.league.icon} ${userLeague.league.nameRu}` : 'Гость'}
+                      </div>
                     </div>
                   </div>
                 </div>
