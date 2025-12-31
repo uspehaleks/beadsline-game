@@ -1064,8 +1064,13 @@ export async function registerRoutes(
     try {
       const { slug } = req.params;
       const limit = parseInt(req.query.limit as string) || 100;
+      const period = (req.query.period as string) || 'all';
       
-      const leaderboard = await storage.getLeagueLeaderboard(slug, limit);
+      // Validate period
+      const validPeriods = ['all', 'week', 'today'];
+      const validatedPeriod = validPeriods.includes(period) ? period as 'all' | 'week' | 'today' : 'all';
+      
+      const leaderboard = await storage.getLeagueLeaderboard(slug, limit, validatedPeriod);
       const playerCount = await storage.getLeaguePlayerCount(slug);
       const league = await storage.getLeague(slug);
       
@@ -1077,6 +1082,30 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get league leaderboard error:", error);
       res.status(500).json({ error: "Failed to get league leaderboard" });
+    }
+  });
+  
+  app.get("/api/leagues/:slug/leaderboard/friends", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const userId = (req.session as any).userId;
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const league = await storage.getLeague(slug);
+      if (!league) {
+        return res.status(404).json({ error: "League not found" });
+      }
+      
+      const leaderboard = await storage.getFriendsLeaderboard(userId, slug, limit);
+      
+      res.json({ 
+        league,
+        leaderboard, 
+        playerCount: leaderboard.length
+      });
+    } catch (error) {
+      console.error("Get friends leaderboard error:", error);
+      res.status(500).json({ error: "Failed to get friends leaderboard" });
     }
   });
 

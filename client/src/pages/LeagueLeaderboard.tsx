@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, Sparkles, UserPlus, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, User, Sparkles } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
 
@@ -32,21 +34,6 @@ interface LeaderboardEntry {
   characterImageUrl: string | null;
 }
 
-const CHARACTER_ICONS: Record<string, string> = {
-  warrior: '⚔️',
-  mage: '🧙',
-  archer: '🏹',
-  knight: '🛡️',
-  ninja: '🥷',
-  pirate: '🏴‍☠️',
-  robot: '🤖',
-  alien: '👽',
-  zombie: '🧟',
-  vampire: '🧛',
-  male: '👨',
-  female: '👩',
-};
-
 interface LeagueLeaderboardData {
   league: LeagueData;
   leaderboard: LeaderboardEntry[];
@@ -59,16 +46,31 @@ interface MyPositionData {
   playerCount: number;
 }
 
+type FilterPeriod = 'all' | 'week' | 'today' | 'friends';
+
+const FILTER_LABELS: Record<FilterPeriod, string> = {
+  all: 'Всё время',
+  week: 'Неделя',
+  today: 'Сегодня',
+  friends: 'Друзья',
+};
+
 export default function LeagueLeaderboard() {
   const params = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const slug = params.slug;
+  const [filter, setFilter] = useState<FilterPeriod>('all');
 
-  const { data, isLoading } = useQuery<LeagueLeaderboardData>({
-    queryKey: ["/api/leagues", slug, "leaderboard"],
+  const { data, isLoading, isFetching } = useQuery<LeagueLeaderboardData>({
+    queryKey: ["/api/leagues", slug, "leaderboard", filter],
     queryFn: async () => {
-      const res = await fetch(`/api/leagues/${slug}/leaderboard?limit=100`);
+      if (filter === 'friends') {
+        const res = await fetch(`/api/leagues/${slug}/leaderboard/friends?limit=100`);
+        if (!res.ok) throw new Error("Failed to load friends leaderboard");
+        return res.json();
+      }
+      const res = await fetch(`/api/leagues/${slug}/leaderboard?limit=100&period=${filter}`);
       if (!res.ok) throw new Error("Failed to load leaderboard");
       return res.json();
     },
@@ -157,7 +159,7 @@ export default function LeagueLeaderboard() {
             <CardContent className="p-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
               <div>
-                <div className="text-lg font-bold">{playerCount}</div>
+                <div className="text-lg font-bold" data-testid="text-player-count">{playerCount}</div>
                 <div className="text-xs opacity-80">Игроков</div>
               </div>
             </CardContent>
@@ -167,7 +169,7 @@ export default function LeagueLeaderboard() {
               <CardContent className="p-3 flex items-center gap-2">
                 <Trophy className="w-5 h-5" />
                 <div>
-                  <div className="text-lg font-bold">#{myPosition.rank}</div>
+                  <div className="text-lg font-bold" data-testid="text-my-rank">#{myPosition.rank}</div>
                   <div className="text-xs opacity-80">Ваша позиция</div>
                 </div>
               </CardContent>
@@ -196,17 +198,47 @@ export default function LeagueLeaderboard() {
       </div>
 
       <div className="p-4">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterPeriod)} className="mb-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all" data-testid="tab-all">
+              {FILTER_LABELS.all}
+            </TabsTrigger>
+            <TabsTrigger value="week" data-testid="tab-week">
+              {FILTER_LABELS.week}
+            </TabsTrigger>
+            <TabsTrigger value="today" data-testid="tab-today">
+              {FILTER_LABELS.today}
+            </TabsTrigger>
+            <TabsTrigger value="friends" data-testid="tab-friends" disabled={!user?.telegramId}>
+              {FILTER_LABELS.friends}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Trophy className="w-5 h-5" />
-              Топ-100 лиги
+              {filter === 'friends' ? 'Рейтинг друзей' : `Топ-100 ${FILTER_LABELS[filter].toLowerCase()}`}
+              {isFetching && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {leaderboard.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                В этой лиге пока нет игроков
+                {filter === 'friends' ? (
+                  <div className="space-y-3">
+                    <UserPlus className="w-12 h-12 mx-auto opacity-50" />
+                    <p>У вас пока нет друзей</p>
+                    <p className="text-sm">Пригласите друзей по реферальной ссылке</p>
+                  </div>
+                ) : filter === 'today' ? (
+                  <p>Сегодня ещё никто не играл</p>
+                ) : filter === 'week' ? (
+                  <p>На этой неделе ещё нет игр</p>
+                ) : (
+                  <p>В этой лиге пока нет игроков</p>
+                )}
               </div>
             ) : (
               <ScrollArea className="h-[50vh]">
@@ -214,7 +246,6 @@ export default function LeagueLeaderboard() {
                   {leaderboard.map((entry, index) => {
                     const isCurrentUser = entry.odoserId === user?.id;
                     const isTopThree = entry.rank <= 3;
-                    const genderIcon = entry.characterType === 'female' ? '👩' : '👨';
                     
                     return (
                       <motion.div
@@ -249,27 +280,30 @@ export default function LeagueLeaderboard() {
                         </div>
                         
                         <div className="relative">
-                          <div 
-                            className={`${isTopThree ? 'w-12 h-12 ring-2 ring-offset-2 ring-offset-background' : 'w-10 h-10'} rounded-full overflow-hidden bg-gradient-to-br from-muted to-muted/50`}
+                          <Avatar 
+                            className={`${isTopThree ? 'w-12 h-12 ring-2 ring-offset-2 ring-offset-background' : 'w-10 h-10'}`}
                             style={isTopThree ? { '--tw-ring-color': league.themeColor } as React.CSSProperties : undefined}
                           >
                             {entry.characterImageUrl ? (
-                              <img 
+                              <AvatarImage 
                                 src={entry.characterImageUrl} 
                                 alt={entry.name}
-                                className="w-full h-full object-cover object-top"
+                                className="object-cover object-top"
+                                data-testid={`img-character-${entry.rank}`}
                               />
-                            ) : (
-                              <div className={`w-full h-full flex items-center justify-center ${isTopThree ? 'text-xl' : 'text-lg'}`}>
-                                {genderIcon}
-                              </div>
-                            )}
-                          </div>
+                            ) : null}
+                            <AvatarFallback className="bg-gradient-to-br from-muted to-muted/50">
+                              <User className={`${isTopThree ? 'w-6 h-6' : 'w-5 h-5'} text-muted-foreground`} />
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-semibold truncate ${isTopThree ? 'text-base' : 'text-sm'}`}>
+                            <span 
+                              className={`font-semibold truncate ${isTopThree ? 'text-base' : 'text-sm'}`}
+                              data-testid={`text-name-${entry.rank}`}
+                            >
                               {entry.name}
                             </span>
                             {isCurrentUser && (
@@ -283,7 +317,7 @@ export default function LeagueLeaderboard() {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <span>#{entry.rank} в лиге</span>
+                            <span>#{entry.rank} в рейтинге</span>
                           </div>
                         </div>
                         
@@ -291,10 +325,13 @@ export default function LeagueLeaderboard() {
                           <div 
                             className={`font-bold ${isTopThree ? 'text-lg' : 'text-base'}`}
                             style={{ color: league.themeColor }}
+                            data-testid={`text-points-${entry.rank}`}
                           >
                             {entry.totalPoints.toLocaleString()}
                           </div>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Beads</div>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                            {filter === 'all' ? 'Beads' : 'Очков'}
+                          </div>
                         </div>
                       </motion.div>
                     );

@@ -259,6 +259,25 @@ export interface IStorage {
   getLeague(slug: string): Promise<League | undefined>;
   getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined>;
   getUserRank(userId: string): Promise<number>;
+  getLeagueLeaderboard(leagueSlug: string, limit?: number, period?: 'all' | 'week' | 'today'): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    totalPoints: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>>;
+  getLeaguePlayerCount(leagueSlug: string): Promise<number>;
+  getFriendsLeaderboard(userId: string, leagueSlug: string, limit?: number): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    totalPoints: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>>;
   
   // User Notifications
   getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>>;
@@ -2940,7 +2959,7 @@ export class DatabaseStorage implements IStorage {
     return undefined;
   }
 
-  async getLeagueLeaderboard(leagueSlug: string, limit: number = 100): Promise<Array<{
+  async getLeagueLeaderboard(leagueSlug: string, limit: number = 100, period: 'all' | 'week' | 'today' = 'all'): Promise<Array<{
     rank: number;
     odoserId: string;
     name: string;
@@ -2952,25 +2971,154 @@ export class DatabaseStorage implements IStorage {
     const league = await this.getLeague(leagueSlug);
     if (!league) return [];
     
-    // Get all registered users ranked, then filter by league qualification
+    if (period === 'all') {
+      // Use total_points from users table for all-time
+      const result = await db.execute(sql`
+        WITH ranked_users AS (
+          SELECT 
+            u.id,
+            u.total_points,
+            u.photo_url,
+            RANK() OVER (ORDER BY u.total_points DESC) as rank,
+            c.name as character_name,
+            c.gender as character_gender,
+            bb.image_url as character_image_url
+          FROM users u
+          LEFT JOIN characters c ON c.user_id = u.id
+          LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
+          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+        )
+        SELECT * FROM ranked_users
+        WHERE total_points >= ${league.minBeads}
+        ${league.maxRank ? sql`AND rank <= ${league.maxRank}` : sql``}
+        ORDER BY rank ASC
+        LIMIT ${limit}
+      `);
+      
+      return result.rows.map((row: any) => ({
+        rank: Number(row.rank),
+        odoserId: row.id,
+        name: row.character_name || 'Игрок',
+        totalPoints: Number(row.total_points),
+        photoUrl: row.photo_url,
+        characterType: row.character_gender || null,
+        characterImageUrl: row.character_image_url || null,
+      }));
+    } else {
+      // Sum scores from game_scores table for week/today
+      // Note: game_scores uses "user_id" column for od_user_id field
+      const dateCondition = period === 'today' 
+        ? sql`gs.created_at >= CURRENT_DATE`
+        : sql`gs.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
+        
+      const result = await db.execute(sql`
+        WITH period_scores AS (
+          SELECT 
+            u.id,
+            COALESCE(SUM(gs.score), 0) as period_points,
+            u.total_points,
+            u.photo_url,
+            c.name as character_name,
+            c.gender as character_gender,
+            bb.image_url as character_image_url
+          FROM users u
+          LEFT JOIN game_scores gs ON gs.user_id = u.id AND ${dateCondition}
+          LEFT JOIN characters c ON c.user_id = u.id
+          LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
+          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+          GROUP BY u.id, u.total_points, u.photo_url, c.name, c.gender, bb.image_url
+        ),
+        ranked_users AS (
+          SELECT 
+            *,
+            RANK() OVER (ORDER BY total_points DESC) as global_rank,
+            RANK() OVER (ORDER BY period_points DESC) as period_rank
+          FROM period_scores
+        )
+        SELECT * FROM ranked_users
+        WHERE total_points >= ${league.minBeads}
+        ${league.maxRank ? sql`AND global_rank <= ${league.maxRank}` : sql``}
+        AND period_points > 0
+        ORDER BY period_rank ASC
+        LIMIT ${limit}
+      `);
+      
+      return result.rows.map((row: any, index: number) => ({
+        rank: index + 1,
+        odoserId: row.id,
+        name: row.character_name || 'Игрок',
+        totalPoints: Number(row.period_points),
+        photoUrl: row.photo_url,
+        characterType: row.character_gender || null,
+        characterImageUrl: row.character_image_url || null,
+      }));
+    }
+  }
+  
+  async getFriendsLeaderboard(userId: string, leagueSlug: string, limit: number = 100): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    totalPoints: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>> {
+    // Get user and league info
+    const user = await this.getUser(userId);
+    if (!user) return [];
+    
+    const league = await this.getLeague(leagueSlug);
+    if (!league) return [];
+    
+    // Find friends: users who share the same referrer (referred_by) OR users referred by this user
+    // Filter by league eligibility (minBeads and optionally maxRank)
     const result = await db.execute(sql`
-      WITH ranked_users AS (
+      WITH user_info AS (
+        SELECT referred_by, referral_code FROM users WHERE id = ${userId}
+      ),
+      all_ranked AS (
+        SELECT 
+          u.id,
+          u.total_points,
+          RANK() OVER (ORDER BY u.total_points DESC) as global_rank
+        FROM users u
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+      ),
+      friends AS (
+        SELECT u.id
+        FROM users u, user_info ui
+        WHERE u.deleted_at IS NULL 
+          AND u.telegram_id IS NOT NULL
+          AND u.id != ${userId}
+          AND (
+            -- Same referrer (siblings) - they share the same referred_by code
+            (ui.referred_by IS NOT NULL AND u.referred_by = ui.referred_by)
+            -- Or referred by current user (their referred_by equals my referral_code)
+            OR (ui.referral_code IS NOT NULL AND u.referred_by = ui.referral_code)
+            -- Or current user's referrer (my referred_by equals their referral_code)
+            OR (ui.referred_by IS NOT NULL AND u.referral_code = ui.referred_by)
+          )
+      ),
+      ranked_friends AS (
         SELECT 
           u.id,
           u.total_points,
           u.photo_url,
-          RANK() OVER (ORDER BY u.total_points DESC) as rank,
           c.name as character_name,
           c.gender as character_gender,
-          bb.image_url as character_image_url
+          bb.image_url as character_image_url,
+          ar.global_rank,
+          RANK() OVER (ORDER BY u.total_points DESC) as rank
         FROM users u
+        INNER JOIN friends f ON f.id = u.id
+        INNER JOIN all_ranked ar ON ar.id = u.id
         LEFT JOIN characters c ON c.user_id = u.id
         LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
-        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+        WHERE u.total_points >= ${league.minBeads}
+        ${league.maxRank ? sql`AND ar.global_rank <= ${league.maxRank}` : sql``}
       )
-      SELECT * FROM ranked_users
-      WHERE total_points >= ${league.minBeads}
-      ${league.maxRank ? sql`AND rank <= ${league.maxRank}` : sql``}
+      SELECT * FROM ranked_friends
       ORDER BY rank ASC
       LIMIT ${limit}
     `);
