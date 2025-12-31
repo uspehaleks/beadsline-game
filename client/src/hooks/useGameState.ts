@@ -202,6 +202,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       
       if (gameplayRes.ok) {
         const gameplayData = await gameplayRes.json();
+        // Override with level-specific spawn period if available
+        if (level?.spawnPeriod) {
+          gameplayData.spawn = { ...gameplayData.spawn, period: level.spawnPeriod };
+        }
         setGameplayConfig(gameplayData);
         maxTotalBallsRef.current = gameplayData.balls?.maxTotalBalls || 100;
       }
