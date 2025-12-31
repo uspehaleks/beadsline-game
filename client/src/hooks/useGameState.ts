@@ -23,6 +23,7 @@ import {
   setEconomyConfig,
   setGameplayConfig,
   getGameplayConfig,
+  getBallSpacing,
   resetCryptoSpawnedCount,
   setCurrentLevel,
   updateBoostTimers,
@@ -467,7 +468,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         
         if (spawnAccumRef.current >= period && canSpawn) {
           spawnAccumRef.current = 0;
-          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -buffer, newBalls);
+          const spacing = getBallSpacing();
+          
+          // Shift all existing balls forward to make room for new ball at position 0
+          newBalls = newBalls.map(ball => ({
+            ...ball,
+            pathProgress: ball.pathProgress + spacing,
+          }));
+          
+          // Create new ball at position 0 (start of path)
+          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
           

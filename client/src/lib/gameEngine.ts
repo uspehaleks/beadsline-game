@@ -957,10 +957,11 @@ export function createRandomBall(id: string, pathProgress: number = 0, chainBall
 export function createInitialBalls(count: number): Ball[] {
   const balls: Ball[] = [];
   const spacing = getBallSpacing();
-  const startOffset = -GAME_CONFIG.spawn.buffer;
   
+  // Start balls at positive positions along the normalized path
+  // First ball at position 0, each subsequent ball further along
   for (let i = 0; i < count; i++) {
-    const ball = createRandomBall(`ball-${i}`, startOffset + i * spacing, balls);
+    const ball = createRandomBall(`ball-${i}`, i * spacing, balls);
     balls.push(ball);
   }
   
@@ -1022,21 +1023,15 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   const newBalls = [...balls];
   
   // Process from the FRONT of the chain (highest progress) to the back
-  // This prevents chain compression from the end
+  // This pulls back balls forward to close gaps (not pushing front balls backward)
   for (let i = newBalls.length - 2; i >= 0; i--) {
     const currentBall = newBalls[i];
     const nextBall = newBalls[i + 1];
-    
-    // Skip rollback near entrance to prevent stuttering when new balls spawn
-    if (currentBall.pathProgress < spacing * 3) {
-      continue;
-    }
     
     const gap = nextBall.pathProgress - currentBall.pathProgress;
     const targetGap = spacing;
     
     // Only apply rollback if there's an actual gap that needs closing
-    // This pulls the BACK ball forward, not the front ball backward
     if (gap > targetGap * 1.5) {
       const newProgress = Math.min(
         nextBall.pathProgress - targetGap,
