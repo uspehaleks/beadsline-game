@@ -1,0 +1,30 @@
+[17:40:34.161] [SPAWN] accum=1816ms, balls=1, tailProg=0.0232, spacing=0.0100
+[17:40:34.170] [SPAWN] Created ball at pos=0 (catching up to 0.0232), id=spawn-1767, color=blue
+[17:40:35.977] [SPAWN] accum=1816ms, balls=2, tailProg=0.0312, spacing=0.0100
+[17:40:35.977] [SPAWN] Created ball at pos=0 (catching up to 0.0312), id=spawn-1767, color=green
+[17:40:37.794] [SPAWN] accum=1817ms, balls=3, tailProg=0.0392, spacing=0.0100
+[17:40:37.794] [SPAWN] Created ball at pos=0 (catching up to 0.0392), id=spawn-1767, color=red
+[17:40:39.594] [SPAWN] accum=1800ms, balls=4, tailProg=0.0470, spacing=0.0100
+[17:40:39.594] [SPAWN] Created ball at pos=0 (catching up to 0.0470), id=spawn-1767, color=yellow
+[17:40:41.410] [SPAWN] accum=1816ms, balls=5, tailProg=0.0548, spacing=0.0100
+[17:40:41.410] [SPAWN] Created ball at pos=0 (catching up to 0.0548), id=spawn-1767, color=purple
+[17:40:43.226] [SPAWN] accum=1816ms, balls=6, tailProg=0.0626, spacing=0.0100
+[17:40:43.226] [SPAWN] Created ball at pos=0 (catching up to 0.0626), id=spawn-1767, color=red
+[17:40:45.043] [SPAWN] accum=1817ms, balls=7, tailProg=0.0704, spacing=0.0100
+[17:40:45.043] [SPAWN] Created ball at pos=0 (catching up to 0.0704), id=spawn-1767, color=purple
+[17:40:46.859] [SPAWN] accum=1816ms, balls=8, tailProg=0.0784, spacing=0.0100
+[17:40:46.859] [SPAWN] Created ball at pos=0 (catching up to 0.0784), id=spawn-1767, color=blue
+[17:40:48.675] [SPAWN] accum=1816ms, balls=9, tailProg=0.0863, spacing=0.0100
+[17:40:48.675] [SPAWN] Created ball at pos=0 (catching up to 0.0863), id=spawn-1767, color=green
+[17:40:50.492] [SPAWN] accum=1817ms, balls=10, tailProg=0.0942, spacing=0.0100
+[17:40:50.492] [SPAWN] Created ball at pos=0 (catching up to 0.0942), id=spawn-1767, color=red
+[17:40:52.308] [SPAWN] accum=1816ms, balls=11, tailProg=0.1021, spacing=0.0100
+[17:40:52.308] [SPAWN] Created ball at pos=0 (catching up to 0.1021), id=spawn-1767, color=purple
+[17:40:54.125] [SPAWN] accum=1817ms, balls=12, tailProg=0.1098, spacing=0.0100
+[17:40:54.125] [SPAWN] Created ball at pos=0 (catching up to 0.1098), id=spawn-1767, color=yellow
+[17:40:55.941] [SPAWN] accum=1816ms, balls=13, tailProg=0.1179, spacing=0.0100
+[17:40:55.941] [SPAWN] Created ball at pos=0 (catching up to 0.1179), id=spawn-1767, color=purple
+[17:40:57.759] [SPAWN] accum=1816ms, balls=14, tailProg=0.1258, spacing=0.0100
+[17:40:57.759] [SPAWN] Created ball at pos=0 (catching up to 0.1258), id=spawn-1767, color=yellow
+[17:40:59.574] [SPAWN] accum=1816ms, balls=15, tailProg=0.1337, spacing=0.0100
+[17:40:59.575] [SPAWN] Created ball at pos=0 (catching up to 0.1337), id=spawn-1767, color=red
