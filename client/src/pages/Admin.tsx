@@ -6217,6 +6217,14 @@ function CharactersTab() {
 function DebugLogsTab() {
   const [logs, setLogs] = useState<string[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [filterSpawn, setFilterSpawn] = useState(true);
+  
+  const EXCLUDED_PATTERNS = [
+    '[CRYPTO] Level completed flag',
+    '[CRYPTO CONFIG]',
+    '=== GAME STARTED ===',
+    'initialBalls:',
+  ];
 
   const fetchLogs = async () => {
     try {
@@ -6243,6 +6251,17 @@ function DebugLogsTab() {
       setLogs([]);
     } catch (e) {}
   };
+  
+  const filteredLogs = logs.filter(log => {
+    for (const pattern of EXCLUDED_PATTERNS) {
+      if (log.includes(pattern)) return false;
+    }
+    if (filterSpawn && (log.includes('[SPAWN]') || log.includes('[GAP-CLOSE]'))) {
+      return true;
+    }
+    if (!filterSpawn) return true;
+    return !filterSpawn;
+  });
 
   return (
     <div className="space-y-4">
@@ -6257,14 +6276,24 @@ function DebugLogsTab() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Switch 
-                checked={autoRefresh} 
-                onCheckedChange={setAutoRefresh}
-                data-testid="switch-auto-refresh"
-              />
-              <Label>Авто-обновление (0.5 сек)</Label>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={autoRefresh} 
+                  onCheckedChange={setAutoRefresh}
+                  data-testid="switch-auto-refresh"
+                />
+                <Label>Авто-обновление</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={filterSpawn} 
+                  onCheckedChange={setFilterSpawn}
+                  data-testid="switch-filter-spawn"
+                />
+                <Label>Только SPAWN/GAP</Label>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -6289,20 +6318,22 @@ function DebugLogsTab() {
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Записей: {logs.length} / 200
+            Записей: {filteredLogs.length} / {logs.length} (всего)
           </div>
 
           <ScrollArea className="h-[500px] border rounded-md p-3 bg-muted/30">
-            {logs.length === 0 ? (
+            {filteredLogs.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
-                Логов пока нет. Начните игру, чтобы увидеть логи.
+                {logs.length === 0 ? 'Логов пока нет. Начните игру, чтобы увидеть логи.' : 'Нет логов с текущим фильтром.'}
               </div>
             ) : (
               <div className="space-y-1 font-mono text-xs">
-                {logs.map((log, index) => (
+                {filteredLogs.map((log, index) => (
                   <div 
                     key={index} 
                     className={`p-1 rounded ${
+                      log.includes('[SPAWN]') ? 'bg-emerald-500/30 text-emerald-300 font-bold' :
+                      log.includes('[GAP-CLOSE]') ? 'bg-amber-500/30 text-amber-300 font-bold' :
                       log.includes('[CHAIN-REACT]') ? 'bg-purple-500/30 text-purple-300 font-bold' :
                       log.includes('[CHAIN-END]') ? 'bg-green-500/20 text-green-300' :
                       log.includes('[CHAIN-NOMATCH]') ? 'bg-yellow-500/20 text-yellow-300' :
