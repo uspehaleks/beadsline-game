@@ -275,7 +275,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         
         let newBalls = moveBallsForward(prev.balls, deltaTime);
         
-        newBalls = processRollback(newBalls, deltaTime);
+        newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         
         let updatedState = prev;
         
@@ -1011,7 +1011,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
         let newBalls = moveBallsForward(prev.balls, deltaTime);
-        newBalls = processRollback(newBalls, deltaTime);
+        newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         newBalls = updateBallPositions(newBalls, currentPath);
         
         if (spawnFinishedRef.current && checkWin(newBalls)) {
