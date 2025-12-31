@@ -38,6 +38,7 @@ import {
   consumeLaser,
   applyLaserEffect,
   SHOOTER_BALL_SPEED,
+  debugLog,
   type PathPoint,
 } from '@/lib/gameEngine';
 import { GAME_CONFIG } from '@/lib/gameConfig';
@@ -467,12 +468,24 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
                          totalSpawnedRef.current < maxTotalBalls;
         
         if (spawnAccumRef.current >= period && canSpawn) {
-          spawnAccumRef.current = 0;
           const spacing = getBallSpacing();
+          
+          // Find tail ball (lowest progress) to check gap
+          const tailBall = newBalls.length > 0 
+            ? newBalls.reduce((min, b) => b.pathProgress < min.pathProgress ? b : min, newBalls[0])
+            : null;
+          const tailProgress = tailBall?.pathProgress ?? spacing;
+          const gapToTail = tailProgress - 0; // Gap from spawn point (0) to tail
+          
+          debugLog(`[SPAWN] accum=${spawnAccumRef.current.toFixed(0)}ms, period=${period}ms, balls=${newBalls.length}, tailProg=${tailProgress.toFixed(4)}, gap=${gapToTail.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
+          
+          spawnAccumRef.current = 0;
           
           // Spawn new ball at position 0 (start of path)
           // Fast gap-closure will integrate it smoothly with the chain
           const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
+          
+          debugLog(`[SPAWN] Created ball at pos=0, id=${newBall.id.slice(0,10)}, color=${newBall.color}`);
           
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;

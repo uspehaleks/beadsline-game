@@ -27,7 +27,7 @@ function flushLogsToServer() {
   }).catch(() => {});
 }
 
-function debugLog(...args: unknown[]) {
+export function debugLog(...args: unknown[]) {
   if (DEBUG_GAME_LOGIC) {
     const msg = `[${new Date().toLocaleTimeString()}] ` + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
     debugLogs.push(msg);
@@ -1014,6 +1014,8 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
   });
 }
 
+let rollbackLogCounter = 0;
+
 export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   if (balls.length < 2) return balls;
   
@@ -1023,6 +1025,8 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   const maxCorrection = smoothingSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
+  let totalCorrections = 0;
+  let maxGapExcess = 0;
   
   // Process from front (highest progress) to back (lowest progress)
   // Each ball tries to close the gap to the ball ahead of it
@@ -1036,6 +1040,7 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
     // Only close gaps that are too large (with small tolerance)
     if (gap > targetGap * 1.05) {
       const excess = gap - targetGap;
+      maxGapExcess = Math.max(maxGapExcess, excess);
       // Move current ball forward - close 80% of the gap per frame for quick catch-up
       const correction = Math.min(excess * 0.8, maxCorrection);
       
@@ -1043,7 +1048,15 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
         ...currentBall,
         pathProgress: currentBall.pathProgress + correction,
       };
+      totalCorrections++;
     }
+  }
+  
+  // Log every 60 frames (~1 second at 60fps) if there are gaps
+  rollbackLogCounter++;
+  if (rollbackLogCounter >= 60 && maxGapExcess > 0) {
+    rollbackLogCounter = 0;
+    debugLog(`[GAP-CLOSE] corrections=${totalCorrections}, maxExcess=${maxGapExcess.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
   }
   
   return newBalls;
