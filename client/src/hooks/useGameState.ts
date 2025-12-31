@@ -470,11 +470,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           spawnAccumRef.current = 0;
           const spacing = getBallSpacing();
           
-          // Spawn new ball at negative buffer position (before path start)
-          // It will naturally move forward and gap-closure will integrate it smoothly
-          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, -spacing * 0.5, newBalls);
-          // Mark as entering so gap-closure handles it specially
-          (newBall as any).entering = true;
+          // Spawn new ball at position 0 (start of path)
+          // Fast gap-closure will integrate it smoothly with the chain
+          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
           
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;

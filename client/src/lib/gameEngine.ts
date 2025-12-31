@@ -1018,8 +1018,8 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   if (balls.length < 2) return balls;
   
   const spacing = getBallSpacing();
-  // Smooth gap-closure speed (normalized units per second)
-  const smoothingSpeed = 0.08;
+  // Fast gap-closure - close gaps almost instantly for smooth chain cohesion
+  const smoothingSpeed = 0.5; // Much faster gap closure
   const maxCorrection = smoothingSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
@@ -1033,17 +1033,15 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
     const gap = nextBall.pathProgress - currentBall.pathProgress;
     const targetGap = spacing;
     
-    // Only close gaps that are too large
-    if (gap > targetGap) {
+    // Only close gaps that are too large (with small tolerance)
+    if (gap > targetGap * 1.05) {
       const excess = gap - targetGap;
-      // Move current ball forward by at most maxCorrection, but not more than the excess
-      const correction = Math.min(excess, maxCorrection);
+      // Move current ball forward - close 80% of the gap per frame for quick catch-up
+      const correction = Math.min(excess * 0.8, maxCorrection);
       
       newBalls[i] = {
         ...currentBall,
         pathProgress: currentBall.pathProgress + correction,
-        // Clear entering flag once ball is on the path
-        ...(currentBall.pathProgress >= 0 ? { entering: undefined } : {}),
       };
     }
   }
