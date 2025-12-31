@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Link } from 'wouter';
+import { Loader2, ChevronRight } from 'lucide-react';
 
 interface League {
   id: string;
@@ -54,29 +55,34 @@ export function LeagueBadge({ size = 'md', showRank = true, className = '' }: Le
   const sizes = sizeClasses[size];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium ${sizes.container} ${className}`}
-      style={{
-        background: `linear-gradient(135deg, ${league.themeColor}20 0%, ${league.themeColor}40 100%)`,
-        border: `1px solid ${league.themeColor}60`,
-        color: league.themeColor,
-        textShadow: `0 0 10px ${league.themeColor}50`,
-      }}
-      data-testid="badge-user-league"
-    >
-      <span className={sizes.icon}>{league.icon}</span>
-      <span>{league.nameRu}</span>
-      {showRank && (
-        <span 
-          className="opacity-70 text-xs"
-          style={{ color: league.themeColor }}
-        >
-          #{rank}
-        </span>
-      )}
-    </motion.div>
+    <Link href={`/league/${league.slug}`}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className={`inline-flex items-center gap-1.5 rounded-full font-medium cursor-pointer ${sizes.container} ${className}`}
+        style={{
+          background: `linear-gradient(135deg, ${league.themeColor}20 0%, ${league.themeColor}40 100%)`,
+          border: `1px solid ${league.themeColor}60`,
+          color: league.themeColor,
+          textShadow: `0 0 10px ${league.themeColor}50`,
+        }}
+        data-testid="badge-user-league"
+      >
+        <span className={sizes.icon}>{league.icon}</span>
+        <span>{league.nameRu}</span>
+        {showRank && (
+          <span 
+            className="opacity-70 text-xs"
+            style={{ color: league.themeColor }}
+          >
+            #{rank}
+          </span>
+        )}
+        <ChevronRight className="w-3 h-3 opacity-60" />
+      </motion.div>
+    </Link>
   );
 }
 

@@ -528,6 +528,10 @@ export default function Admin() {
                 <Users className="w-4 h-4 mr-1.5" />
                 Персонажи
               </TabsTrigger>
+              <TabsTrigger value="leagues" data-testid="tab-leagues" className="w-full justify-start">
+                <Trophy className="w-4 h-4 mr-1.5" />
+                Лиги
+              </TabsTrigger>
             </TabsList>
           </div>
           <div className="flex-1">
@@ -601,6 +605,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="characters">
             <CharactersTab />
+          </TabsContent>
+          <TabsContent value="leagues">
+            <LeaguesTab />
           </TabsContent>
           </div>
         </Tabs>
@@ -6550,6 +6557,234 @@ function BoostsTab() {
                       </DialogContent>
                     </Dialog>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface LeagueData {
+  id: string;
+  slug: string;
+  nameRu: string;
+  nameEn: string;
+  icon: string;
+  minBeads: number;
+  maxRank: number | null;
+  themeColor: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+function LeaguesTab() {
+  const { toast } = useToast();
+  const [editingLeague, setEditingLeague] = useState<LeagueData | null>(null);
+  const [editForm, setEditForm] = useState({
+    nameRu: '',
+    nameEn: '',
+    icon: '',
+    minBeads: 0,
+    maxRank: null as number | null,
+    themeColor: '',
+    sortOrder: 0,
+    isActive: true,
+  });
+
+  const { data: leagues, isLoading } = useQuery<LeagueData[]>({
+    queryKey: ["/api/admin/leagues"],
+  });
+
+  const updateLeagueMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof editForm }) => {
+      return apiRequest("PUT", `/api/admin/leagues/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/leagues"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leagues"] });
+      toast({ title: "Сохранено", description: "Лига обновлена" });
+      setEditingLeague(null);
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось обновить лигу", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (league: LeagueData) => {
+    setEditingLeague(league);
+    setEditForm({
+      nameRu: league.nameRu,
+      nameEn: league.nameEn,
+      icon: league.icon,
+      minBeads: league.minBeads,
+      maxRank: league.maxRank,
+      themeColor: league.themeColor,
+      sortOrder: league.sortOrder,
+      isActive: league.isActive,
+    });
+  };
+
+  const handleSave = () => {
+    if (!editingLeague) return;
+    updateLeagueMutation.mutate({ id: editingLeague.id, data: editForm });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5" />
+            Управление лигами
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Настройка требований для лиг. Гости не участвуют в лигах.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {leagues?.map((league) => (
+                <div 
+                  key={league.id} 
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                  style={{ borderLeftColor: league.themeColor, borderLeftWidth: 4 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{league.icon}</span>
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        {league.nameRu}
+                        {!league.isActive && (
+                          <Badge variant="secondary">Неактивна</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Мин. бидов: {league.minBeads.toLocaleString()} 
+                        {league.maxRank && ` | Топ-${league.maxRank}`}
+                      </div>
+                    </div>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleEdit(league)}
+                        data-testid={`button-edit-league-${league.slug}`}
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Редактировать
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Редактировать лигу</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Название (RU)</Label>
+                            <Input
+                              value={editForm.nameRu}
+                              onChange={(e) => setEditForm({ ...editForm, nameRu: e.target.value })}
+                              data-testid="input-league-name-ru"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Название (EN)</Label>
+                            <Input
+                              value={editForm.nameEn}
+                              onChange={(e) => setEditForm({ ...editForm, nameEn: e.target.value })}
+                              data-testid="input-league-name-en"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Иконка</Label>
+                            <Input
+                              value={editForm.icon}
+                              onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })}
+                              data-testid="input-league-icon"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Цвет темы</Label>
+                            <Input
+                              type="color"
+                              value={editForm.themeColor}
+                              onChange={(e) => setEditForm({ ...editForm, themeColor: e.target.value })}
+                              data-testid="input-league-color"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Мин. бидов</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editForm.minBeads}
+                              onChange={(e) => setEditForm({ ...editForm, minBeads: parseInt(e.target.value) || 0 })}
+                              data-testid="input-league-min-beads"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Макс. ранг (топ-N)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="Пусто = без ограничений"
+                              value={editForm.maxRank || ''}
+                              onChange={(e) => setEditForm({ ...editForm, maxRank: e.target.value ? parseInt(e.target.value) : null })}
+                              data-testid="input-league-max-rank"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Порядок сортировки</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={editForm.sortOrder}
+                            onChange={(e) => setEditForm({ ...editForm, sortOrder: parseInt(e.target.value) || 1 })}
+                            data-testid="input-league-sort"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={editForm.isActive}
+                            onCheckedChange={(checked) => setEditForm({ ...editForm, isActive: checked })}
+                            data-testid="toggle-league-active"
+                          />
+                          <Label>Активна</Label>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <Button
+                            onClick={handleSave}
+                            disabled={updateLeagueMutation.isPending}
+                            data-testid="button-save-league"
+                          >
+                            {updateLeagueMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-2" />
+                            )}
+                            Сохранить
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               ))}
             </div>

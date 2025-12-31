@@ -2855,6 +2855,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(leagues.sortOrder);
   }
 
+  async getAllLeagues(): Promise<League[]> {
+    return await db
+      .select()
+      .from(leagues)
+      .orderBy(leagues.sortOrder);
+  }
+
   async getLeague(slug: string): Promise<League | undefined> {
     const [league] = await db
       .select()
@@ -2863,12 +2870,30 @@ export class DatabaseStorage implements IStorage {
     return league || undefined;
   }
 
+  async getLeagueById(id: string): Promise<League | undefined> {
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.id, id));
+    return league || undefined;
+  }
+
+  async updateLeague(id: string, data: Partial<InsertLeague>): Promise<League | undefined> {
+    const [updated] = await db
+      .update(leagues)
+      .set(data)
+      .where(eq(leagues.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
   async getUserRank(userId: string): Promise<number> {
+    // Only count registered users (with telegramId) for ranking
     const result = await db.execute(sql`
       SELECT rank FROM (
         SELECT id, RANK() OVER (ORDER BY total_points DESC) as rank
         FROM users
-        WHERE deleted_at IS NULL
+        WHERE deleted_at IS NULL AND telegram_id IS NOT NULL
       ) ranked
       WHERE id = ${userId}
     `);
@@ -2880,6 +2905,11 @@ export class DatabaseStorage implements IStorage {
   async getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined> {
     const user = await this.getUser(userId);
     if (!user) return undefined;
+
+    // Guests don't participate in leagues
+    if (!user.telegramId) {
+      return undefined;
+    }
 
     const rank = await this.getUserRank(userId);
     const allLeagues = await this.getLeagues();
@@ -2905,6 +2935,66 @@ export class DatabaseStorage implements IStorage {
     }
     
     return undefined;
+  }
+
+  async getLeagueLeaderboard(leagueSlug: string, limit: number = 100): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    totalPoints: number;
+    photoUrl: string | null;
+  }>> {
+    const league = await this.getLeague(leagueSlug);
+    if (!league) return [];
+    
+    // Get all registered users ranked, then filter by league qualification
+    const result = await db.execute(sql`
+      WITH ranked_users AS (
+        SELECT 
+          u.id,
+          u.total_points,
+          u.photo_url,
+          RANK() OVER (ORDER BY u.total_points DESC) as rank,
+          c.name as character_name
+        FROM users u
+        LEFT JOIN characters c ON c.user_id = u.id
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+      )
+      SELECT * FROM ranked_users
+      WHERE total_points >= ${league.minBeads}
+      ${league.maxRank ? sql`AND rank <= ${league.maxRank}` : sql``}
+      ORDER BY rank ASC
+      LIMIT ${limit}
+    `);
+    
+    return result.rows.map((row: any) => ({
+      rank: Number(row.rank),
+      odoserId: row.id,
+      name: row.character_name || 'Игрок',
+      totalPoints: Number(row.total_points),
+      photoUrl: row.photo_url,
+    }));
+  }
+
+  async getLeaguePlayerCount(leagueSlug: string): Promise<number> {
+    const league = await this.getLeague(leagueSlug);
+    if (!league) return 0;
+    
+    const result = await db.execute(sql`
+      WITH ranked_users AS (
+        SELECT 
+          u.id,
+          u.total_points,
+          RANK() OVER (ORDER BY u.total_points DESC) as rank
+        FROM users u
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+      )
+      SELECT COUNT(*) as count FROM ranked_users
+      WHERE total_points >= ${league.minBeads}
+      ${league.maxRank ? sql`AND rank <= ${league.maxRank}` : sql``}
+    `);
+    
+    return Number(result.rows[0]?.count) || 0;
   }
 }
 

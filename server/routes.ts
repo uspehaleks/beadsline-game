@@ -1060,6 +1060,99 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/leagues/:slug/leaderboard", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const leaderboard = await storage.getLeagueLeaderboard(slug, limit);
+      const playerCount = await storage.getLeaguePlayerCount(slug);
+      const league = await storage.getLeague(slug);
+      
+      res.json({ 
+        league,
+        leaderboard, 
+        playerCount 
+      });
+    } catch (error) {
+      console.error("Get league leaderboard error:", error);
+      res.status(500).json({ error: "Failed to get league leaderboard" });
+    }
+  });
+
+  app.get("/api/leagues/:slug/my-position", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const userId = (req.session as any).userId;
+      
+      const userLeagueData = await storage.getUserLeague(userId);
+      const playerCount = await storage.getLeaguePlayerCount(slug);
+      
+      if (!userLeagueData || userLeagueData.league.slug !== slug) {
+        return res.json({ inLeague: false, playerCount });
+      }
+      
+      res.json({
+        inLeague: true,
+        rank: userLeagueData.rank,
+        playerCount,
+      });
+    } catch (error) {
+      console.error("Get my league position error:", error);
+      res.status(500).json({ error: "Failed to get league position" });
+    }
+  });
+
+  // Admin league management
+  app.get("/api/admin/leagues", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const leagues = await storage.getAllLeagues();
+      res.json(leagues);
+    } catch (error) {
+      console.error("Get admin leagues error:", error);
+      res.status(500).json({ error: "Failed to get leagues" });
+    }
+  });
+
+  app.put("/api/admin/leagues/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const { id } = req.params;
+      const { nameRu, nameEn, icon, minBeads, maxRank, themeColor, sortOrder, isActive } = req.body;
+      
+      const updated = await storage.updateLeague(id, {
+        nameRu,
+        nameEn,
+        icon,
+        minBeads,
+        maxRank,
+        themeColor,
+        sortOrder,
+        isActive,
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ error: "League not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update league error:", error);
+      res.status(500).json({ error: "Failed to update league" });
+    }
+  });
+
   app.get("/api/config/:key", async (req, res) => {
     try {
       const { key } = req.params;

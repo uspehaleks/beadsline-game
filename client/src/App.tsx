@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
+import LeagueLeaderboard from "@/pages/LeagueLeaderboard";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/components/MaintenancePage";
 import { Loader2 } from "lucide-react";
@@ -21,6 +22,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/admin" component={Admin} />
+      <Route path="/league/:slug" component={LeagueLeaderboard} />
       <Route component={NotFound} />
     </Switch>
   );
