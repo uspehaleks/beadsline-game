@@ -472,15 +472,18 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
             : null;
           const tailProgress = tailBall?.pathProgress ?? spacing;
           
-          sendDebugLog(`[SPAWN] accum=${spawnAccumRef.current.toFixed(0)}ms, balls=${newBalls.length}, tailProg=${tailProgress.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
+          // Spawn at correct logical position (adjacent to tail) for chain cohesion
+          const spawnPosition = Math.max(0, tailProgress - spacing);
+          
+          sendDebugLog(`[SPAWN] accum=${spawnAccumRef.current.toFixed(0)}ms, balls=${newBalls.length}, tailProg=${tailProgress.toFixed(4)}, spawnPos=${spawnPosition.toFixed(4)}`);
           
           spawnAccumRef.current = 0;
           
-          // Spawn at position 0 (portal) with catchingUp flag for accelerated movement
-          const rawBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
-          const newBall = { ...rawBall, catchingUp: true };
+          // Create ball at correct position with spawn animation for visual portal emergence
+          const rawBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, spawnPosition, newBalls);
+          const newBall = { ...rawBall, spawnAnimStart: Date.now() };
           
-          sendDebugLog(`[SPAWN] Created ball at pos=0 (catching up to ${tailProgress.toFixed(4)}), id=${newBall.id.slice(0,10)}, color=${newBall.color}`);
+          sendDebugLog(`[SPAWN] Created ball at pos=${spawnPosition.toFixed(4)} with portal anim, id=${newBall.id.slice(0,10)}, color=${newBall.color}`);
           
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;

@@ -995,9 +995,27 @@ export function createInitialGameState(): GameState {
   };
 }
 
+const SPAWN_ANIM_DURATION = 300; // ms for portal emergence animation
+
 export function updateBallPositions(balls: Ball[], path: PathPoint[]): Ball[] {
+  const now = Date.now();
+  
   return balls.map(ball => {
-    const position = getPositionOnPath(path, ball.pathProgress);
+    let visualProgress = ball.pathProgress;
+    
+    // Apply spawn animation: interpolate from portal (0) to true position
+    if (ball.spawnAnimStart) {
+      const elapsed = now - ball.spawnAnimStart;
+      if (elapsed < SPAWN_ANIM_DURATION) {
+        // Ease-out cubic for smooth deceleration
+        const t = elapsed / SPAWN_ANIM_DURATION;
+        const eased = 1 - Math.pow(1 - t, 3);
+        // Interpolate from position 0 (portal) to true pathProgress
+        visualProgress = eased * ball.pathProgress;
+      }
+    }
+    
+    const position = getPositionOnPath(path, visualProgress);
     return { ...ball, x: position.x, y: position.y };
   });
 }
@@ -1042,24 +1060,14 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       
-      // Balls with catchingUp flag move 2x faster to join the chain (visible but smooth)
-      const catchupMultiplier = currentBall.catchingUp ? 2.0 : 1.0;
-      const effectiveMaxCorrection = maxCorrection * catchupMultiplier;
-      
       // Move current ball forward - close 80% of the gap per frame for quick catch-up
-      const correction = Math.min(excess * 0.8, effectiveMaxCorrection);
+      const correction = Math.min(excess * 0.8, maxCorrection);
       
       newBalls[i] = {
         ...currentBall,
         pathProgress: currentBall.pathProgress + correction,
       };
       totalCorrections++;
-    } else if (currentBall.catchingUp) {
-      // Ball has caught up - remove the flag
-      newBalls[i] = {
-        ...currentBall,
-        catchingUp: false,
-      };
     }
   }
   
