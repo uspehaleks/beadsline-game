@@ -393,6 +393,28 @@ export const userAccessoriesRelations = relations(userAccessories, ({ one }) => 
   }),
 }));
 
+export const leagues = pgTable("leagues", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 50 }).notNull().unique(),
+  nameRu: text("name_ru").notNull(),
+  nameEn: text("name_en").notNull(),
+  icon: text("icon").notNull(),
+  minBeads: integer("min_beads").default(0).notNull(),
+  maxRank: integer("max_rank"),
+  themeColor: varchar("theme_color", { length: 20 }).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLeagueSchema = createInsertSchema(leagues).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLeague = z.infer<typeof insertLeagueSchema>;
+export type League = typeof leagues.$inferSelect;
+
 export const insertBeadsTransactionSchema = createInsertSchema(beadsTransactions).omit({
   id: true,
   createdAt: true,

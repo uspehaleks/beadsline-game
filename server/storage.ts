@@ -80,6 +80,9 @@ import {
   type RevenueShare,
   type InsertRevenueShare,
   type RevenueSummary,
+  leagues,
+  type League,
+  type InsertLeague,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -250,6 +253,12 @@ export interface IStorage {
   createRevenueShare(share: InsertRevenueShare): Promise<RevenueShare>;
   getRevenueSummary(): Promise<RevenueSummary>;
   recordRevenueFromPurchase(purchaseId: string, priceStars: number, priceUsd: number, paymentType: 'stars' | 'crypto'): Promise<void>;
+  
+  // Leagues
+  getLeagues(): Promise<League[]>;
+  getLeague(slug: string): Promise<League | undefined>;
+  getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined>;
+  getUserRank(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2835,6 +2844,67 @@ export class DatabaseStorage implements IStorage {
       advertisingUsd,
       teamSharesJson,
     });
+  }
+
+  // Leagues
+  async getLeagues(): Promise<League[]> {
+    return await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.isActive, true))
+      .orderBy(leagues.sortOrder);
+  }
+
+  async getLeague(slug: string): Promise<League | undefined> {
+    const [league] = await db
+      .select()
+      .from(leagues)
+      .where(eq(leagues.slug, slug));
+    return league || undefined;
+  }
+
+  async getUserRank(userId: string): Promise<number> {
+    const result = await db.execute(sql`
+      SELECT rank FROM (
+        SELECT id, RANK() OVER (ORDER BY total_points DESC) as rank
+        FROM users
+        WHERE deleted_at IS NULL
+      ) ranked
+      WHERE id = ${userId}
+    `);
+    
+    if (result.rows.length === 0) return 0;
+    return Number(result.rows[0].rank) || 0;
+  }
+
+  async getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined> {
+    const user = await this.getUser(userId);
+    if (!user) return undefined;
+
+    const rank = await this.getUserRank(userId);
+    const allLeagues = await this.getLeagues();
+    
+    // Find the highest league the user qualifies for
+    // Sort by sortOrder descending to check highest leagues first
+    const sortedLeagues = [...allLeagues].sort((a, b) => b.sortOrder - a.sortOrder);
+    
+    for (const league of sortedLeagues) {
+      // User must have minimum beads
+      if (user.totalPoints < league.minBeads) continue;
+      
+      // If league has max rank requirement, user must be within that rank
+      if (league.maxRank !== null && rank > league.maxRank) continue;
+      
+      return { league, rank };
+    }
+    
+    // Default to bronze (first league by sort order)
+    const bronzeLeague = allLeagues.find(l => l.slug === 'bronze') || allLeagues[0];
+    if (bronzeLeague) {
+      return { league: bronzeLeague, rank };
+    }
+    
+    return undefined;
   }
 }
 
