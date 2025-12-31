@@ -1042,12 +1042,25 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   const smoothingSpeed = 0.5; // Much faster gap closure
   const maxCorrection = smoothingSpeed * deltaTime * 0.001;
   
-  const newBalls = [...balls];
+  let newBalls = [...balls];
   let totalCorrections = 0;
   let maxGapExcess = 0;
   
+  // PHASE 1: Pull the entire chain BACKWARD toward the portal if tail is too far
+  // This creates the "rollback" effect after removing balls
+  const tailBall = newBalls.reduce((min, b) => b.pathProgress < min.pathProgress ? b : min, newBalls[0]);
+  const targetTailPosition = spacing; // Tail should be at spacing distance from portal
+  
+  if (tailBall.pathProgress > targetTailPosition * 1.5) {
+    const pullbackAmount = Math.min((tailBall.pathProgress - targetTailPosition) * 0.3, maxCorrection * 2);
+    newBalls = newBalls.map(ball => ({
+      ...ball,
+      pathProgress: Math.max(0, ball.pathProgress - pullbackAmount),
+    }));
+  }
+  
+  // PHASE 2: Close internal gaps by moving back balls forward
   // Process from front (highest progress) to back (lowest progress)
-  // Each ball tries to close the gap to the ball ahead of it
   for (let i = newBalls.length - 2; i >= 0; i--) {
     const currentBall = newBalls[i];
     const nextBall = newBalls[i + 1];
