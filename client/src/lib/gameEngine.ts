@@ -441,7 +441,6 @@ export function getBallSpacing(): number {
 }
 
 function generateSpiralPath(width: number, height: number, pathConfig: LevelPath): PathPoint[] {
-  const points: PathPoint[] = [];
   const segments = pathConfig.segments || 600;
   const spiralTurns = pathConfig.spiralTurns || 3.0;
   const outerRadius = pathConfig.outerRadius || 0.42;
@@ -452,13 +451,53 @@ function generateSpiralPath(width: number, height: number, pathConfig: LevelPath
   const maxRadius = Math.min(width, height) * outerRadius;
   const minRadius = Math.min(width, height) * innerRadius;
   
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
+  // Generate high-resolution raw spiral points
+  const rawSegments = segments * 4;
+  const rawPoints: PathPoint[] = [];
+  
+  for (let i = 0; i <= rawSegments; i++) {
+    const t = i / rawSegments;
     const angle = t * Math.PI * 2 * spiralTurns;
     const radius = maxRadius - (maxRadius - minRadius) * t;
     
     const x = centerX + radius * Math.cos(angle - Math.PI / 2);
     const y = centerY + radius * Math.sin(angle - Math.PI / 2);
+    rawPoints.push({ x, y });
+  }
+  
+  // Calculate cumulative arc lengths
+  const arcLengths: number[] = [0];
+  for (let i = 1; i < rawPoints.length; i++) {
+    const dx = rawPoints[i].x - rawPoints[i - 1].x;
+    const dy = rawPoints[i].y - rawPoints[i - 1].y;
+    arcLengths.push(arcLengths[i - 1] + Math.sqrt(dx * dx + dy * dy));
+  }
+  
+  const totalLength = arcLengths[arcLengths.length - 1];
+  
+  // Resample by arc length for uniform speed
+  const points: PathPoint[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const targetLength = (i / segments) * totalLength;
+    
+    // Binary search for the segment containing targetLength
+    let low = 0;
+    let high = arcLengths.length - 1;
+    while (low < high - 1) {
+      const mid = Math.floor((low + high) / 2);
+      if (arcLengths[mid] <= targetLength) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    
+    // Interpolate between rawPoints[low] and rawPoints[high]
+    const segmentLength = arcLengths[high] - arcLengths[low];
+    const t = segmentLength > 0 ? (targetLength - arcLengths[low]) / segmentLength : 0;
+    
+    const x = rawPoints[low].x + t * (rawPoints[high].x - rawPoints[low].x);
+    const y = rawPoints[low].y + t * (rawPoints[high].y - rawPoints[low].y);
     points.push({ x, y });
   }
   
