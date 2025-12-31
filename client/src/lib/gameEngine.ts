@@ -1015,9 +1015,40 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 }
 
 export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
-  // Rollback disabled - spawn mechanism now handles ball spacing by shifting
-  // the chain forward when new balls are added at position 0
-  return balls;
+  if (balls.length < 2) return balls;
+  
+  const spacing = getBallSpacing();
+  // Smooth gap-closure speed (normalized units per second)
+  const smoothingSpeed = 0.08;
+  const maxCorrection = smoothingSpeed * deltaTime * 0.001;
+  
+  const newBalls = [...balls];
+  
+  // Process from front (highest progress) to back (lowest progress)
+  // Each ball tries to close the gap to the ball ahead of it
+  for (let i = newBalls.length - 2; i >= 0; i--) {
+    const currentBall = newBalls[i];
+    const nextBall = newBalls[i + 1];
+    
+    const gap = nextBall.pathProgress - currentBall.pathProgress;
+    const targetGap = spacing;
+    
+    // Only close gaps that are too large
+    if (gap > targetGap) {
+      const excess = gap - targetGap;
+      // Move current ball forward by at most maxCorrection, but not more than the excess
+      const correction = Math.min(excess, maxCorrection);
+      
+      newBalls[i] = {
+        ...currentBall,
+        pathProgress: currentBall.pathProgress + correction,
+        // Clear entering flag once ball is on the path
+        ...(currentBall.pathProgress >= 0 ? { entering: undefined } : {}),
+      };
+    }
+  }
+  
+  return newBalls;
 }
 
 function ballsMatch(ball1: Ball, ball2: Ball): boolean {

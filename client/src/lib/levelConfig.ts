@@ -131,7 +131,7 @@ export const LEVELS: LevelConfig[] = [
     speed: { base: 0.011, max: 0.018 },
     colors: 6,
     unlockCondition: 4,
-    ballSpacing: 0.012,
+    ballSpacing: 0.010,
   },
   {
     id: 6,
