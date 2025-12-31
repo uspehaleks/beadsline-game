@@ -259,6 +259,9 @@ export interface IStorage {
   getLeague(slug: string): Promise<League | undefined>;
   getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined>;
   getUserRank(userId: string): Promise<number>;
+  
+  // User Notifications
+  getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3002,6 +3005,29 @@ export class DatabaseStorage implements IStorage {
     `);
     
     return Number(result.rows[0]?.count) || 0;
+  }
+
+  async getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>> {
+    const result = await db.execute(sql`
+      SELECT u.id, u.telegram_id, u.first_name, u.username
+      FROM users u
+      LEFT JOIN characters c ON c.user_id = u.id
+      WHERE u.telegram_id IS NOT NULL 
+        AND u.deleted_at IS NULL
+        AND (
+          c.id IS NULL 
+          OR c.name IS NULL 
+          OR c.name = '' 
+          OR c.gender IS NULL
+        )
+    `);
+    
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      telegramId: row.telegram_id,
+      firstName: row.first_name,
+      username: row.username,
+    }));
   }
 }
 

@@ -2828,6 +2828,99 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // ===== ADMIN: NOTIFY USERS WITHOUT CHARACTERS =====
+  
+  // Get list of users without characters (for preview)
+  app.get("/api/admin/users-without-characters", requireAdmin, async (req, res) => {
+    try {
+      const usersData = await storage.getUsersWithoutCharacters();
+      res.json({ users: usersData, count: usersData.length });
+    } catch (error) {
+      console.error("Get users without characters error:", error);
+      res.status(500).json({ error: "Failed to get users" });
+    }
+  });
+
+  // Send notification to users without characters
+  app.post("/api/admin/notify-character-creation", requireAdmin, async (req, res) => {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
+    }
+
+    try {
+      const usersData = await storage.getUsersWithoutCharacters();
+      
+      if (usersData.length === 0) {
+        return res.json({ success: true, sentCount: 0, message: "Нет пользователей без персонажей" });
+      }
+
+      const botUsername = await (async () => {
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+          const data = await response.json();
+          return data.ok ? data.result?.username : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      const appUrl = botUsername 
+        ? `https://t.me/${botUsername}/app`
+        : "игру";
+
+      let sentCount = 0;
+      let failedCount = 0;
+
+      for (const user of usersData) {
+        const greeting = user.firstName ? `${user.firstName}, ` : "";
+        const messageText = `${greeting}пора создать своего персонажа!
+
+Выбери пол и придумай имя — это займёт всего пару секунд.
+
+С персонажем ты попадёшь в лигу и сможешь соревноваться с другими игроками!
+
+Перейти в игру: ${appUrl}`;
+
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.telegramId,
+              text: messageText,
+              parse_mode: 'HTML',
+            }),
+          });
+          
+          const result = await response.json();
+          if (result.ok) {
+            sentCount++;
+          } else {
+            console.log(`Failed to send to ${user.telegramId}:`, result);
+            failedCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending to ${user.telegramId}:`, error);
+          failedCount++;
+        }
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      res.json({ 
+        success: true, 
+        sentCount, 
+        failedCount,
+        totalUsers: usersData.length 
+      });
+    } catch (error) {
+      console.error("Notify character creation error:", error);
+      res.status(500).json({ error: "Failed to send notifications" });
+    }
+  });
+
   // ===== CHARACTER SYSTEM API =====
 
   // Get current user's character

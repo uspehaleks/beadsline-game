@@ -532,6 +532,10 @@ export default function Admin() {
                 <Trophy className="w-4 h-4 mr-1.5" />
                 Лиги
               </TabsTrigger>
+              <TabsTrigger value="notifications" data-testid="tab-notifications" className="w-full justify-start">
+                <Bot className="w-4 h-4 mr-1.5" />
+                Уведомления
+              </TabsTrigger>
             </TabsList>
           </div>
           <div className="flex-1">
@@ -608,6 +612,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="leagues">
             <LeaguesTab />
+          </TabsContent>
+          <TabsContent value="notifications">
+            <NotificationsTab />
           </TabsContent>
           </div>
         </Tabs>
@@ -6830,6 +6837,137 @@ function LeaguesTab() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface UsersWithoutCharactersResponse {
+  users: Array<{ id: string; telegramId: string; firstName: string | null; username: string }>;
+  count: number;
+}
+
+interface NotifyResponse {
+  success: boolean;
+  sentCount?: number;
+  failedCount?: number;
+  totalUsers?: number;
+  message?: string;
+}
+
+function NotificationsTab() {
+  const { toast } = useToast();
+  
+  const { data: usersWithoutChars, isLoading, refetch } = useQuery<UsersWithoutCharactersResponse>({
+    queryKey: ['/api/admin/users-without-characters'],
+  });
+
+  const notifyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/admin/notify-character-creation');
+      return response.json() as Promise<NotifyResponse>;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Уведомления отправлены',
+          description: `Отправлено: ${data.sentCount}, Ошибок: ${data.failedCount}`,
+        });
+        refetch();
+      }
+    },
+    onError: () => {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось отправить уведомления',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5" />
+            Уведомления через Telegram
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-muted rounded-lg">
+            <h3 className="font-medium mb-2">Пользователи без персонажа</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Отправьте уведомление всем зарегистрированным пользователям, которые ещё не создали персонажа.
+              Они получат сообщение с призывом создать персонажа и ссылкой на игру.
+            </p>
+            
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Загрузка...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Badge variant="secondary" className="text-lg px-3 py-1">
+                    {usersWithoutChars?.count || 0} пользователей
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetch()}
+                    data-testid="button-refresh-users"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Обновить
+                  </Button>
+                </div>
+                
+                {(usersWithoutChars?.count || 0) > 0 && (
+                  <>
+                    <ScrollArea className="h-40 border rounded-md p-2">
+                      <div className="space-y-1">
+                        {usersWithoutChars?.users.map((u) => (
+                          <div key={u.id} className="flex items-center gap-2 text-sm py-1">
+                            <span className="text-muted-foreground">{u.telegramId}</span>
+                            <span>—</span>
+                            <span>{u.firstName || u.username}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    
+                    <Button
+                      onClick={() => notifyMutation.mutate()}
+                      disabled={notifyMutation.isPending}
+                      data-testid="button-send-notifications"
+                    >
+                      {notifyMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Отправка...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="w-4 h-4 mr-2" />
+                          Отправить уведомления ({usersWithoutChars?.count})
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+                
+                {(usersWithoutChars?.count || 0) === 0 && (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    Все пользователи уже создали персонажей
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
