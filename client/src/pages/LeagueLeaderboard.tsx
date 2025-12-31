@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2 } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, User, Sparkles } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import { motion } from "framer-motion";
 
 interface LeagueData {
   id: string;
@@ -209,48 +210,91 @@ export default function LeagueLeaderboard() {
             ) : (
               <ScrollArea className="h-[50vh]">
                 <div className="space-y-2">
-                  {leaderboard.map((entry) => {
+                  {leaderboard.map((entry, index) => {
                     const isCurrentUser = entry.odoserId === user?.id;
+                    const isTopThree = entry.rank <= 3;
+                    const genderIcon = entry.characterType === 'female' ? '👩' : '👨';
+                    
                     return (
-                      <div
+                      <motion.div
                         key={entry.odoserId}
-                        className={`flex items-center gap-3 p-3 rounded-lg border ${
-                          isCurrentUser ? "bg-primary/10 border-primary" : ""
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03, duration: 0.2 }}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                          isCurrentUser 
+                            ? "bg-primary/10 border-primary shadow-md" 
+                            : isTopThree 
+                              ? "bg-gradient-to-r from-background to-muted/30 border-muted" 
+                              : "hover:bg-muted/50"
                         }`}
                         data-testid={`leaderboard-entry-${entry.rank}`}
                       >
-                        <div className="w-8 flex justify-center">
-                          {getRankIcon(entry.rank) || (
-                            <span className="text-muted-foreground font-medium">
+                        <div className="w-10 flex justify-center">
+                          {getRankIcon(entry.rank) ? (
+                            <div className="relative">
+                              {getRankIcon(entry.rank)}
+                              {isTopThree && (
+                                <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-yellow-400" />
+                              )}
+                            </div>
+                          ) : (
+                            <span className={`font-bold text-lg ${
+                              entry.rank <= 10 ? "text-foreground" : "text-muted-foreground"
+                            }`}>
                               {entry.rank}
                             </span>
                           )}
                         </div>
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={entry.photoUrl || undefined} />
-                          <AvatarFallback className="text-lg">
-                            {entry.characterType && CHARACTER_ICONS[entry.characterType] 
-                              ? CHARACTER_ICONS[entry.characterType]
-                              : entry.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        
+                        <div className="relative">
+                          <Avatar 
+                            className={`${isTopThree ? 'w-12 h-12 ring-2 ring-offset-2 ring-offset-background' : 'w-10 h-10'}`}
+                            style={isTopThree ? { '--tw-ring-color': league.themeColor } as React.CSSProperties : undefined}
+                          >
+                            <AvatarImage src={entry.photoUrl || undefined} />
+                            <AvatarFallback className={`${isTopThree ? 'text-xl' : 'text-lg'} bg-gradient-to-br from-muted to-muted/50`}>
+                              {genderIcon}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div 
+                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs border-2 border-background"
+                            style={{ backgroundColor: league.themeColor }}
+                          >
+                            <span className="text-white text-[10px]">{genderIcon}</span>
+                          </div>
+                        </div>
+                        
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
-                            {entry.name}
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold truncate ${isTopThree ? 'text-base' : 'text-sm'}`}>
+                              {entry.name}
+                            </span>
                             {isCurrentUser && (
-                              <Badge variant="secondary" className="ml-2 text-xs">
+                              <Badge 
+                                variant="default" 
+                                className="text-[10px] px-1.5 py-0"
+                                style={{ backgroundColor: league.themeColor }}
+                              >
                                 Вы
                               </Badge>
                             )}
                           </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span>#{entry.rank} в лиге</span>
+                          </div>
                         </div>
+                        
                         <div className="text-right">
-                          <div className="font-bold" style={{ color: league.themeColor }}>
+                          <div 
+                            className={`font-bold ${isTopThree ? 'text-lg' : 'text-base'}`}
+                            style={{ color: league.themeColor }}
+                          >
                             {entry.totalPoints.toLocaleString()}
                           </div>
-                          <div className="text-xs text-muted-foreground">Beads</div>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Beads</div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
