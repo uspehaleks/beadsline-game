@@ -29,6 +29,7 @@ interface LeaderboardEntry {
   totalPoints: number;
   photoUrl: string | null;
   characterType: string | null;
+  characterImageUrl: string | null;
 }
 
 const CHARACTER_ICONS: Record<string, string> = {
@@ -248,20 +249,26 @@ export default function LeagueLeaderboard() {
                         </div>
                         
                         <div className="relative">
-                          <Avatar 
-                            className={`${isTopThree ? 'w-12 h-12 ring-2 ring-offset-2 ring-offset-background' : 'w-10 h-10'}`}
+                          <div 
+                            className={`${isTopThree ? 'w-12 h-12 ring-2 ring-offset-2 ring-offset-background' : 'w-10 h-10'} rounded-full overflow-hidden bg-gradient-to-br from-muted to-muted/50`}
                             style={isTopThree ? { '--tw-ring-color': league.themeColor } as React.CSSProperties : undefined}
                           >
-                            <AvatarImage src={entry.photoUrl || undefined} />
-                            <AvatarFallback className={`${isTopThree ? 'text-xl' : 'text-lg'} bg-gradient-to-br from-muted to-muted/50`}>
-                              {genderIcon}
-                            </AvatarFallback>
-                          </Avatar>
+                            {entry.characterImageUrl ? (
+                              <img 
+                                src={entry.characterImageUrl} 
+                                alt={entry.name}
+                                className="w-full h-full object-cover object-top"
+                              />
+                            ) : (
+                              <div className={`w-full h-full flex items-center justify-center ${isTopThree ? 'text-xl' : 'text-lg'}`}>
+                                {genderIcon}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-base">{genderIcon}</span>
                             <span className={`font-semibold truncate ${isTopThree ? 'text-base' : 'text-sm'}`}>
                               {entry.name}
                             </span>

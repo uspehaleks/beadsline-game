@@ -2944,6 +2944,7 @@ export class DatabaseStorage implements IStorage {
     totalPoints: number;
     photoUrl: string | null;
     characterType: string | null;
+    characterImageUrl: string | null;
   }>> {
     const league = await this.getLeague(leagueSlug);
     if (!league) return [];
@@ -2957,9 +2958,11 @@ export class DatabaseStorage implements IStorage {
           u.photo_url,
           RANK() OVER (ORDER BY u.total_points DESC) as rank,
           c.name as character_name,
-          c.gender as character_gender
+          c.gender as character_gender,
+          bb.image_url as character_image_url
         FROM users u
         LEFT JOIN characters c ON c.user_id = u.id
+        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
         WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
       )
       SELECT * FROM ranked_users
@@ -2976,6 +2979,7 @@ export class DatabaseStorage implements IStorage {
       totalPoints: Number(row.total_points),
       photoUrl: row.photo_url,
       characterType: row.character_gender || null,
+      characterImageUrl: row.character_image_url || null,
     }));
   }
 
