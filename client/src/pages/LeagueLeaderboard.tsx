@@ -27,7 +27,23 @@ interface LeaderboardEntry {
   name: string;
   totalPoints: number;
   photoUrl: string | null;
+  characterType: string | null;
 }
+
+const CHARACTER_ICONS: Record<string, string> = {
+  warrior: '⚔️',
+  mage: '🧙',
+  archer: '🏹',
+  knight: '🛡️',
+  ninja: '🥷',
+  pirate: '🏴‍☠️',
+  robot: '🤖',
+  alien: '👽',
+  zombie: '🧟',
+  vampire: '🧛',
+  male: '👨',
+  female: '👩',
+};
 
 interface LeagueLeaderboardData {
   league: LeagueData;
@@ -172,7 +188,7 @@ export default function LeagueLeaderboard() {
         </div>
 
         <div className="mt-3 text-sm opacity-80">
-          Требования: {league.minBeads.toLocaleString()} бидов
+          Требования: {league.minBeads.toLocaleString()} Beads
           {league.maxRank && ` и топ-${league.maxRank}`}
         </div>
       </div>
@@ -212,8 +228,10 @@ export default function LeagueLeaderboard() {
                         </div>
                         <Avatar className="w-10 h-10">
                           <AvatarImage src={entry.photoUrl || undefined} />
-                          <AvatarFallback>
-                            {entry.name.substring(0, 2).toUpperCase()}
+                          <AvatarFallback className="text-lg">
+                            {entry.characterType && CHARACTER_ICONS[entry.characterType] 
+                              ? CHARACTER_ICONS[entry.characterType]
+                              : entry.name.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -230,7 +248,7 @@ export default function LeagueLeaderboard() {
                           <div className="font-bold" style={{ color: league.themeColor }}>
                             {entry.totalPoints.toLocaleString()}
                           </div>
-                          <div className="text-xs text-muted-foreground">бидов</div>
+                          <div className="text-xs text-muted-foreground">Beads</div>
                         </div>
                       </div>
                     );

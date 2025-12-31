@@ -773,7 +773,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                       <div className="font-bold tabular-nums" style={{ color: '#00ff88' }} data-testid="stats-best">{user.bestScore.toLocaleString()}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Ранг</div>
+                      <div className="text-xs text-muted-foreground">Лига</div>
                       <div className="font-bold tabular-nums text-xs" style={{ color: '#f7931a' }} data-testid="stats-rank">{rankInfo?.name} {rankInfo?.level}</div>
                     </div>
                   </div>

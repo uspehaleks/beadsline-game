@@ -2943,6 +2943,7 @@ export class DatabaseStorage implements IStorage {
     name: string;
     totalPoints: number;
     photoUrl: string | null;
+    characterType: string | null;
   }>> {
     const league = await this.getLeague(leagueSlug);
     if (!league) return [];
@@ -2955,7 +2956,8 @@ export class DatabaseStorage implements IStorage {
           u.total_points,
           u.photo_url,
           RANK() OVER (ORDER BY u.total_points DESC) as rank,
-          c.name as character_name
+          c.name as character_name,
+          c.character_type
         FROM users u
         LEFT JOIN characters c ON c.user_id = u.id
         WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
@@ -2973,6 +2975,7 @@ export class DatabaseStorage implements IStorage {
       name: row.character_name || 'Игрок',
       totalPoints: Number(row.total_points),
       photoUrl: row.photo_url,
+      characterType: row.character_type || null,
     }));
   }
 
