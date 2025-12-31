@@ -1041,14 +1041,25 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
     if (gap > targetGap * 1.05) {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
+      
+      // Balls with catchingUp flag move 5x faster to join the chain
+      const catchupMultiplier = currentBall.catchingUp ? 5.0 : 1.0;
+      const effectiveMaxCorrection = maxCorrection * catchupMultiplier;
+      
       // Move current ball forward - close 80% of the gap per frame for quick catch-up
-      const correction = Math.min(excess * 0.8, maxCorrection);
+      const correction = Math.min(excess * 0.8, effectiveMaxCorrection);
       
       newBalls[i] = {
         ...currentBall,
         pathProgress: currentBall.pathProgress + correction,
       };
       totalCorrections++;
+    } else if (currentBall.catchingUp) {
+      // Ball has caught up - remove the flag
+      newBalls[i] = {
+        ...currentBall,
+        catchingUp: false,
+      };
     }
   }
   

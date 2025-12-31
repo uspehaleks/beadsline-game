@@ -676,6 +676,7 @@ export interface Ball {
   isRainbow?: boolean;
   radius: number;
   pathProgress: number;
+  catchingUp?: boolean;
 }
 
 export interface GameState {
