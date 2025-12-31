@@ -6220,10 +6220,20 @@ function DebugLogsTab() {
   const [filterSpawn, setFilterSpawn] = useState(true);
   
   const EXCLUDED_PATTERNS = [
-    '[CRYPTO] Level completed flag',
+    '[CRYPTO]',
     '[CRYPTO CONFIG]',
     '=== GAME STARTED ===',
     'initialBalls:',
+    '[FRAME]',
+    '[LOOP]',
+    '[BOOST]',
+    '[GAP-FOUND]',
+    '[GAP]',
+    '[CHECK]',
+    '[MATCH]',
+    '[LEFT]',
+    '[RIGHT]',
+    '[SHOOTER-SMART]',
   ];
 
   const fetchLogs = async () => {

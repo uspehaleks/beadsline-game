@@ -249,10 +249,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       if (gameEndedRef.current) return;
       
       frameCount++;
-      // Debug: log every 60 frames unconditionally
-      if (frameCount % 60 === 0) {
-        sendDebugLog(`[FRAME] #${frameCount} gap:${gapContextRef.current ? 'YES' : 'NO'} pending:${!!pendingChainReactionRef.current}`);
-      }
       
       const deltaTime = lastTimeRef.current ? timestamp - lastTimeRef.current : 16;
       lastTimeRef.current = timestamp;
@@ -477,7 +473,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           const tailProgress = tailBall?.pathProgress ?? spacing;
           const gapToTail = tailProgress - 0; // Gap from spawn point (0) to tail
           
-          debugLog(`[SPAWN] accum=${spawnAccumRef.current.toFixed(0)}ms, period=${period}ms, balls=${newBalls.length}, tailProg=${tailProgress.toFixed(4)}, gap=${gapToTail.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
+          sendDebugLog(`[SPAWN] accum=${spawnAccumRef.current.toFixed(0)}ms, period=${period}ms, balls=${newBalls.length}, tailProg=${tailProgress.toFixed(4)}, gap=${gapToTail.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
           
           spawnAccumRef.current = 0;
           
@@ -485,7 +481,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           // Fast gap-closure will integrate it smoothly with the chain
           const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
           
-          debugLog(`[SPAWN] Created ball at pos=0, id=${newBall.id.slice(0,10)}, color=${newBall.color}`);
+          sendDebugLog(`[SPAWN] Created ball at pos=0, id=${newBall.id.slice(0,10)}, color=${newBall.color}`);
           
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
