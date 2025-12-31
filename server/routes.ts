@@ -1025,11 +1025,29 @@ export async function registerRoutes(
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
-      const leaderboard = await storage.getLeaderboard(limit);
+      const period = req.query.period as string || 'all';
+      
+      if (!['all', 'week', 'today'].includes(period)) {
+        return res.status(400).json({ error: "Invalid period. Must be 'all', 'week', or 'today'" });
+      }
+      
+      const leaderboard = await storage.getLeaderboard(limit, period as 'all' | 'week' | 'today');
       res.json(leaderboard);
     } catch (error) {
       console.error("Get leaderboard error:", error);
       res.status(500).json({ error: "Failed to get leaderboard" });
+    }
+  });
+  
+  app.get("/api/leaderboard/friends", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const leaderboard = await storage.getFriendsLeaderboardGlobal(userId, limit);
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Get friends leaderboard error:", error);
+      res.status(500).json({ error: "Failed to get friends leaderboard" });
     }
   });
 

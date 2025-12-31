@@ -16,11 +16,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
 
 type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop' | 'accessoryShop' | 'customize';
+type LeaderboardFilter = 'all' | 'week' | 'today' | 'friends';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig>(LEVELS[0]);
   const [showCommunityInvite, setShowCommunityInvite] = useState(false);
+  const [leaderboardFilter, setLeaderboardFilter] = useState<LeaderboardFilter>('all');
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
 
   const { data: characterExists, isLoading: isCharacterLoading, refetch: refetchCharacter } = useQuery<{ exists: boolean }>({
@@ -28,8 +30,18 @@ export default function Home() {
     enabled: !!user,
   });
 
-  const { data: leaderboard = [], isLoading: isLeaderboardLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: ['/api/leaderboard'],
+  const { data: leaderboard = [], isLoading: isLeaderboardLoading, isFetching: isLeaderboardFetching } = useQuery<LeaderboardEntry[]>({
+    queryKey: ['/api/leaderboard', leaderboardFilter],
+    queryFn: async () => {
+      if (leaderboardFilter === 'friends') {
+        const response = await fetch('/api/leaderboard/friends', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch friends leaderboard');
+        return response.json();
+      }
+      const response = await fetch(`/api/leaderboard?period=${leaderboardFilter}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch leaderboard');
+      return response.json();
+    },
     enabled: currentScreen === 'leaderboard',
   });
 
@@ -137,7 +149,10 @@ export default function Home() {
             entries={leaderboard}
             currentUserId={user?.id}
             isLoading={isLeaderboardLoading}
+            isFetching={isLeaderboardFetching}
             onBack={handleMainMenu}
+            filter={leaderboardFilter}
+            onFilterChange={setLeaderboardFilter}
           />
         );
       

@@ -107,7 +107,8 @@ export interface IStorage {
   getAllScores(limit?: number, offset?: number): Promise<GameScore[]>;
   getScoreCount(): Promise<number>;
   
-  getLeaderboard(limit?: number): Promise<LeaderboardEntry[]>;
+  getLeaderboard(limit?: number, period?: 'all' | 'week' | 'today'): Promise<LeaderboardEntry[]>;
+  getFriendsLeaderboardGlobal(userId: string, limit?: number): Promise<LeaderboardEntry[]>;
   
   getGameConfig(key: string): Promise<GameConfig | undefined>;
   getAllGameConfigs(): Promise<GameConfig[]>;
@@ -446,28 +447,105 @@ export class DatabaseStorage implements IStorage {
     return Number(result[0]?.count || 0);
   }
 
-  async getLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
-    const results = await db
-      .select({
-        id: users.id,
-        username: users.username,
-        photoUrl: users.photoUrl,
-        totalPoints: users.totalPoints,
-        gamesPlayed: users.gamesPlayed,
-        bestScore: users.bestScore,
-      })
-      .from(users)
-      .orderBy(desc(users.totalPoints))
-      .limit(limit);
+  async getLeaderboard(limit: number = 50, period: 'all' | 'week' | 'today' = 'all'): Promise<LeaderboardEntry[]> {
+    if (period === 'all') {
+      const results = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          photoUrl: users.photoUrl,
+          totalPoints: users.totalPoints,
+          gamesPlayed: users.gamesPlayed,
+          bestScore: users.bestScore,
+        })
+        .from(users)
+        .where(isNull(users.deletedAt))
+        .orderBy(desc(users.totalPoints))
+        .limit(limit);
 
-    return results.map((user, index) => ({
-      rank: index + 1,
-      userId: user.id,
-      username: user.username,
-      photoUrl: user.photoUrl,
-      totalPoints: user.totalPoints,
-      gamesPlayed: user.gamesPlayed,
-      bestScore: user.bestScore,
+      return results.map((user, index) => ({
+        rank: index + 1,
+        userId: user.id,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        totalPoints: user.totalPoints,
+        gamesPlayed: user.gamesPlayed,
+        bestScore: user.bestScore,
+      }));
+    } else {
+      const dateCondition = period === 'today' 
+        ? sql`gs.created_at >= CURRENT_DATE`
+        : sql`gs.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
+      
+      const result = await db.execute(sql`
+        SELECT 
+          u.id,
+          u.username,
+          u.photo_url,
+          COALESCE(SUM(gs.score), 0)::integer as total_points,
+          u.games_played,
+          u.best_score
+        FROM users u
+        INNER JOIN game_scores gs ON gs.user_id = u.id
+        WHERE u.deleted_at IS NULL AND ${dateCondition}
+        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score
+        ORDER BY total_points DESC
+        LIMIT ${limit}
+      `);
+      
+      return result.rows.map((row: any, index: number) => ({
+        rank: index + 1,
+        userId: row.id,
+        username: row.username,
+        photoUrl: row.photo_url,
+        totalPoints: Number(row.total_points),
+        gamesPlayed: row.games_played,
+        bestScore: row.best_score,
+      }));
+    }
+  }
+  
+  async getFriendsLeaderboardGlobal(userId: string, limit: number = 50): Promise<LeaderboardEntry[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
+    
+    const result = await db.execute(sql`
+      WITH user_info AS (
+        SELECT referred_by, referral_code FROM users WHERE id = ${userId}
+      ),
+      friends AS (
+        SELECT u.id
+        FROM users u, user_info ui
+        WHERE u.deleted_at IS NULL 
+          AND u.id != ${userId}
+          AND (
+            (ui.referred_by IS NOT NULL AND u.referred_by = ui.referred_by)
+            OR (ui.referral_code IS NOT NULL AND u.referred_by = ui.referral_code)
+            OR (ui.referred_by IS NOT NULL AND u.referral_code = ui.referred_by)
+          )
+      )
+      SELECT 
+        u.id,
+        u.username,
+        u.photo_url,
+        u.total_points,
+        u.games_played,
+        u.best_score,
+        RANK() OVER (ORDER BY u.total_points DESC) as rank
+      FROM users u
+      INNER JOIN friends f ON f.id = u.id
+      ORDER BY u.total_points DESC
+      LIMIT ${limit}
+    `);
+    
+    return result.rows.map((row: any) => ({
+      rank: Number(row.rank),
+      userId: row.id,
+      username: row.username,
+      photoUrl: row.photo_url,
+      totalPoints: Number(row.total_points),
+      gamesPlayed: row.games_played,
+      bestScore: row.best_score,
     }));
   }
 

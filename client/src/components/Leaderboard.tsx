@@ -3,17 +3,23 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Trophy, Medal, Crown, Star } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Trophy, Medal, Crown, Star, Calendar, Clock, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+type LeaderboardFilter = 'all' | 'week' | 'today' | 'friends';
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
   currentUserId?: string;
   isLoading?: boolean;
+  isFetching?: boolean;
   onBack: () => void;
+  filter?: LeaderboardFilter;
+  onFilterChange?: (filter: LeaderboardFilter) => void;
 }
 
-export function Leaderboard({ entries, currentUserId, isLoading, onBack }: LeaderboardProps) {
+export function Leaderboard({ entries, currentUserId, isLoading, isFetching, onBack, filter = 'all', onFilterChange }: LeaderboardProps) {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
 
@@ -34,13 +40,38 @@ export function Leaderboard({ entries, currentUserId, isLoading, onBack }: Leade
             <h1 className="font-display text-xl font-bold">Рейтинг</h1>
           </div>
         </div>
+        
+        {onFilterChange && (
+          <div className="px-4 pb-3">
+            <Tabs value={filter} onValueChange={(v) => onFilterChange(v as LeaderboardFilter)}>
+              <TabsList className="w-full grid grid-cols-4">
+                <TabsTrigger value="all" className="text-xs" data-testid="tab-filter-all">
+                  <Trophy className="w-3 h-3 mr-1" />
+                  Всё
+                </TabsTrigger>
+                <TabsTrigger value="week" className="text-xs" data-testid="tab-filter-week">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Неделя
+                </TabsTrigger>
+                <TabsTrigger value="today" className="text-xs" data-testid="tab-filter-today">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Сегодня
+                </TabsTrigger>
+                <TabsTrigger value="friends" className="text-xs" data-testid="tab-filter-friends">
+                  <Users className="w-3 h-3 mr-1" />
+                  Друзья
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
       </div>
 
       <div className="p-4 max-w-md mx-auto">
-        {isLoading ? (
+        {isLoading || isFetching ? (
           <LeaderboardSkeleton />
         ) : entries.length === 0 ? (
-          <EmptyLeaderboard />
+          <EmptyLeaderboard filter={filter} />
         ) : (
           <>
             <TopThreePodium entries={top3} currentUserId={currentUserId} />
@@ -220,13 +251,22 @@ function LeaderboardSkeleton() {
   );
 }
 
-function EmptyLeaderboard() {
+function EmptyLeaderboard({ filter }: { filter?: LeaderboardFilter }) {
+  const messages: Record<LeaderboardFilter, { title: string; subtitle: string }> = {
+    all: { title: 'Пока нет игроков', subtitle: 'Стань первым и займи топ!' },
+    week: { title: 'Нет игр за неделю', subtitle: 'Сыграй первым на этой неделе!' },
+    today: { title: 'Нет игр сегодня', subtitle: 'Сыграй первым сегодня!' },
+    friends: { title: 'Нет друзей в рейтинге', subtitle: 'Пригласи друзей по реферальной ссылке!' },
+  };
+  
+  const message = messages[filter || 'all'];
+  
   return (
     <div className="text-center py-16">
       <Trophy className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-      <h3 className="font-display text-xl font-semibold mb-2">Пока нет игроков</h3>
+      <h3 className="font-display text-xl font-semibold mb-2">{message.title}</h3>
       <p className="text-muted-foreground">
-        Стань первым и займи топ!
+        {message.subtitle}
       </p>
     </div>
   );
