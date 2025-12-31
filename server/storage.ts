@@ -458,11 +458,10 @@ export class DatabaseStorage implements IStorage {
           u.games_played,
           u.best_score,
           c.name as character_name,
-          bb.image_url as character_image_url
+          (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
         FROM users u
         LEFT JOIN characters c ON c.user_id = u.id
-        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
-        WHERE u.deleted_at IS NULL
+        WHERE u.deleted_at IS NULL AND u.total_points > 0
         ORDER BY u.total_points DESC
         LIMIT ${limit}
       `);
@@ -492,13 +491,13 @@ export class DatabaseStorage implements IStorage {
           u.games_played,
           u.best_score,
           c.name as character_name,
-          bb.image_url as character_image_url
+          (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
         FROM users u
         LEFT JOIN game_scores gs ON gs.user_id = u.id AND ${dateCondition}
         LEFT JOIN characters c ON c.user_id = u.id
-        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
         WHERE u.deleted_at IS NULL
-        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score, c.name, bb.image_url
+        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score, c.name, c.gender
+        HAVING COALESCE(SUM(gs.score), 0) > 0
         ORDER BY total_points DESC
         LIMIT ${limit}
       `);
@@ -544,12 +543,11 @@ export class DatabaseStorage implements IStorage {
         u.games_played,
         u.best_score,
         c.name as character_name,
-        bb.image_url as character_image_url,
+        (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url,
         RANK() OVER (ORDER BY u.total_points DESC) as rank
       FROM users u
       INNER JOIN friends f ON f.id = u.id
       LEFT JOIN characters c ON c.user_id = u.id
-      LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
       ORDER BY u.total_points DESC
       LIMIT ${limit}
     `);
