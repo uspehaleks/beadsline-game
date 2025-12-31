@@ -1033,6 +1033,33 @@ export async function registerRoutes(
     }
   });
 
+  // Leagues
+  app.get("/api/leagues", async (req, res) => {
+    try {
+      const leagues = await storage.getLeagues();
+      res.json(leagues);
+    } catch (error) {
+      console.error("Get leagues error:", error);
+      res.status(500).json({ error: "Failed to get leagues" });
+    }
+  });
+
+  app.get("/api/user/league", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const result = await storage.getUserLeague(userId);
+      
+      if (!result) {
+        return res.status(404).json({ error: "League not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Get user league error:", error);
+      res.status(500).json({ error: "Failed to get user league" });
+    }
+  });
+
   app.get("/api/config/:key", async (req, res) => {
     try {
       const { key } = req.params;

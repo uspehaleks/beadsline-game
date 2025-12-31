@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
+import { LeagueBadge } from '@/components/LeagueBadge';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
@@ -539,11 +540,8 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     <span className="text-muted-foreground">Загрузка...</span>
                   ) : characterData?.character?.name || user.firstName || user.username}
                 </h3>
-                <div className="flex items-center gap-2">
-                  <Medal className="w-4 h-4" style={{ color: '#f7931a' }} />
-                  <span className="text-sm text-muted-foreground">
-                    {rankInfo.name} {rankInfo.level}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <LeagueBadge size="sm" showRank={false} />
                 </div>
               </div>
               <div className="text-right">
