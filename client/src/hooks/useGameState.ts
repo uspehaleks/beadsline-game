@@ -470,14 +470,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           spawnAccumRef.current = 0;
           const spacing = getBallSpacing();
           
-          // Shift all existing balls forward to make room for new ball at position 0
-          newBalls = newBalls.map(ball => ({
-            ...ball,
-            pathProgress: ball.pathProgress + spacing,
-          }));
+          // Find the tail ball (smallest pathProgress) and spawn behind it
+          const minProgress = newBalls.length > 0 
+            ? Math.min(...newBalls.map(b => b.pathProgress))
+            : spacing;
           
-          // Create new ball at position 0 (start of path)
-          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, 0, newBalls);
+          // Spawn new ball just behind the tail, with small offset for smooth entry
+          const spawnProgress = Math.max(0, minProgress - spacing);
+          const newBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, spawnProgress, newBalls);
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
           

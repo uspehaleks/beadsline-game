@@ -958,10 +958,11 @@ export function createInitialBalls(count: number): Ball[] {
   const balls: Ball[] = [];
   const spacing = getBallSpacing();
   
-  // Start balls at positive positions along the normalized path
-  // First ball at position 0, each subsequent ball further along
+  // Start balls at small positive offset to ensure smooth movement from start
+  const startOffset = spacing * 0.5;
+  
   for (let i = 0; i < count; i++) {
-    const ball = createRandomBall(`ball-${i}`, i * spacing, balls);
+    const ball = createRandomBall(`ball-${i}`, startOffset + i * spacing, balls);
     balls.push(ball);
   }
   
