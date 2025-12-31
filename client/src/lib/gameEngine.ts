@@ -986,6 +986,12 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
     const currentBall = newBalls[i];
     const prevBall = newBalls[i - 1];
     
+    // Skip rollback near entrance to prevent stuttering when new balls spawn
+    // Only apply rollback if the previous ball has moved well into the path
+    if (prevBall.pathProgress < spacing * 3) {
+      continue;
+    }
+    
     const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
