@@ -1015,38 +1015,9 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 }
 
 export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
-  if (balls.length < 2) return balls;
-  
-  const spacing = getBallSpacing();
-  const rollbackSpeed = 0.15;
-  const rollbackAmount = rollbackSpeed * deltaTime * 0.001;
-  
-  const newBalls = [...balls];
-  
-  // Process from the FRONT of the chain (highest progress) to the back
-  // This pulls back balls forward to close gaps (not pushing front balls backward)
-  for (let i = newBalls.length - 2; i >= 0; i--) {
-    const currentBall = newBalls[i];
-    const nextBall = newBalls[i + 1];
-    
-    const gap = nextBall.pathProgress - currentBall.pathProgress;
-    const targetGap = spacing;
-    
-    // Only apply rollback if there's an actual gap that needs closing
-    if (gap > targetGap * 1.5) {
-      const newProgress = Math.min(
-        nextBall.pathProgress - targetGap,
-        currentBall.pathProgress + rollbackAmount
-      );
-      
-      newBalls[i] = {
-        ...currentBall,
-        pathProgress: newProgress,
-      };
-    }
-  }
-  
-  return newBalls;
+  // Rollback disabled - spawn mechanism now handles ball spacing by shifting
+  // the chain forward when new balls are added at position 0
+  return balls;
 }
 
 function ballsMatch(ball1: Ball, ball2: Ball): boolean {
