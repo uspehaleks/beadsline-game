@@ -449,28 +449,34 @@ export class DatabaseStorage implements IStorage {
 
   async getLeaderboard(limit: number = 50, period: 'all' | 'week' | 'today' = 'all'): Promise<LeaderboardEntry[]> {
     if (period === 'all') {
-      const results = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          photoUrl: users.photoUrl,
-          totalPoints: users.totalPoints,
-          gamesPlayed: users.gamesPlayed,
-          bestScore: users.bestScore,
-        })
-        .from(users)
-        .where(isNull(users.deletedAt))
-        .orderBy(desc(users.totalPoints))
-        .limit(limit);
+      const result = await db.execute(sql`
+        SELECT 
+          u.id,
+          u.username,
+          u.photo_url,
+          u.total_points,
+          u.games_played,
+          u.best_score,
+          c.name as character_name,
+          bb.image_url as character_image_url
+        FROM users u
+        LEFT JOIN characters c ON c.user_id = u.id
+        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
+        WHERE u.deleted_at IS NULL
+        ORDER BY u.total_points DESC
+        LIMIT ${limit}
+      `);
 
-      return results.map((user, index) => ({
+      return result.rows.map((row: any, index: number) => ({
         rank: index + 1,
-        userId: user.id,
-        username: user.username,
-        photoUrl: user.photoUrl,
-        totalPoints: user.totalPoints,
-        gamesPlayed: user.gamesPlayed,
-        bestScore: user.bestScore,
+        userId: row.id,
+        username: row.username,
+        photoUrl: row.photo_url,
+        totalPoints: Number(row.total_points),
+        gamesPlayed: row.games_played,
+        bestScore: row.best_score,
+        characterName: row.character_name || null,
+        characterImageUrl: row.character_image_url || null,
       }));
     } else {
       const dateCondition = period === 'today' 
@@ -484,11 +490,15 @@ export class DatabaseStorage implements IStorage {
           u.photo_url,
           COALESCE(SUM(gs.score), 0)::integer as total_points,
           u.games_played,
-          u.best_score
+          u.best_score,
+          c.name as character_name,
+          bb.image_url as character_image_url
         FROM users u
-        INNER JOIN game_scores gs ON gs.user_id = u.id
-        WHERE u.deleted_at IS NULL AND ${dateCondition}
-        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score
+        LEFT JOIN game_scores gs ON gs.user_id = u.id AND ${dateCondition}
+        LEFT JOIN characters c ON c.user_id = u.id
+        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
+        WHERE u.deleted_at IS NULL
+        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score, c.name, bb.image_url
         ORDER BY total_points DESC
         LIMIT ${limit}
       `);
@@ -501,6 +511,8 @@ export class DatabaseStorage implements IStorage {
         totalPoints: Number(row.total_points),
         gamesPlayed: row.games_played,
         bestScore: row.best_score,
+        characterName: row.character_name || null,
+        characterImageUrl: row.character_image_url || null,
       }));
     }
   }
@@ -531,9 +543,13 @@ export class DatabaseStorage implements IStorage {
         u.total_points,
         u.games_played,
         u.best_score,
+        c.name as character_name,
+        bb.image_url as character_image_url,
         RANK() OVER (ORDER BY u.total_points DESC) as rank
       FROM users u
       INNER JOIN friends f ON f.id = u.id
+      LEFT JOIN characters c ON c.user_id = u.id
+      LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
       ORDER BY u.total_points DESC
       LIMIT ${limit}
     `);
@@ -546,6 +562,8 @@ export class DatabaseStorage implements IStorage {
       totalPoints: Number(row.total_points),
       gamesPlayed: row.games_played,
       bestScore: row.best_score,
+      characterName: row.character_name || null,
+      characterImageUrl: row.character_image_url || null,
     }));
   }
 

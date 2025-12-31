@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Trophy, Medal, Crown, Star, Calendar, Clock, Users } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Crown, Star, Calendar, Clock, Users, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 type LeaderboardFilter = 'all' | 'week' | 'today' | 'friends';
@@ -155,6 +155,9 @@ function PodiumCard({ entry, rank, isCurrentUser }: PodiumCardProps) {
   
   const iconColor = rank === 1 ? 'text-amber-400' : rank === 2 ? 'text-slate-300' : 'text-orange-600';
   const RankIcon = rank === 1 ? Crown : Medal;
+  
+  const displayName = entry.characterName || entry.username;
+  const avatarImage = entry.characterImageUrl || entry.photoUrl;
 
   return (
     <Card 
@@ -168,13 +171,13 @@ function PodiumCard({ entry, rank, isCurrentUser }: PodiumCardProps) {
       </div>
 
       <Avatar className="w-12 h-12 mx-auto mt-2 border-2 border-border">
-        <AvatarImage src={entry.photoUrl || undefined} alt={entry.username} />
-        <AvatarFallback className="bg-muted font-display">
-          {entry.username.substring(0, 2).toUpperCase()}
+        <AvatarImage src={avatarImage || undefined} alt={displayName} />
+        <AvatarFallback className="bg-muted">
+          <User className="w-6 h-6 text-muted-foreground" />
         </AvatarFallback>
       </Avatar>
 
-      <h3 className="font-semibold text-sm mt-2 truncate">{entry.username}</h3>
+      <h3 className="font-semibold text-sm mt-2 truncate">{displayName}</h3>
       
       <div className={`mt-2 rounded-lg border ${bgClass} ${heightClass} flex items-end justify-center pb-2`}>
         <div className="flex flex-col items-center">
@@ -195,6 +198,9 @@ interface LeaderboardRowProps {
 }
 
 function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps) {
+  const displayName = entry.characterName || entry.username;
+  const avatarImage = entry.characterImageUrl || entry.photoUrl;
+  
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -210,14 +216,14 @@ function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps
         </div>
 
         <Avatar className="w-10 h-10 border border-border">
-          <AvatarImage src={entry.photoUrl || undefined} alt={entry.username} />
-          <AvatarFallback className="bg-muted font-display text-sm">
-            {entry.username.substring(0, 2).toUpperCase()}
+          <AvatarImage src={avatarImage || undefined} alt={displayName} />
+          <AvatarFallback className="bg-muted">
+            <User className="w-5 h-5 text-muted-foreground" />
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm truncate">{entry.username}</h3>
+          <h3 className="font-semibold text-sm truncate">{displayName}</h3>
           <p className="text-xs text-muted-foreground">
             {entry.gamesPlayed} игр
           </p>

@@ -710,6 +710,8 @@ export interface LeaderboardEntry {
   totalPoints: number;
   gamesPlayed: number;
   bestScore: number;
+  characterName: string | null;
+  characterImageUrl: string | null;
 }
 
 export interface AdminCryptoBalances {
