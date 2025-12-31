@@ -982,23 +982,26 @@ export function processRollback(balls: Ball[], deltaTime: number): Ball[] {
   
   const newBalls = [...balls];
   
-  for (let i = 1; i < newBalls.length; i++) {
+  // Process from the FRONT of the chain (highest progress) to the back
+  // This prevents chain compression from the end
+  for (let i = newBalls.length - 2; i >= 0; i--) {
     const currentBall = newBalls[i];
-    const prevBall = newBalls[i - 1];
+    const nextBall = newBalls[i + 1];
     
     // Skip rollback near entrance to prevent stuttering when new balls spawn
-    // Only apply rollback if the previous ball has moved well into the path
-    if (prevBall.pathProgress < spacing * 3) {
+    if (currentBall.pathProgress < spacing * 3) {
       continue;
     }
     
-    const gap = currentBall.pathProgress - prevBall.pathProgress;
+    const gap = nextBall.pathProgress - currentBall.pathProgress;
     const targetGap = spacing;
     
+    // Only apply rollback if there's an actual gap that needs closing
+    // This pulls the BACK ball forward, not the front ball backward
     if (gap > targetGap * 1.5) {
-      const newProgress = Math.max(
-        prevBall.pathProgress + targetGap,
-        currentBall.pathProgress - rollbackAmount
+      const newProgress = Math.min(
+        nextBall.pathProgress - targetGap,
+        currentBall.pathProgress + rollbackAmount
       );
       
       newBalls[i] = {
