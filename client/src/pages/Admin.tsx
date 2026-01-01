@@ -4984,18 +4984,6 @@ interface TeamMember {
   createdAt: string;
 }
 
-interface RevenueSummary {
-  totalSalesStars: number;
-  totalSalesUsd: number;
-  developmentStars: number;
-  developmentUsd: number;
-  advertisingStars: number;
-  advertisingUsd: number;
-  teamShares: { memberId: string; name: string; stars: number; usd: number }[];
-  salesCount: number;
-  starsSalesCount: number;
-  cryptoSalesCount: number;
-}
 
 function AccountingTab() {
   const { toast } = useToast();
