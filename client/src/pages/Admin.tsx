@@ -57,6 +57,8 @@ import { SiEthereum, SiTether } from "react-icons/si";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -1075,6 +1077,19 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     },
   });
 
+  const resetLevelsMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("POST", `/api/admin/users/${userId}/reset-levels`);
+    },
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Готово", description: "Уровни пользователя сброшены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось сбросить уровни", variant: "destructive" });
+    },
+  });
+
   const openEditDialog = (user: User) => {
     setEditingUser(user);
     setEditForm({
@@ -1152,8 +1167,23 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                     size="icon"
                     onClick={() => openEditDialog(user)}
                     data-testid={`edit-user-${user.id}`}
+                    title="Редактировать"
                   >
                     <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (confirm(`Сбросить уровни для ${user.username}?`)) {
+                        resetLevelsMutation.mutate(user.id);
+                      }
+                    }}
+                    disabled={resetLevelsMutation.isPending}
+                    data-testid={`reset-levels-${user.id}`}
+                    title="Сбросить уровни"
+                  >
+                    <RotateCcw className="w-4 h-4 text-orange-500" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -1161,6 +1191,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                     onClick={() => deleteUserMutation.mutate(user.id)}
                     disabled={deleteUserMutation.isPending}
                     data-testid={`delete-user-${user.id}`}
+                    title="Удалить"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
@@ -2179,10 +2210,13 @@ const TRANSACTION_TYPES = [
 ];
 
 function TransactionsTab() {
+  const { toast } = useToast();
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; desc: string } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
   const perPage = 20;
 
   const { data, isLoading } = useQuery<TransactionsResponse>({
@@ -2198,6 +2232,27 @@ function TransactionsTab() {
       return res.json();
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return apiRequest("POST", `/api/admin/transactions/${id}/delete`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/transactions"] });
+      toast({ title: "Готово", description: "Транзакция удалена" });
+      setDeleteTarget(null);
+      setDeleteReason("");
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось удалить транзакцию", variant: "destructive" });
+    },
+  });
+
+  const handleDelete = () => {
+    if (deleteTarget && deleteReason.trim().length >= 3) {
+      deleteMutation.mutate({ id: deleteTarget.id, reason: deleteReason.trim() });
+    }
+  };
 
   const handleSearch = () => {
     setSearch(searchInput);
@@ -2328,7 +2383,25 @@ function TransactionsTab() {
                       ) : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Баланс: {tx.balanceBefore} → {tx.balanceAfter}</span>
-                        <span>{formatDate(tx.createdAt)}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{formatDate(tx.createdAt)}</span>
+                          {!(tx as any).deletedAt && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              onClick={() => setDeleteTarget({ id: tx.id, desc: tx.description || tx.type })}
+                              data-testid={`button-delete-tx-${tx.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                          {(tx as any).deletedAt && (
+                            <Badge variant="outline" className="text-red-500 border-red-500/30">
+                              Удалено
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -2370,6 +2443,41 @@ function TransactionsTab() {
             )}
           </>
         )}
+
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Удалить транзакцию?</DialogTitle>
+              <DialogDescription>
+                {deleteTarget?.desc}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Причина удаления</label>
+                <Input
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Минимум 3 символа..."
+                  data-testid="input-delete-reason"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                Отмена
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDelete}
+                disabled={deleteReason.trim().length < 3 || deleteMutation.isPending}
+                data-testid="button-confirm-delete-tx"
+              >
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Удалить"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
