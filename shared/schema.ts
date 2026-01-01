@@ -302,6 +302,9 @@ export const beadsTransactions = pgTable("beads_transactions", {
   description: text("description"),
   gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: varchar("deleted_by", { length: 255 }),
+  deleteReason: text("delete_reason"),
 });
 
 export const beadsTransactionsRelations = relations(beadsTransactions, ({ one }) => ({

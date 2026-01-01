@@ -282,6 +282,13 @@ export interface IStorage {
   
   // User Notifications
   getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>>;
+  
+  // Transaction Management
+  softDeleteTransaction(transactionId: string, deletedBy: string, reason: string): Promise<boolean>;
+  restoreTransaction(transactionId: string): Promise<boolean>;
+  
+  // User Level Management
+  resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1851,6 +1858,9 @@ export class DatabaseStorage implements IStorage {
         description: beadsTransactions.description,
         gameScoreId: beadsTransactions.gameScoreId,
         createdAt: beadsTransactions.createdAt,
+        deletedAt: beadsTransactions.deletedAt,
+        deletedBy: beadsTransactions.deletedBy,
+        deleteReason: beadsTransactions.deleteReason,
         username: users.username,
         cryptoBtc: gameScores.cryptoBtc,
         cryptoEth: gameScores.cryptoEth,
@@ -3270,6 +3280,45 @@ export class DatabaseStorage implements IStorage {
       firstName: row.first_name,
       username: row.username,
     }));
+  }
+
+  async softDeleteTransaction(transactionId: string, deletedBy: string, reason: string): Promise<boolean> {
+    const result = await db.update(beadsTransactions)
+      .set({
+        deletedAt: new Date(),
+        deletedBy,
+        deleteReason: reason,
+      })
+      .where(eq(beadsTransactions.id, transactionId))
+      .returning({ id: beadsTransactions.id });
+    
+    return result.length > 0;
+  }
+
+  async restoreTransaction(transactionId: string): Promise<boolean> {
+    const result = await db.update(beadsTransactions)
+      .set({
+        deletedAt: null,
+        deletedBy: null,
+        deleteReason: null,
+      })
+      .where(eq(beadsTransactions.id, transactionId))
+      .returning({ id: beadsTransactions.id });
+    
+    return result.length > 0;
+  }
+
+  async resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { success: false, error: 'Пользователь не найден' };
+    }
+
+    await db.update(users)
+      .set({ completedLevels: [] })
+      .where(eq(users.id, userId));
+
+    return { success: true };
   }
 }
 
