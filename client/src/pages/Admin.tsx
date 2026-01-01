@@ -50,7 +50,8 @@ import {
   ChevronRight,
   FileText,
   Sparkles,
-  Upload
+  Upload,
+  ShoppingCart
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -343,8 +344,8 @@ export default function Admin() {
         </header>
 
         {statsLoading ? (
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6">
+            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
               <Card key={i}>
                 <CardContent className="pt-6">
                   <div className="h-20 animate-pulse bg-muted rounded" />
@@ -353,7 +354,7 @@ export default function Admin() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -414,6 +415,54 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground">House Account</p>
                     <p className="text-2xl font-bold" data-testid="text-house-balance" style={{ color: '#00ff88' }}>
                       {(houseAccount?.balance || 0).toLocaleString()} <span className="text-base">Beads</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-green-500/10">
+                    <TrendingUp className="w-6 h-6 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Доход от продаж Beads</p>
+                    <p className="text-2xl font-bold text-green-500" data-testid="text-sales-income-top">
+                      +{(houseAccount?.salesIncome || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-orange-500/10">
+                    <Gift className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Выдано игрокам</p>
+                    <p className="text-2xl font-bold text-orange-500" data-testid="text-distributed-top">
+                      {(houseAccount?.totalDistributed || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-full bg-blue-500/10">
+                    <ShoppingCart className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Всего продаж</p>
+                    <p className="text-2xl font-bold" data-testid="text-total-sales-top">
+                      {revenueSummary?.salesCount || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Stars: {revenueSummary?.starsSalesCount || 0} | Crypto: {revenueSummary?.cryptoSalesCount || 0}
                     </p>
                   </div>
                 </div>
@@ -4999,6 +5048,17 @@ function AccountingTab() {
     queryKey: ['/api/admin/revenue-summary'],
   });
 
+  const { data: houseAccount } = useQuery<{ balance: number; salesIncome: number; totalDistributed: number }>({
+    queryKey: ['/api/admin/house-account'],
+    refetchInterval: 10000,
+  });
+
+  const beadsIncome = houseAccount?.salesIncome || 0;
+  const beadsDevelopment = Math.floor(beadsIncome * 0.1);
+  const beadsAdvertising = Math.floor(beadsIncome * 0.15);
+  const beadsTeamPool = beadsIncome - beadsDevelopment - beadsAdvertising;
+  const beadsPerMember = Math.floor(beadsTeamPool / 5);
+
   const updateMemberMutation = useMutation({
     mutationFn: async ({ id, name, role }: { id: string; name: string; role: string }) => {
       return apiRequest('PUT', `/api/admin/team-members/${id}`, { name, role });
@@ -5076,13 +5136,14 @@ function AccountingTab() {
 
               <div>
                 <h3 className="font-semibold mb-4">Распределение дохода</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <Wrench className="w-4 h-4 text-primary" />
                       <span className="font-medium">Разработка (10%)</span>
                     </div>
                     <div className="text-lg">{formatStars(revenue.developmentStars)} + {formatUsd(revenue.developmentUsd)}</div>
+                    <div className="text-sm text-green-500 mt-1">+ {beadsDevelopment.toLocaleString()} Beads</div>
                   </div>
                   <div className="p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
@@ -5090,6 +5151,15 @@ function AccountingTab() {
                       <span className="font-medium">Реклама (15%)</span>
                     </div>
                     <div className="text-lg">{formatStars(revenue.advertisingStars)} + {formatUsd(revenue.advertisingUsd)}</div>
+                    <div className="text-sm text-green-500 mt-1">+ {beadsAdvertising.toLocaleString()} Beads</div>
+                  </div>
+                  <div className="p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium">Команда (75%)</span>
+                    </div>
+                    <div className="text-lg">{formatStars(Math.floor(revenue.totalSalesStars * 0.75))} + {formatUsd(revenue.totalSalesUsd * 0.75)}</div>
+                    <div className="text-sm text-green-500 mt-1">+ {beadsTeamPool.toLocaleString()} Beads ({beadsPerMember.toLocaleString()}/чел)</div>
                   </div>
                 </div>
               </div>
