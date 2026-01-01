@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
-import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats, Boost } from "@shared/schema";
+import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats, Boost, HouseAccountConfig, RevenueSummary } from "@shared/schema";
 import { 
   Users, 
   Users2,
@@ -145,6 +145,18 @@ export default function Admin() {
   const { data: fundToggles } = useQuery<FundToggles>({
     queryKey: ["/api/admin/fund-toggles"],
     enabled: isAdmin,
+  });
+
+  const { data: houseAccount } = useQuery<HouseAccountConfig>({
+    queryKey: ["/api/admin/house-account"],
+    enabled: isAdmin,
+    refetchInterval: 5000,
+  });
+
+  const { data: revenueSummary } = useQuery<RevenueSummary>({
+    queryKey: ["/api/admin/revenue-summary"],
+    enabled: isAdmin,
+    refetchInterval: 10000,
   });
 
   const toggleFundMutation = useMutation({
