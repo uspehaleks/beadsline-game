@@ -388,13 +388,18 @@ export default function Admin() {
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-green-500/10">
-                    <Gamepad2 className="w-6 h-6 text-green-500" />
+                    <TrendingUp className="w-6 h-6 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Всего игр</p>
-                    <p className="text-2xl font-bold" data-testid="text-total-games">
-                      {stats?.totalGames || 0}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Всего доход</p>
+                    <div className="flex flex-col" data-testid="text-total-income">
+                      <span className="text-lg font-bold flex items-center gap-1">
+                        {revenueSummary?.totalSalesStars || 0} <span className="text-yellow-400">⭐</span>
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        ${(revenueSummary?.totalSalesUsd || 0).toFixed(2)} USD
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -403,12 +408,12 @@ export default function Admin() {
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-full bg-amber-500/10">
-                    <Gift className="w-6 h-6 text-amber-500" />
+                    <Wallet className="w-6 h-6 text-amber-500" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Активный призовой фонд</p>
-                    <p className="text-2xl font-bold" data-testid="text-active-pool">
-                      {stats?.activePrizePool?.name || "Нет"}
+                    <p className="text-sm text-muted-foreground">House Account</p>
+                    <p className="text-2xl font-bold" data-testid="text-house-balance" style={{ color: '#00ff88' }}>
+                      {(houseAccount?.balance || 0).toLocaleString()} <span className="text-base">Beads</span>
                     </p>
                   </div>
                 </div>
