@@ -284,8 +284,7 @@ export interface IStorage {
   getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>>;
   
   // Transaction Management
-  softDeleteTransaction(transactionId: string, deletedBy: string, reason: string): Promise<boolean>;
-  restoreTransaction(transactionId: string): Promise<boolean>;
+  deleteTransaction(transactionId: string): Promise<boolean>;
   
   // User Level Management
   resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }>;
@@ -3282,26 +3281,8 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async softDeleteTransaction(transactionId: string, deletedBy: string, reason: string): Promise<boolean> {
-    const result = await db.update(beadsTransactions)
-      .set({
-        deletedAt: new Date(),
-        deletedBy,
-        deleteReason: reason,
-      })
-      .where(eq(beadsTransactions.id, transactionId))
-      .returning({ id: beadsTransactions.id });
-    
-    return result.length > 0;
-  }
-
-  async restoreTransaction(transactionId: string): Promise<boolean> {
-    const result = await db.update(beadsTransactions)
-      .set({
-        deletedAt: null,
-        deletedBy: null,
-        deleteReason: null,
-      })
+  async deleteTransaction(transactionId: string): Promise<boolean> {
+    const result = await db.delete(beadsTransactions)
       .where(eq(beadsTransactions.id, transactionId))
       .returning({ id: beadsTransactions.id });
     

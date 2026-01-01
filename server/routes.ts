@@ -2445,18 +2445,12 @@ export async function registerRoutes(
     }
   });
 
-  // Soft delete transaction
-  app.post("/api/admin/transactions/:id/delete", requireAdmin, async (req, res) => {
+  // Delete transaction (hard delete)
+  app.delete("/api/admin/transactions/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { reason } = req.body;
-      const adminId = (req.session as any).userId;
       
-      if (!reason || typeof reason !== 'string' || reason.trim().length < 3) {
-        return res.status(400).json({ error: "Укажите причину удаления (минимум 3 символа)" });
-      }
-      
-      const success = await storage.softDeleteTransaction(id, adminId, reason.trim());
+      const success = await storage.deleteTransaction(id);
       
       if (!success) {
         return res.status(404).json({ error: "Транзакция не найдена" });
@@ -2466,24 +2460,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Delete transaction error:", error);
       res.status(500).json({ error: "Failed to delete transaction" });
-    }
-  });
-
-  // Restore transaction
-  app.post("/api/admin/transactions/:id/restore", requireAdmin, async (req, res) => {
-    try {
-      const { id } = req.params;
-      
-      const success = await storage.restoreTransaction(id);
-      
-      if (!success) {
-        return res.status(404).json({ error: "Транзакция не найдена" });
-      }
-      
-      res.json({ success: true, message: "Транзакция восстановлена" });
-    } catch (error) {
-      console.error("Restore transaction error:", error);
-      res.status(500).json({ error: "Failed to restore transaction" });
     }
   });
 

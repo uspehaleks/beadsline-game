@@ -2216,7 +2216,6 @@ function TransactionsTab() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; desc: string } | null>(null);
-  const [deleteReason, setDeleteReason] = useState("");
   const perPage = 20;
 
   const { data, isLoading } = useQuery<TransactionsResponse>({
@@ -2234,14 +2233,13 @@ function TransactionsTab() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return apiRequest("POST", `/api/admin/transactions/${id}/delete`, { reason });
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/admin/transactions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/transactions"] });
       toast({ title: "Готово", description: "Транзакция удалена" });
       setDeleteTarget(null);
-      setDeleteReason("");
     },
     onError: () => {
       toast({ title: "Ошибка", description: "Не удалось удалить транзакцию", variant: "destructive" });
@@ -2249,8 +2247,8 @@ function TransactionsTab() {
   });
 
   const handleDelete = () => {
-    if (deleteTarget && deleteReason.trim().length >= 3) {
-      deleteMutation.mutate({ id: deleteTarget.id, reason: deleteReason.trim() });
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget.id);
     }
   };
 
@@ -2452,17 +2450,6 @@ function TransactionsTab() {
                 {deleteTarget?.desc}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Причина удаления</label>
-                <Input
-                  value={deleteReason}
-                  onChange={(e) => setDeleteReason(e.target.value)}
-                  placeholder="Минимум 3 символа..."
-                  data-testid="input-delete-reason"
-                />
-              </div>
-            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>
                 Отмена
@@ -2470,7 +2457,7 @@ function TransactionsTab() {
               <Button 
                 variant="destructive" 
                 onClick={handleDelete}
-                disabled={deleteReason.trim().length < 3 || deleteMutation.isPending}
+                disabled={deleteMutation.isPending}
                 data-testid="button-confirm-delete-tx"
               >
                 {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Удалить"}
@@ -2741,7 +2728,7 @@ function BeadsHouseTab() {
 
   const totalPages = transactionsData ? Math.ceil(transactionsData.total / txPerPage) : 0;
 
-  const [editHouse, setEditHouse] = useState({ balance: 1000000 });
+  const [editHouse, setEditHouse] = useState({ balance: 1000000, salesIncome: 0, totalDistributed: 0 });
   const [editLives, setEditLives] = useState<LivesConfigData>({
     livesPerGame: 3,
     extraLifeCost: 50,
@@ -2751,7 +2738,11 @@ function BeadsHouseTab() {
 
   useEffect(() => {
     if (houseAccount) {
-      setEditHouse({ balance: houseAccount.balance });
+      setEditHouse({ 
+        balance: houseAccount.balance, 
+        salesIncome: houseAccount.salesIncome || 0,
+        totalDistributed: houseAccount.totalDistributed || 0
+      });
     }
   }, [houseAccount]);
 
@@ -2762,7 +2753,7 @@ function BeadsHouseTab() {
   }, [livesConfig]);
 
   const updateHouseMutation = useMutation({
-    mutationFn: async (data: { balance: number }) => {
+    mutationFn: async (data: { balance: number; salesIncome: number; totalDistributed: number }) => {
       return apiRequest("PUT", "/api/admin/house-account", data);
     },
     onSuccess: () => {
@@ -2876,28 +2867,48 @@ function BeadsHouseTab() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4 items-end">
-            <div className="space-y-2 flex-1">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
               <Label>Баланс Beads</Label>
               <Input
                 type="number"
                 value={editHouse.balance}
-                onChange={(e) => setEditHouse({ balance: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setEditHouse({ ...editHouse, balance: parseInt(e.target.value) || 0 })}
                 data-testid="input-house-balance"
               />
             </div>
-            <Button
-              onClick={() => updateHouseMutation.mutate(editHouse)}
-              disabled={updateHouseMutation.isPending}
-              data-testid="button-save-house"
-            >
-              {updateHouseMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-            </Button>
+            <div className="space-y-2">
+              <Label>Доход от продаж</Label>
+              <Input
+                type="number"
+                value={editHouse.salesIncome}
+                onChange={(e) => setEditHouse({ ...editHouse, salesIncome: parseInt(e.target.value) || 0 })}
+                data-testid="input-sales-income"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Выдано игрокам</Label>
+              <Input
+                type="number"
+                value={editHouse.totalDistributed}
+                onChange={(e) => setEditHouse({ ...editHouse, totalDistributed: parseInt(e.target.value) || 0 })}
+                data-testid="input-total-distributed"
+              />
+            </div>
           </div>
+          <Button
+            onClick={() => updateHouseMutation.mutate(editHouse)}
+            disabled={updateHouseMutation.isPending}
+            className="w-full"
+            data-testid="button-save-house"
+          >
+            {updateHouseMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Сохранить
+          </Button>
           <p className="text-xs text-muted-foreground">
             House Account - центральный фонд Beads. Награды за победы дебетуются из него, покупки - кредитуются.
           </p>
