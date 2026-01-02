@@ -1090,10 +1090,9 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     }
   }
   
-  // Deactivate rollback if no more gaps
-  if (!hasGap) {
-    rollbackActiveUntil = 0;
-  }
+  // Keep rollback active for the full 2-second window
+  // Don't deactivate early - this ensures chain pauses after match
+  // even if no gaps exist (e.g., when chain becomes empty)
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
   rollbackLogCounter++;
