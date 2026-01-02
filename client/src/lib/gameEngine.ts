@@ -1054,15 +1054,16 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   }
   
   const spacing = getBallSpacing();
-  const rollbackSpeed = 0.15; // Speed of gap closure
+  // Fast rollback speed - close gaps quickly like in classic Zuma
+  const rollbackSpeed = 0.4;
   const maxCorrectionPerFrame = rollbackSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
   let hasGap = false;
   let maxGapExcess = 0;
   
-  // Find the first significant gap in the chain
-  // A gap means balls were removed and front part needs to roll backward
+  // Find gaps in the chain where balls were removed
+  // Front part (higher pathProgress) rolls backward to meet back part
   for (let i = 1; i < newBalls.length; i++) {
     const prevBall = newBalls[i - 1];
     const currentBall = newBalls[i];
@@ -1070,16 +1071,16 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
-    // Detect gaps that are larger than normal spacing (30% threshold)
-    if (gap > targetGap * 1.30) {
+    // Detect any gap larger than normal spacing (10% threshold for responsiveness)
+    if (gap > targetGap * 1.10) {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       hasGap = true;
       
-      // Calculate how much to move - close gap smoothly
-      const correction = Math.min(excess * 0.5, maxCorrectionPerFrame);
+      // Calculate correction - move quickly to close gap
+      const correction = Math.min(excess * 0.6, maxCorrectionPerFrame);
       
-      // IMPORTANT: Move this ball AND ALL balls behind it backward together
+      // Move this ball AND ALL balls behind it backward together
       // This keeps the chain cohesive while closing the gap
       for (let j = i; j < newBalls.length; j++) {
         newBalls[j] = {
@@ -1090,9 +1091,10 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     }
   }
   
-  // Keep rollback active for the full 2-second window
-  // Don't deactivate early - this ensures chain pauses after match
-  // even if no gaps exist (e.g., when chain becomes empty)
+  // Deactivate rollback early if gaps are closed - allows normal movement to resume
+  if (!hasGap && rollbackActive) {
+    rollbackActiveUntil = now + 100; // Small grace period then resume
+  }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
   rollbackLogCounter++;
