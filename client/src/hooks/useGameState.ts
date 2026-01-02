@@ -39,6 +39,7 @@ import {
   applyLaserEffect,
   SHOOTER_BALL_SPEED,
   debugLog,
+  activateRollback,
   type PathPoint,
 } from '@/lib/gameEngine';
 import { GAME_CONFIG } from '@/lib/gameConfig';
@@ -407,6 +408,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
                 const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, chainCombo);
                 
                 const processedBalls = removeBalls(currentState.balls, ballIndicesToRemove);
+                activateRollback();
                 
                 if (pending.newLeftBallId || pending.newRightBallId) {
                   gapContextRef.current = { 
@@ -756,6 +758,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           const rightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
           
           newBalls = removeBalls(newBalls, matches);
+          activateRollback();
           
           let totalPoints = points;
           let totalCryptoCollected = { ...cryptoCollected };
@@ -813,6 +816,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
             currentRightBall = newMaxIdx < newBalls.length - 1 ? newBalls[newMaxIdx + 1] : null;
             
             newBalls = removeBalls(newBalls, chainMatches);
+            activateRollback();
             
             // Play combo sound
             const hasChainCrypto = chainMatchedBalls.some(b => b.crypto || b.isUsdtFund);

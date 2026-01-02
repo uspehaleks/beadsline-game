@@ -1033,13 +1033,24 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 }
 
 let rollbackLogCounter = 0;
+let rollbackActiveUntil = 0;
+
+export function activateRollback() {
+  rollbackActiveUntil = Date.now() + 2000;
+}
 
 export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished: boolean = false): Ball[] {
   if (balls.length < 2) return balls;
   
+  const now = Date.now();
+  const rollbackActive = now < rollbackActiveUntil;
+  
+  if (!rollbackActive) {
+    return balls;
+  }
+  
   const spacing = getBallSpacing();
-  // Fast gap-closure - close gaps almost instantly for smooth chain cohesion
-  const smoothingSpeed = 0.5;
+  const smoothingSpeed = 0.3;
   const maxCorrection = smoothingSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
@@ -1047,8 +1058,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   let maxGapExcess = 0;
   
   // ZUMA STYLE: When balls are removed, FRONT balls roll BACKWARD to close the gap
-  // This makes the game easier as the chain moves away from the victory portal
-  // Process from back (lowest progress) to front (highest progress)
+  // Only runs for 2 seconds after a match to prevent jittering
   for (let i = 1; i < newBalls.length; i++) {
     const prevBall = newBalls[i - 1];
     const currentBall = newBalls[i];
@@ -1056,14 +1066,13 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
-    // Only close gaps that are significantly larger (20% threshold)
-    // This prevents jittering from minor spacing variations during normal forward movement
-    if (gap > targetGap * 1.20) {
+    // Only close gaps that are significantly larger (50% threshold for real gaps only)
+    if (gap > targetGap * 1.50) {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       
       // Move current ball BACKWARD - close the gap smoothly
-      const correction = Math.min(excess * 0.5, maxCorrection);
+      const correction = Math.min(excess * 0.4, maxCorrection);
       
       newBalls[i] = {
         ...currentBall,
@@ -1071,6 +1080,11 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
       };
       totalCorrections++;
     }
+  }
+  
+  // Deactivate rollback if no more gaps
+  if (totalCorrections === 0 && maxGapExcess === 0) {
+    rollbackActiveUntil = 0;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
