@@ -1035,10 +1035,12 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 let rollbackLogCounter = 0;
 let rollbackActiveUntil = 0;
 let rollbackHadGap = false; // Track if we've seen a real gap during this rollback
+let rollbackStartLeadPosition = 0; // Position of lead ball when rollback started
 
 export function activateRollback() {
   rollbackActiveUntil = Date.now() + 2000;
   rollbackHadGap = false; // Reset gap tracking for new rollback session
+  rollbackStartLeadPosition = 0; // Will be set on first processRollback call
 }
 
 export function isRollbackActive(): boolean {
@@ -1053,8 +1055,8 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     return balls;
   }
   
-  // With fewer than 2 balls, we can't detect gaps - keep rollback active
-  if (balls.length < 2) {
+  // With no balls, just keep rollback active to pause spawned balls
+  if (balls.length === 0) {
     return balls;
   }
   
@@ -1064,6 +1066,35 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   const maxCorrectionPerFrame = rollbackSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
+  
+  // Find lead ball (highest pathProgress)
+  const leadBall = newBalls.reduce((max, b) => b.pathProgress > max.pathProgress ? b : max, newBalls[0]);
+  
+  // Remember lead position at start of rollback
+  if (rollbackStartLeadPosition === 0 && leadBall.pathProgress > 0) {
+    rollbackStartLeadPosition = leadBall.pathProgress;
+  }
+  
+  // SPECIAL CASE: If lead ball is close to portal (< 0.20), push ALL balls backward
+  // This creates the "rollback into portal" effect when matches happen near spawn
+  const portalThreshold = 0.20;
+  if (leadBall.pathProgress < portalThreshold && leadBall.pathProgress > 0) {
+    const retreatAmount = Math.min(0.005 * deltaTime * 0.06, leadBall.pathProgress);
+    for (let i = 0; i < newBalls.length; i++) {
+      newBalls[i] = {
+        ...newBalls[i],
+        pathProgress: Math.max(0, newBalls[i].pathProgress - retreatAmount),
+      };
+    }
+    // Don't deactivate early when doing portal retreat
+    return newBalls;
+  }
+  
+  // With only 1 ball, we can't detect gaps - keep rollback active
+  if (balls.length < 2) {
+    return newBalls;
+  }
+  
   let hasGap = false;
   let maxGapExcess = 0;
   
@@ -1102,6 +1133,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   if (!hasGap && rollbackHadGap) {
     rollbackActiveUntil = 0;
     rollbackHadGap = false;
+    rollbackStartLeadPosition = 0;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
