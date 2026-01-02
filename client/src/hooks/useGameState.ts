@@ -40,6 +40,7 @@ import {
   SHOOTER_BALL_SPEED,
   debugLog,
   activateRollback,
+  isRollbackActive,
   type PathPoint,
 } from '@/lib/gameEngine';
 import { GAME_CONFIG } from '@/lib/gameConfig';
@@ -274,7 +275,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
-        let newBalls = moveBallsForward(prev.balls, deltaTime);
+        // During rollback, pause forward movement to let chain close gaps properly
+        let newBalls = isRollbackActive() 
+          ? prev.balls 
+          : moveBallsForward(prev.balls, deltaTime);
         
         newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         
@@ -1014,7 +1018,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
-        let newBalls = moveBallsForward(prev.balls, deltaTime);
+        // During rollback, pause forward movement to let chain close gaps properly
+        let newBalls = isRollbackActive() 
+          ? prev.balls 
+          : moveBallsForward(prev.balls, deltaTime);
         newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         newBalls = updateBallPositions(newBalls, currentPath);
         

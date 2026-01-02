@@ -1039,6 +1039,10 @@ export function activateRollback() {
   rollbackActiveUntil = Date.now() + 2000;
 }
 
+export function isRollbackActive(): boolean {
+  return Date.now() < rollbackActiveUntil;
+}
+
 export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished: boolean = false): Ball[] {
   if (balls.length < 2) return balls;
   
