@@ -1034,9 +1034,11 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 
 let rollbackLogCounter = 0;
 let rollbackActiveUntil = 0;
+let rollbackHadGap = false; // Track if we've seen a real gap during this rollback
 
 export function activateRollback() {
   rollbackActiveUntil = Date.now() + 2000;
+  rollbackHadGap = false; // Reset gap tracking for new rollback session
 }
 
 export function isRollbackActive(): boolean {
@@ -1044,12 +1046,15 @@ export function isRollbackActive(): boolean {
 }
 
 export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished: boolean = false): Ball[] {
-  if (balls.length < 2) return balls;
-  
   const now = Date.now();
   const rollbackActive = now < rollbackActiveUntil;
   
   if (!rollbackActive) {
+    return balls;
+  }
+  
+  // With fewer than 2 balls, we can't detect gaps - keep rollback active
+  if (balls.length < 2) {
     return balls;
   }
   
@@ -1076,6 +1081,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       hasGap = true;
+      rollbackHadGap = true; // Mark that we've seen a gap during this session
       
       // Calculate correction - move quickly to close gap
       const correction = Math.min(excess * 0.6, maxCorrectionPerFrame);
@@ -1091,9 +1097,11 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     }
   }
   
-  // Deactivate rollback immediately when gaps are closed
-  if (!hasGap) {
+  // Only deactivate early if we previously had a gap and it's now closed
+  // This prevents premature deactivation when chain was empty after match
+  if (!hasGap && rollbackHadGap) {
     rollbackActiveUntil = 0;
+    rollbackHadGap = false;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
