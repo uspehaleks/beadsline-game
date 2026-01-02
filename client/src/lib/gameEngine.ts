@@ -1075,10 +1075,14 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     rollbackStartLeadPosition = leadBall.pathProgress;
   }
   
-  // SPECIAL CASE: If lead ball is close to portal (< 0.20), push ALL balls backward
-  // This creates the "rollback into portal" effect when matches happen near spawn
-  const portalThreshold = 0.20;
-  if (leadBall.pathProgress < portalThreshold && leadBall.pathProgress > 0) {
+  // SPECIAL CASE: Portal rollback - only when chain is very short (< 5 balls) 
+  // AND lead ball is very close to portal (< 0.10)
+  // This creates the "rollback into portal" effect when matches happen at game start
+  const portalThreshold = 0.10;
+  const maxBallsForPortalRetreat = 5;
+  if (newBalls.length <= maxBallsForPortalRetreat && 
+      leadBall.pathProgress < portalThreshold && 
+      leadBall.pathProgress > 0) {
     const retreatAmount = Math.min(0.005 * deltaTime * 0.06, leadBall.pathProgress);
     for (let i = 0; i < newBalls.length; i++) {
       newBalls[i] = {
