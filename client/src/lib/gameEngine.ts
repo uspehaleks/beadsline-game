@@ -1056,13 +1056,14 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
-    // Only close gaps that are too large (with small tolerance)
-    if (gap > targetGap * 1.05) {
+    // Only close gaps that are significantly larger (20% threshold)
+    // This prevents jittering from minor spacing variations during normal forward movement
+    if (gap > targetGap * 1.20) {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       
-      // Move current ball BACKWARD - close 80% of the gap per frame for quick catch-up
-      const correction = Math.min(excess * 0.8, maxCorrection);
+      // Move current ball BACKWARD - close the gap smoothly
+      const correction = Math.min(excess * 0.5, maxCorrection);
       
       newBalls[i] = {
         ...currentBall,
