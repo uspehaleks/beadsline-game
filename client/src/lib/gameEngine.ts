@@ -1091,9 +1091,9 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     }
   }
   
-  // Deactivate rollback early if gaps are closed - allows normal movement to resume
-  if (!hasGap && rollbackActive) {
-    rollbackActiveUntil = now + 100; // Small grace period then resume
+  // Deactivate rollback immediately when gaps are closed
+  if (!hasGap) {
+    rollbackActiveUntil = 0;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
