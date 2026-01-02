@@ -1046,14 +1046,14 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   let totalCorrections = 0;
   let maxGapExcess = 0;
   
-  // Only close internal gaps - no pullback to avoid jittering
-  // When balls are removed, remaining balls close the gap by moving forward
-  // Process from front (highest progress) to back (lowest progress)
-  for (let i = newBalls.length - 2; i >= 0; i--) {
+  // ZUMA STYLE: When balls are removed, FRONT balls roll BACKWARD to close the gap
+  // This makes the game easier as the chain moves away from the victory portal
+  // Process from back (lowest progress) to front (highest progress)
+  for (let i = 1; i < newBalls.length; i++) {
+    const prevBall = newBalls[i - 1];
     const currentBall = newBalls[i];
-    const nextBall = newBalls[i + 1];
     
-    const gap = nextBall.pathProgress - currentBall.pathProgress;
+    const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
     // Only close gaps that are too large (with small tolerance)
@@ -1061,12 +1061,12 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
       
-      // Move current ball forward - close 80% of the gap per frame for quick catch-up
+      // Move current ball BACKWARD - close 80% of the gap per frame for quick catch-up
       const correction = Math.min(excess * 0.8, maxCorrection);
       
       newBalls[i] = {
         ...currentBall,
-        pathProgress: currentBall.pathProgress + correction,
+        pathProgress: currentBall.pathProgress - correction,
       };
       totalCorrections++;
     }
@@ -1076,7 +1076,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   rollbackLogCounter++;
   if (rollbackLogCounter >= 60 && maxGapExcess > 0) {
     rollbackLogCounter = 0;
-    debugLog(`[GAP-CLOSE] corrections=${totalCorrections}, maxExcess=${maxGapExcess.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
+    debugLog(`[ROLLBACK] corrections=${totalCorrections}, maxExcess=${maxGapExcess.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
   }
   
   return newBalls;
