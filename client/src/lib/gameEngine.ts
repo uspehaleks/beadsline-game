@@ -1054,15 +1054,15 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   }
   
   const spacing = getBallSpacing();
-  const smoothingSpeed = 0.3;
-  const maxCorrection = smoothingSpeed * deltaTime * 0.001;
+  const rollbackSpeed = 0.15; // Speed of gap closure
+  const maxCorrectionPerFrame = rollbackSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
-  let totalCorrections = 0;
+  let hasGap = false;
   let maxGapExcess = 0;
   
-  // ZUMA STYLE: When balls are removed, FRONT balls roll BACKWARD to close the gap
-  // Only runs for 2 seconds after a match to prevent jittering
+  // Find the first significant gap in the chain
+  // A gap means balls were removed and front part needs to roll backward
   for (let i = 1; i < newBalls.length; i++) {
     const prevBall = newBalls[i - 1];
     const currentBall = newBalls[i];
@@ -1070,24 +1070,28 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     const gap = currentBall.pathProgress - prevBall.pathProgress;
     const targetGap = spacing;
     
-    // Only close gaps that are significantly larger (50% threshold for real gaps only)
-    if (gap > targetGap * 1.50) {
+    // Detect gaps that are larger than normal spacing (30% threshold)
+    if (gap > targetGap * 1.30) {
       const excess = gap - targetGap;
       maxGapExcess = Math.max(maxGapExcess, excess);
+      hasGap = true;
       
-      // Move current ball BACKWARD - close the gap smoothly
-      const correction = Math.min(excess * 0.4, maxCorrection);
+      // Calculate how much to move - close gap smoothly
+      const correction = Math.min(excess * 0.5, maxCorrectionPerFrame);
       
-      newBalls[i] = {
-        ...currentBall,
-        pathProgress: currentBall.pathProgress - correction,
-      };
-      totalCorrections++;
+      // IMPORTANT: Move this ball AND ALL balls behind it backward together
+      // This keeps the chain cohesive while closing the gap
+      for (let j = i; j < newBalls.length; j++) {
+        newBalls[j] = {
+          ...newBalls[j],
+          pathProgress: newBalls[j].pathProgress - correction,
+        };
+      }
     }
   }
   
   // Deactivate rollback if no more gaps
-  if (totalCorrections === 0 && maxGapExcess === 0) {
+  if (!hasGap) {
     rollbackActiveUntil = 0;
   }
   
@@ -1095,7 +1099,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   rollbackLogCounter++;
   if (rollbackLogCounter >= 60 && maxGapExcess > 0) {
     rollbackLogCounter = 0;
-    debugLog(`[ROLLBACK] corrections=${totalCorrections}, maxExcess=${maxGapExcess.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
+    debugLog(`[ROLLBACK] maxExcess=${maxGapExcess.toFixed(4)}, spacing=${spacing.toFixed(4)}`);
   }
   
   return newBalls;
