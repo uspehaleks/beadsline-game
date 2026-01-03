@@ -156,59 +156,77 @@ export default function Withdraw() {
             
             <p className="text-gray-400 mb-4">Выберите криптовалюту для вывода:</p>
             
-            <Card 
-              className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
-              onClick={() => setSelectedCrypto('btc')}
-              data-testid="card-select-btc"
-            >
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Bitcoin className="w-6 h-6 text-orange-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold">Bitcoin (BTC)</div>
-                  <div className="text-sm text-gray-400">
-                    Баланс: {user?.btcBalance.toFixed(8)} BTC
+            {config?.btc?.enabled && (
+              <Card 
+                className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
+                onClick={() => setSelectedCrypto('btc')}
+                data-testid="card-select-btc"
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                    <Bitcoin className="w-6 h-6 text-orange-500" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex-1">
+                    <div className="font-semibold">Bitcoin (BTC)</div>
+                    <div className="text-sm text-gray-400">
+                      Баланс: {user?.btcBalance.toFixed(8)} BTC
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card 
-              className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
-              onClick={() => setSelectedCrypto('eth')}
-              data-testid="card-select-eth"
-            >
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <SiEthereum className="w-6 h-6 text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold">Ethereum (ETH)</div>
-                  <div className="text-sm text-gray-400">
-                    Баланс: {user?.ethBalance.toFixed(8)} ETH
+            {config?.eth?.enabled && (
+              <Card 
+                className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
+                onClick={() => setSelectedCrypto('eth')}
+                data-testid="card-select-eth"
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <SiEthereum className="w-6 h-6 text-purple-400" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex-1">
+                    <div className="font-semibold">Ethereum (ETH)</div>
+                    <div className="text-sm text-gray-400">
+                      Баланс: {user?.ethBalance.toFixed(8)} ETH
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card 
-              className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
-              onClick={() => setSelectedCrypto('usdt')}
-              data-testid="card-select-usdt"
-            >
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <SiTether className="w-6 h-6 text-green-500" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold">Tether (USDT)</div>
-                  <div className="text-sm text-gray-400">
-                    Баланс: {user?.usdtBalance.toFixed(2)} USDT
+            {(config?.usdt?.bep20?.enabled || config?.usdt?.trc20?.enabled || 
+              config?.usdt?.erc20?.enabled || config?.usdt?.ton?.enabled) && (
+              <Card 
+                className="cursor-pointer hover-elevate bg-gray-800/50 border-gray-700"
+                onClick={() => setSelectedCrypto('usdt')}
+                data-testid="card-select-usdt"
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <SiTether className="w-6 h-6 text-green-500" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex-1">
+                    <div className="font-semibold">Tether (USDT)</div>
+                    <div className="text-sm text-gray-400">
+                      Баланс: {user?.usdtBalance.toFixed(2)} USDT
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {!config?.btc?.enabled && !config?.eth?.enabled && 
+             !config?.usdt?.bep20?.enabled && !config?.usdt?.trc20?.enabled && 
+             !config?.usdt?.erc20?.enabled && !config?.usdt?.ton?.enabled && (
+              <Alert className="bg-yellow-500/10 border-yellow-500/30">
+                <AlertCircle className="w-4 h-4 text-yellow-400" />
+                <AlertDescription className="text-yellow-200 text-sm">
+                  Вывод временно недоступен. Попробуйте позже.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {myWithdrawals.length > 0 && (
               <div className="mt-8">
