@@ -1639,6 +1639,47 @@ export class DatabaseStorage implements IStorage {
     return Number(result[0]?.total) || 0;
   }
 
+  async deleteUserReferralRewards(userId: string): Promise<number> {
+    // Get total beads to deduct from user
+    const totalBeads = await this.getTotalReferralBeads(userId);
+    
+    // Delete all referral rewards for this user
+    await db.delete(referralRewards).where(eq(referralRewards.userId, userId));
+    
+    // Deduct beads from user's total points
+    if (totalBeads > 0) {
+      const user = await this.getUser(userId);
+      if (user) {
+        await db.update(users)
+          .set({ totalPoints: Math.max(0, user.totalPoints - totalBeads) })
+          .where(eq(users.id, userId));
+      }
+    }
+    
+    return totalBeads;
+  }
+
+  async getAllReferralRewards(): Promise<(ReferralReward & { username?: string; refUsername?: string })[]> {
+    const rewards = await db.select()
+      .from(referralRewards)
+      .orderBy(desc(referralRewards.createdAt))
+      .limit(500);
+    
+    // Add usernames
+    const result = [];
+    for (const reward of rewards) {
+      const user = await this.getUser(reward.userId);
+      const refUser = await this.getUser(reward.refUserId);
+      result.push({
+        ...reward,
+        username: user?.username,
+        refUsername: refUser?.username,
+      });
+    }
+    
+    return result;
+  }
+
   async getLevel2ReferralsCount(userId: string): Promise<number> {
     // First get user's referral code
     const user = await this.getUser(userId);
@@ -3395,7 +3436,18 @@ export class DatabaseStorage implements IStorage {
 
   async updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig> {
     const current = await this.getWithdrawalConfig();
-    const newConfig = { ...current, ...config };
+    
+    // Deep merge for nested objects
+    const newConfig: WithdrawalConfig = {
+      btc: config.btc ? { ...current.btc, ...config.btc } : current.btc,
+      eth: config.eth ? { ...current.eth, ...config.eth } : current.eth,
+      usdt: config.usdt ? {
+        bep20: config.usdt.bep20 ? { ...current.usdt.bep20, ...config.usdt.bep20 } : current.usdt.bep20,
+        trc20: config.usdt.trc20 ? { ...current.usdt.trc20, ...config.usdt.trc20 } : current.usdt.trc20,
+        erc20: config.usdt.erc20 ? { ...current.usdt.erc20, ...config.usdt.erc20 } : current.usdt.erc20,
+        ton: config.usdt.ton ? { ...current.usdt.ton, ...config.usdt.ton } : current.usdt.ton,
+      } : current.usdt,
+    };
     
     await this.setGameConfig({
       key: 'withdrawal_config',

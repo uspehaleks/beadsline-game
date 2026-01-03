@@ -3871,6 +3871,25 @@ function ReferralsTab() {
     },
   });
 
+  const deleteRewardsMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("DELETE", `/api/admin/referral/rewards/${userId}`);
+    },
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/referral/stats"] });
+      toast({ title: "Реферальные награды обнулены" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка удаления", variant: "destructive" });
+    },
+  });
+
+  const handleResetRewards = (userId: string, username: string, beads: number) => {
+    if (confirm(`Обнулить ${beads.toLocaleString()} Beads у ${username}?\nЭто действие нельзя отменить!`)) {
+      deleteRewardsMutation.mutate(userId);
+    }
+  };
+
   if (configLoading || statsLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -4073,7 +4092,20 @@ function ReferralsTab() {
                   <div className="text-right font-medium text-primary">
                     {stat.totalReferralBeads.toLocaleString()}
                   </div>
-                  <div></div>
+                  <div className="flex justify-end">
+                    {stat.totalReferralBeads > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleResetRewards(stat.userId, stat.username, stat.totalReferralBeads)}
+                        disabled={deleteRewardsMutation.isPending}
+                        data-testid={`button-reset-referral-${stat.userId}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
 

@@ -1819,6 +1819,29 @@ export async function registerRoutes(
     }
   });
 
+  // Get all referral rewards (admin)
+  app.get("/api/admin/referral/rewards", requireAdmin, async (req, res) => {
+    try {
+      const rewards = await storage.getAllReferralRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Get all referral rewards error:", error);
+      res.status(500).json({ error: "Failed to get referral rewards" });
+    }
+  });
+
+  // Delete all referral rewards for a user (admin)
+  app.delete("/api/admin/referral/rewards/:userId", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const deletedBeads = await storage.deleteUserReferralRewards(userId);
+      res.json({ success: true, deletedBeads });
+    } catch (error) {
+      console.error("Delete user referral rewards error:", error);
+      res.status(500).json({ error: "Failed to delete referral rewards" });
+    }
+  });
+
   app.post("/api/game/start", async (req, res) => {
     try {
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
