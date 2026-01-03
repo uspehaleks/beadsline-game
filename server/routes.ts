@@ -3809,5 +3809,258 @@ export async function registerRoutes(
     }
   });
 
+  // ========== WITHDRAWAL REQUESTS ==========
+  
+  // Get withdrawal config (public)
+  app.get("/api/withdrawal/config", async (req, res) => {
+    try {
+      const config = await storage.getWithdrawalConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get withdrawal config error:", error);
+      res.status(500).json({ error: "Failed to get withdrawal config" });
+    }
+  });
+
+  // Create withdrawal request
+  app.post("/api/withdrawal/request", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Не авторизован" });
+      }
+
+      const { cryptoType, network, amount, walletAddress } = req.body;
+      
+      if (!cryptoType || amount === undefined || amount === null || !walletAddress) {
+        return res.status(400).json({ error: "Не все поля заполнены" });
+      }
+
+      // Validate crypto type
+      if (!['btc', 'eth', 'usdt'].includes(cryptoType)) {
+        return res.status(400).json({ error: "Неверный тип криптовалюты" });
+      }
+
+      // Validate network for USDT
+      if (cryptoType === 'usdt') {
+        if (!network) {
+          return res.status(400).json({ error: "Выберите сеть для USDT" });
+        }
+        if (!['bep20', 'trc20', 'erc20', 'ton'].includes(network)) {
+          return res.status(400).json({ error: "Неверная сеть" });
+        }
+      }
+
+      // Validate wallet address format
+      if (typeof walletAddress !== 'string' || walletAddress.trim().length < 10 || walletAddress.trim().length > 200) {
+        return res.status(400).json({ error: "Неверный адрес кошелька" });
+      }
+
+      // Strict amount validation using regex first to prevent injection
+      const amountStr = String(amount).trim();
+      if (!/^[0-9]+(\.[0-9]+)?$/.test(amountStr)) {
+        return res.status(400).json({ error: "Неверный формат суммы" });
+      }
+      
+      const withdrawAmount = Number(amountStr);
+      if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0 || withdrawAmount > 1e12) {
+        return res.status(400).json({ error: "Неверная сумма" });
+      }
+      
+      // Limit precision to prevent floating point exploitation
+      const MAX_DECIMALS = cryptoType === 'usdt' ? 2 : 8;
+      const multiplier = Math.pow(10, MAX_DECIMALS);
+      const cleanAmount = Math.floor(withdrawAmount * multiplier) / multiplier;
+      
+      if (cleanAmount <= 0) {
+        return res.status(400).json({ error: "Сумма слишком мала" });
+      }
+
+      // Check user balance (fresh read)
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+
+      let userBalance = 0;
+      if (cryptoType === 'btc') userBalance = user.btcBalance;
+      else if (cryptoType === 'eth') userBalance = user.ethBalance;
+      else if (cryptoType === 'usdt') userBalance = user.usdtBalance;
+
+      // Get config to check minimum and fee
+      const config = await storage.getWithdrawalConfig();
+      let minAmount = 0;
+      let networkFee = 0;
+      let enabled = false;
+
+      if (cryptoType === 'btc') {
+        minAmount = config.btc.minAmount;
+        networkFee = config.btc.networkFee;
+        enabled = config.btc.enabled;
+      } else if (cryptoType === 'eth') {
+        minAmount = config.eth.minAmount;
+        networkFee = config.eth.networkFee;
+        enabled = config.eth.enabled;
+      } else if (cryptoType === 'usdt') {
+        const networkConfig = config.usdt[network as keyof typeof config.usdt];
+        if (networkConfig) {
+          minAmount = networkConfig.minAmount;
+          networkFee = networkConfig.networkFee;
+          enabled = networkConfig.enabled;
+        }
+      }
+
+      if (!enabled) {
+        return res.status(400).json({ error: "Вывод временно недоступен" });
+      }
+
+      if (cleanAmount < minAmount) {
+        return res.status(400).json({ error: `Минимальная сумма вывода: ${minAmount} ${cryptoType.toUpperCase()}` });
+      }
+
+      if (userBalance < cleanAmount) {
+        return res.status(400).json({ error: "Недостаточно средств" });
+      }
+
+      // Create withdrawal request
+      const withdrawal = await storage.createWithdrawalRequest({
+        userId,
+        cryptoType,
+        network: cryptoType === 'usdt' ? network : cryptoType,
+        amount: String(cleanAmount),
+        walletAddress: walletAddress.trim(),
+        networkFee: String(networkFee),
+      });
+
+      // Deduct from user balance (use cleanAmount for consistency)
+      const newBalance = userBalance - cleanAmount;
+      const balanceUpdate: any = {};
+      if (cryptoType === 'btc') balanceUpdate.btcBalance = Math.max(0, newBalance);
+      else if (cryptoType === 'eth') balanceUpdate.ethBalance = Math.max(0, newBalance);
+      else if (cryptoType === 'usdt') balanceUpdate.usdtBalance = Math.max(0, newBalance);
+      
+      await storage.updateUser(userId, balanceUpdate);
+
+      res.json({ success: true, withdrawal });
+    } catch (error) {
+      console.error("Create withdrawal request error:", error);
+      res.status(500).json({ error: "Ошибка создания заявки" });
+    }
+  });
+
+  // Get user's withdrawal requests
+  app.get("/api/withdrawal/my", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Не авторизован" });
+      }
+
+      const withdrawals = await storage.getUserWithdrawalRequests(userId);
+      res.json(withdrawals);
+    } catch (error) {
+      console.error("Get user withdrawals error:", error);
+      res.status(500).json({ error: "Failed to get withdrawals" });
+    }
+  });
+
+  // Admin: Get all withdrawal requests
+  app.get("/api/admin/withdrawals", requireAdmin, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const withdrawals = await storage.getWithdrawalRequests(status as string | undefined);
+      res.json(withdrawals);
+    } catch (error) {
+      console.error("Get withdrawals error:", error);
+      res.status(500).json({ error: "Failed to get withdrawals" });
+    }
+  });
+
+  // Admin: Update withdrawal request (approve/reject/complete)
+  app.patch("/api/admin/withdrawals/:id", requireAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, adminNote, txHash } = req.body;
+      const adminId = req.session?.userId;
+
+      // Define allowed state transitions
+      const allowedTransitions: Record<string, string[]> = {
+        'pending': ['approved', 'rejected'],
+        'approved': ['completed', 'rejected'],
+        'completed': [], // No transitions allowed
+        'rejected': []   // No transitions allowed
+      };
+
+      // First, get current withdrawal to check its status
+      const allWithdrawals = await storage.getWithdrawalRequests();
+      const currentWithdrawal = allWithdrawals.find(w => w.id === id);
+      
+      if (!currentWithdrawal) {
+        return res.status(404).json({ error: "Заявка не найдена" });
+      }
+
+      // Validate status transition if status is being changed
+      if (status && status !== currentWithdrawal.status) {
+        const allowed = allowedTransitions[currentWithdrawal.status] || [];
+        if (!allowed.includes(status)) {
+          return res.status(400).json({ 
+            error: `Нельзя изменить статус с "${currentWithdrawal.status}" на "${status}"` 
+          });
+        }
+      }
+
+      const updates: any = {};
+      if (status) updates.status = status;
+      if (adminNote !== undefined) updates.adminNote = adminNote;
+      if (txHash) updates.txHash = txHash;
+      
+      if (status === 'completed' || status === 'rejected') {
+        updates.processedAt = new Date();
+        updates.processedBy = adminId;
+      }
+
+      // If rejecting from pending or approved, return funds to user
+      if (status === 'rejected' && (currentWithdrawal.status === 'pending' || currentWithdrawal.status === 'approved')) {
+        const user = await storage.getUser(currentWithdrawal.userId);
+        if (user) {
+          // Validate amount from database (already stored as clean value)
+          const amountStr = String(currentWithdrawal.amount);
+          if (/^[0-9]+(\.[0-9]+)?$/.test(amountStr)) {
+            const amount = Number(amountStr);
+            if (Number.isFinite(amount) && amount > 0) {
+              const balanceUpdate: any = {};
+              if (currentWithdrawal.cryptoType === 'btc') {
+                balanceUpdate.btcBalance = Math.max(0, user.btcBalance + amount);
+              } else if (currentWithdrawal.cryptoType === 'eth') {
+                balanceUpdate.ethBalance = Math.max(0, user.ethBalance + amount);
+              } else if (currentWithdrawal.cryptoType === 'usdt') {
+                balanceUpdate.usdtBalance = Math.max(0, user.usdtBalance + amount);
+              }
+              
+              await storage.updateUser(currentWithdrawal.userId, balanceUpdate);
+            }
+          }
+        }
+      }
+
+      const updated = await storage.updateWithdrawalRequest(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update withdrawal error:", error);
+      res.status(500).json({ error: "Ошибка обновления заявки" });
+    }
+  });
+
+  // Admin: Update withdrawal config
+  app.patch("/api/admin/withdrawal/config", requireAdmin, async (req, res) => {
+    try {
+      const config = await storage.updateWithdrawalConfig(req.body);
+      res.json(config);
+    } catch (error) {
+      console.error("Update withdrawal config error:", error);
+      res.status(500).json({ error: "Failed to update config" });
+    }
+  });
+
   return httpServer;
 }

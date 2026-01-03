@@ -83,6 +83,10 @@ import {
   leagues,
   type League,
   type InsertLeague,
+  withdrawalRequests,
+  type WithdrawalRequest,
+  type InsertWithdrawalRequest,
+  type WithdrawalConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -288,6 +292,14 @@ export interface IStorage {
   
   // User Level Management
   resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }>;
+  
+  // Withdrawal Requests
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  getWithdrawalRequests(status?: string): Promise<Array<WithdrawalRequest & { username?: string }>>;
+  getUserWithdrawalRequests(userId: string): Promise<WithdrawalRequest[]>;
+  updateWithdrawalRequest(id: string, updates: { status?: string; adminNote?: string; txHash?: string; processedBy?: string; processedAt?: Date }): Promise<WithdrawalRequest | undefined>;
+  getWithdrawalConfig(): Promise<WithdrawalConfig>;
+  updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3300,6 +3312,98 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     return { success: true };
+  }
+
+  // Withdrawal Request methods
+  async createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    const [withdrawal] = await db
+      .insert(withdrawalRequests)
+      .values(request)
+      .returning();
+    return withdrawal;
+  }
+
+  async getWithdrawalRequests(status?: string): Promise<Array<WithdrawalRequest & { username?: string }>> {
+    const result = await db.execute(sql`
+      SELECT w.*, u.username
+      FROM withdrawal_requests w
+      LEFT JOIN users u ON u.id = w.user_id
+      ${status ? sql`WHERE w.status = ${status}` : sql``}
+      ORDER BY w.created_at DESC
+    `);
+    
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      cryptoType: row.crypto_type,
+      network: row.network,
+      amount: row.amount,
+      walletAddress: row.wallet_address,
+      networkFee: row.network_fee,
+      status: row.status,
+      adminNote: row.admin_note,
+      txHash: row.tx_hash,
+      processedAt: row.processed_at,
+      processedBy: row.processed_by,
+      createdAt: row.created_at,
+      username: row.username,
+    }));
+  }
+
+  async getUserWithdrawalRequests(userId: string): Promise<WithdrawalRequest[]> {
+    return await db
+      .select()
+      .from(withdrawalRequests)
+      .where(eq(withdrawalRequests.userId, userId))
+      .orderBy(desc(withdrawalRequests.createdAt));
+  }
+
+  async updateWithdrawalRequest(id: string, updates: { status?: string; adminNote?: string; txHash?: string; processedBy?: string; processedAt?: Date }): Promise<WithdrawalRequest | undefined> {
+    const updateData: any = {};
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.adminNote !== undefined) updateData.adminNote = updates.adminNote;
+    if (updates.txHash !== undefined) updateData.txHash = updates.txHash;
+    if (updates.processedBy !== undefined) updateData.processedBy = updates.processedBy;
+    if (updates.processedAt !== undefined) updateData.processedAt = updates.processedAt;
+    
+    const [withdrawal] = await db
+      .update(withdrawalRequests)
+      .set(updateData)
+      .where(eq(withdrawalRequests.id, id))
+      .returning();
+    return withdrawal;
+  }
+
+  async getWithdrawalConfig(): Promise<WithdrawalConfig> {
+    const config = await this.getGameConfig('withdrawal_config');
+    if (config?.value) {
+      return config.value as WithdrawalConfig;
+    }
+    
+    // Default config
+    return {
+      btc: { minAmount: 0.0001, networkFee: 0.00005, enabled: true },
+      eth: { minAmount: 0.005, networkFee: 0.001, enabled: true },
+      usdt: {
+        bep20: { minAmount: 2, networkFee: 0.15, enabled: true },
+        trc20: { minAmount: 2, networkFee: 1, enabled: true },
+        erc20: { minAmount: 10, networkFee: 5, enabled: false },
+        ton: { minAmount: 2, networkFee: 0.1, enabled: true },
+      },
+    };
+  }
+
+  async updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig> {
+    const current = await this.getWithdrawalConfig();
+    const newConfig = { ...current, ...config };
+    
+    await this.setGameConfig({
+      key: 'withdrawal_config',
+      value: newConfig,
+      description: 'Crypto withdrawal configuration',
+    });
+    
+    return newConfig;
   }
 }
 

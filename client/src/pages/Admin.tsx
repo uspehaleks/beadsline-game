@@ -51,7 +51,9 @@ import {
   FileText,
   Sparkles,
   Upload,
-  ShoppingCart
+  ShoppingCart,
+  ArrowDownToLine,
+  ExternalLink
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -604,6 +606,10 @@ export default function Admin() {
                 <Bot className="w-4 h-4 mr-1.5" />
                 Уведомления
               </TabsTrigger>
+              <TabsTrigger value="withdrawals" data-testid="tab-withdrawals" className="w-full justify-start">
+                <ArrowDownToLine className="w-4 h-4 mr-1.5" />
+                Выводы
+              </TabsTrigger>
             </TabsList>
           </div>
           <div className="flex-1">
@@ -683,6 +689,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="notifications">
             <NotificationsTab />
+          </TabsContent>
+          <TabsContent value="withdrawals">
+            <WithdrawalsTab />
           </TabsContent>
           </div>
         </Tabs>
@@ -7164,6 +7173,261 @@ function NotificationsTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+interface WithdrawalWithUser {
+  id: string;
+  userId: string;
+  cryptoType: string;
+  network: string | null;
+  amount: string;
+  walletAddress: string;
+  networkFee: string;
+  status: string;
+  adminNote: string | null;
+  txHash: string | null;
+  processedAt: string | null;
+  processedBy: string | null;
+  createdAt: string;
+  username?: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  approved: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  completed: 'bg-green-500/20 text-green-400 border-green-500/30',
+  rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Ожидает',
+  approved: 'Одобрено',
+  completed: 'Выполнено',
+  rejected: 'Отклонено',
+};
+
+function WithdrawalsTab() {
+  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalWithUser | null>(null);
+  const [txHash, setTxHash] = useState('');
+  const [adminNote, setAdminNote] = useState('');
+
+  const { data: withdrawals = [], isLoading, refetch } = useQuery<WithdrawalWithUser[]>({
+    queryKey: ['/api/admin/withdrawals', statusFilter === 'all' ? '' : statusFilter],
+    queryFn: async () => {
+      const url = statusFilter === 'all' 
+        ? '/api/admin/withdrawals' 
+        : `/api/admin/withdrawals?status=${statusFilter}`;
+      const response = await fetch(url, { credentials: 'include' });
+      return response.json();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, status, txHash, adminNote }: { id: string; status?: string; txHash?: string; adminNote?: string }) => {
+      return apiRequest('PATCH', `/api/admin/withdrawals/${id}`, { status, txHash, adminNote });
+    },
+    onSuccess: () => {
+      toast({ title: 'Успешно', description: 'Заявка обновлена' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/withdrawals'] });
+      setSelectedWithdrawal(null);
+      setTxHash('');
+      setAdminNote('');
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить заявку', variant: 'destructive' });
+    },
+  });
+
+  const handleApprove = (w: WithdrawalWithUser) => {
+    setSelectedWithdrawal(w);
+  };
+
+  const handleComplete = () => {
+    if (!selectedWithdrawal) return;
+    updateMutation.mutate({ 
+      id: selectedWithdrawal.id, 
+      status: 'completed', 
+      txHash: txHash || undefined,
+      adminNote: adminNote || undefined,
+    });
+  };
+
+  const handleReject = (w: WithdrawalWithUser) => {
+    if (confirm('Отклонить заявку? Средства будут возвращены пользователю.')) {
+      updateMutation.mutate({ id: w.id, status: 'rejected', adminNote: 'Отклонено администратором' });
+    }
+  };
+
+  const pendingCount = withdrawals.filter(w => w.status === 'pending').length;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowDownToLine className="w-5 h-5" />
+            Заявки на вывод
+            {pendingCount > 0 && (
+              <Badge className="bg-yellow-500/20 text-yellow-400 ml-2">{pendingCount} ожидает</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 mb-4">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40" data-testid="select-status-filter">
+                <SelectValue placeholder="Все статусы" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все статусы</SelectItem>
+                <SelectItem value="pending">Ожидает</SelectItem>
+                <SelectItem value="completed">Выполнено</SelectItem>
+                <SelectItem value="rejected">Отклонено</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-withdrawals">
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Обновить
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : withdrawals.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Нет заявок на вывод
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {withdrawals.map((w) => (
+                <Card key={w.id} className="bg-muted/30" data-testid={`card-withdrawal-admin-${w.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-lg">
+                            {parseFloat(w.amount).toFixed(w.cryptoType === 'usdt' ? 2 : 8)} {w.cryptoType.toUpperCase()}
+                          </span>
+                          <Badge className={STATUS_COLORS[w.status]}>
+                            {STATUS_LABELS[w.status]}
+                          </Badge>
+                          {w.network && w.network !== w.cryptoType && (
+                            <Badge variant="outline">{w.network.toUpperCase()}</Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div>Пользователь: <span className="font-medium text-foreground">{w.username || w.userId}</span></div>
+                          <div className="flex items-center gap-1">
+                            Кошелёк: 
+                            <code className="text-xs bg-muted px-1 rounded max-w-[200px] truncate" title={w.walletAddress}>
+                              {w.walletAddress}
+                            </code>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => navigator.clipboard.writeText(w.walletAddress)}>
+                              <ExternalLink className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <div>Комиссия сети: {parseFloat(w.networkFee).toFixed(w.cryptoType === 'usdt' ? 2 : 8)} {w.cryptoType.toUpperCase()}</div>
+                          <div>Дата: {new Date(w.createdAt).toLocaleString('ru-RU')}</div>
+                          {w.txHash && <div>TX: <code className="text-xs">{w.txHash}</code></div>}
+                          {w.adminNote && <div className="text-yellow-500">Заметка: {w.adminNote}</div>}
+                        </div>
+                      </div>
+                      
+                      {w.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleApprove(w)} data-testid={`button-approve-${w.id}`}>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Выполнить
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleReject(w)} data-testid={`button-reject-${w.id}`}>
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Отклонить
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!selectedWithdrawal} onOpenChange={(open) => !open && setSelectedWithdrawal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Подтверждение вывода</DialogTitle>
+            <DialogDescription>
+              Введите хэш транзакции после отправки средств
+            </DialogDescription>
+          </DialogHeader>
+          {selectedWithdrawal && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted">
+                <div className="font-semibold mb-2">
+                  {parseFloat(selectedWithdrawal.amount).toFixed(selectedWithdrawal.cryptoType === 'usdt' ? 2 : 8)} {selectedWithdrawal.cryptoType.toUpperCase()}
+                  {selectedWithdrawal.network && selectedWithdrawal.network !== selectedWithdrawal.cryptoType && (
+                    <span className="text-muted-foreground ml-2">({selectedWithdrawal.network.toUpperCase()})</span>
+                  )}
+                </div>
+                <div className="text-sm space-y-1">
+                  <div>Пользователь: {selectedWithdrawal.username}</div>
+                  <div className="break-all">Кошелёк: {selectedWithdrawal.walletAddress}</div>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="txHash">Хэш транзакции (TX Hash)</Label>
+                <Input
+                  id="txHash"
+                  value={txHash}
+                  onChange={(e) => setTxHash(e.target.value)}
+                  placeholder="0x..."
+                  className="mt-1"
+                  data-testid="input-tx-hash"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="adminNote">Заметка (опционально)</Label>
+                <Input
+                  id="adminNote"
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                  placeholder="Комментарий администратора"
+                  className="mt-1"
+                  data-testid="input-admin-note"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedWithdrawal(null)}>
+              Отмена
+            </Button>
+            <Button onClick={handleComplete} disabled={updateMutation.isPending} data-testid="button-confirm-complete">
+              {updateMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Отметить выполненным
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
