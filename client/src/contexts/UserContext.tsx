@@ -59,15 +59,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setUser(data);
       } else {
-        const guestId = localStorage.getItem('guestUserId') || `guest_${Date.now()}`;
-        localStorage.setItem('guestUserId', guestId);
-        
-        const response = await apiRequest('POST', '/api/auth/guest', {
-          guestId,
-        });
-        
-        const data = await response.json();
-        setUser(data);
+        setError('telegram_required');
       }
     } catch (err) {
       console.error('Failed to initialize user:', err);

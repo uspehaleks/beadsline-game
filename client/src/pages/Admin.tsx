@@ -7274,7 +7274,7 @@ function WithdrawalsTab() {
   const [editConfig, setEditConfig] = useState<WithdrawalConfig | null>(null);
 
   useEffect(() => {
-    if (config && !editConfig) {
+    if (config) {
       setEditConfig(config);
     }
   }, [config]);
