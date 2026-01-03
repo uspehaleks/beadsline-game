@@ -368,7 +368,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [lastSeenRewardId, setLastSeenRewardId] = useState<string | null>(null);
+  const [lastSeenRewardId, setLastSeenRewardId] = useState<string | null>(() => {
+    return localStorage.getItem('lastSeenRewardId');
+  });
+  const [notifiedRewardIds, setNotifiedRewardIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('notifiedRewardIds');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [pendingNotifications, setPendingNotifications] = useState<ReferralRewardWithUser[]>([]);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const { toast } = useToast();
@@ -466,46 +476,49 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
 
   const leagueProgress = getLeagueProgress();
 
-  // Проверка новых реферальных наград
+  // Проверка и показ новых реферальных наград (только 1 раз каждая)
   useEffect(() => {
-    if (referralInfo?.lastRewardId && lastSeenRewardId === null) {
-      setLastSeenRewardId(referralInfo.lastRewardId);
-    } else if (referralInfo?.lastRewardId && lastSeenRewardId && referralInfo.lastRewardId !== lastSeenRewardId) {
-      refetchRewards();
-      setLastSeenRewardId(referralInfo.lastRewardId);
-    }
-  }, [referralInfo?.lastRewardId, lastSeenRewardId, refetchRewards]);
-
-  // Показ уведомлений о новых наградах
-  useEffect(() => {
-    if (referralRewards?.rewards && referralRewards.rewards.length > 0) {
-      const newRewards = referralRewards.rewards.filter(
-        r => !pendingNotifications.some(p => p.id === r.id) && r.id !== lastSeenRewardId
-      );
-      
-      if (newRewards.length > 0 && lastSeenRewardId) {
-        newRewards.slice(0, 3).forEach((reward, idx) => {
-          setTimeout(() => {
-            toast({
-              title: "Реферальная награда!",
-              description: `+${reward.beadsAmount} Beads от ${reward.refUsername} (Ур.${reward.level})`,
-            });
-          }, idx * 1500);
+    if (!referralRewards?.rewards || referralRewards.rewards.length === 0) return;
+    
+    // Фильтруем только награды, которые ещё не показывали
+    const newRewards = referralRewards.rewards.filter(r => !notifiedRewardIds.has(r.id));
+    
+    if (newRewards.length === 0) return;
+    
+    // Показываем до 3 уведомлений
+    newRewards.slice(0, 3).forEach((reward, idx) => {
+      setTimeout(() => {
+        toast({
+          title: "Реферальная награда!",
+          description: `+${reward.beadsAmount} Beads от ${reward.refUsername} (Ур.${reward.level})`,
         });
-        
-        if (newRewards.length > 3) {
-          setTimeout(() => {
-            toast({
-              title: "И ещё награды!",
-              description: `+${newRewards.length - 3} реферальных наград`,
-            });
-          }, 4500);
-        }
-        
-        setPendingNotifications(prev => [...prev, ...newRewards]);
-      }
+      }, idx * 1500);
+    });
+    
+    if (newRewards.length > 3) {
+      setTimeout(() => {
+        toast({
+          title: "И ещё награды!",
+          description: `+${newRewards.length - 3} реферальных наград`,
+        });
+      }, 4500);
     }
-  }, [referralRewards?.rewards, lastSeenRewardId, pendingNotifications, toast]);
+    
+    // Сохраняем ID показанных наград в localStorage
+    const currentIds = Array.from(notifiedRewardIds);
+    const newIds = newRewards.map(r => r.id);
+    const allIds = [...currentIds, ...newIds];
+    const newNotifiedIds = new Set(allIds);
+    setNotifiedRewardIds(newNotifiedIds);
+    localStorage.setItem('notifiedRewardIds', JSON.stringify(allIds));
+    
+    // Обновляем lastSeenRewardId
+    if (referralRewards.rewards[0]) {
+      const latestId = referralRewards.rewards[0].id;
+      setLastSeenRewardId(latestId);
+      localStorage.setItem('lastSeenRewardId', latestId);
+    }
+  }, [referralRewards?.rewards, notifiedRewardIds, toast]);
 
   useEffect(() => {
     if (showQRModal && referralInfo?.referralLink) {

@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Bitcoin, Loader2, AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { ArrowLeft, Bitcoin, Loader2, AlertCircle, CheckCircle2, Clock, XCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { Link } from 'wouter';
 import type { WithdrawalConfig, WithdrawalRequest } from '@shared/schema';
@@ -145,6 +146,14 @@ export default function Withdraw() {
 
         {!selectedCrypto ? (
           <div className="space-y-4">
+            <Alert className="bg-blue-500/10 border-blue-500/30" data-testid="alert-withdrawal-info">
+              <Info className="w-4 h-4 text-blue-400" />
+              <AlertDescription className="text-blue-200 text-sm">
+                Вывод доступен при достижении минимальной суммы.<br />
+                Все выплаты обрабатываются вручную и фиксируются.
+              </AlertDescription>
+            </Alert>
+            
             <p className="text-gray-400 mb-4">Выберите криптовалюту для вывода:</p>
             
             <Card 
