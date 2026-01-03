@@ -49,7 +49,7 @@ export const LEVELS: LevelConfig[] = [
     initialBalls: 5,
     targetBalls: 50,
     maxBalls: 60,
-    speed: { base: 0.013, max: 0.020 },
+    speed: { base: 0.016, max: 0.024 },
     colors: 5,
     unlockCondition: null,
   },

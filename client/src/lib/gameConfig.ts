@@ -9,7 +9,7 @@ export const GAME_CONFIG = {
   
   balls: {
     radius: 14,
-    spacing: 0.018,
+    spacing: 0.024,
     initialCount: 5,
     targetCount: 50,
     shooterSpeed: 18,

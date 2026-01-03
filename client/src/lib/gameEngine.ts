@@ -1035,13 +1035,11 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 let rollbackLogCounter = 0;
 let rollbackActiveUntil = 0;
 let rollbackHadGap = false; // Track if we've seen a real gap during this rollback
-let portalRetreatArmed = false; // Explicit flag: only true when match at game start
 
-// Activate rollback. If isEarlyGame is true, also arm portal retreat.
-export function activateRollback(isEarlyGame: boolean = false) {
+// Activate rollback to close gaps after ball removal
+export function activateRollback(_isEarlyGame: boolean = false) {
   rollbackActiveUntil = Date.now() + 2000;
   rollbackHadGap = false; // Reset gap tracking for new rollback session
-  portalRetreatArmed = isEarlyGame; // Only arm portal retreat if explicitly at game start
 }
 
 export function isRollbackActive(): boolean {
@@ -1053,46 +1051,20 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   const rollbackActive = now < rollbackActiveUntil;
   
   if (!rollbackActive) {
-    portalRetreatArmed = false;
     return balls;
   }
   
-  // With no balls, just keep rollback active to pause spawned balls
-  if (balls.length === 0) {
+  // With fewer than 2 balls, we can't detect gaps - keep rollback active but don't process
+  if (balls.length < 2) {
     return balls;
   }
   
   const spacing = getBallSpacing();
   // Fast rollback speed - close gaps quickly like in classic Zuma
-  const rollbackSpeed = 0.4;
+  const rollbackSpeed = 0.5;
   const maxCorrectionPerFrame = rollbackSpeed * deltaTime * 0.001;
   
   const newBalls = [...balls];
-  
-  // Find lead ball (highest pathProgress)
-  const leadBall = newBalls.reduce((max, b) => b.pathProgress > max.pathProgress ? b : max, newBalls[0]);
-  
-  // PORTAL RETREAT: Only runs when explicitly armed (match at game start)
-  // This creates the "rollback into portal" effect
-  if (portalRetreatArmed && leadBall.pathProgress > 0) {
-    const retreatAmount = Math.min(0.008 * deltaTime * 0.06, leadBall.pathProgress);
-    for (let i = 0; i < newBalls.length; i++) {
-      newBalls[i] = {
-        ...newBalls[i],
-        pathProgress: Math.max(0, newBalls[i].pathProgress - retreatAmount),
-      };
-    }
-    // If all balls reached portal, disarm
-    if (leadBall.pathProgress - retreatAmount <= 0) {
-      portalRetreatArmed = false;
-    }
-    return newBalls;
-  }
-  
-  // With only 1 ball, we can't detect gaps - keep rollback active
-  if (balls.length < 2) {
-    return newBalls;
-  }
   
   let hasGap = false;
   let maxGapExcess = 0;
@@ -1132,7 +1104,6 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   if (!hasGap && rollbackHadGap) {
     rollbackActiveUntil = 0;
     rollbackHadGap = false;
-    portalRetreatArmed = false;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
