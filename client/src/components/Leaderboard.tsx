@@ -171,7 +171,7 @@ function PodiumCard({ entry, rank, isCurrentUser }: PodiumCardProps) {
       </div>
 
       <Avatar className="w-12 h-12 mx-auto mt-2 border-2 border-border">
-        <AvatarImage src={avatarImage || undefined} alt={displayName} />
+        <AvatarImage src={avatarImage || undefined} alt="" />
         <AvatarFallback className="bg-muted">
           <User className="w-6 h-6 text-muted-foreground" />
         </AvatarFallback>
@@ -216,7 +216,7 @@ function LeaderboardRow({ entry, isCurrentUser, delay = 0 }: LeaderboardRowProps
         </div>
 
         <Avatar className="w-10 h-10 border border-border">
-          <AvatarImage src={avatarImage || undefined} alt={displayName} />
+          <AvatarImage src={avatarImage || undefined} alt="" />
           <AvatarFallback className="bg-muted">
             <User className="w-5 h-5 text-muted-foreground" />
           </AvatarFallback>

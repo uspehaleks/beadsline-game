@@ -287,7 +287,7 @@ export default function LeagueLeaderboard() {
                             {entry.characterImageUrl ? (
                               <AvatarImage 
                                 src={entry.characterImageUrl} 
-                                alt={entry.name}
+                                alt=""
                                 className="object-cover object-top"
                                 data-testid={`img-character-${entry.rank}`}
                               />
@@ -330,7 +330,7 @@ export default function LeagueLeaderboard() {
                             {entry.totalPoints.toLocaleString()}
                           </div>
                           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                            {filter === 'all' ? 'Beads' : 'Очков'}
+                            Beads
                           </div>
                         </div>
                       </motion.div>
