@@ -3139,10 +3139,9 @@ export class DatabaseStorage implements IStorage {
             RANK() OVER (ORDER BY u.total_points DESC) as rank,
             c.name as character_name,
             c.gender as character_gender,
-            bb.image_url as character_image_url
+            (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
           FROM users u
           LEFT JOIN characters c ON c.user_id = u.id
-          LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
           WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
         )
         SELECT * FROM ranked_users
@@ -3177,13 +3176,12 @@ export class DatabaseStorage implements IStorage {
             u.photo_url,
             c.name as character_name,
             c.gender as character_gender,
-            bb.image_url as character_image_url
+            (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
           FROM users u
           LEFT JOIN game_scores gs ON gs.user_id = u.id AND ${dateCondition}
           LEFT JOIN characters c ON c.user_id = u.id
-          LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
           WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
-          GROUP BY u.id, u.total_points, u.photo_url, c.name, c.gender, bb.image_url
+          GROUP BY u.id, u.total_points, u.photo_url, c.name, c.gender
         ),
         ranked_users AS (
           SELECT 
@@ -3264,14 +3262,13 @@ export class DatabaseStorage implements IStorage {
           u.photo_url,
           c.name as character_name,
           c.gender as character_gender,
-          bb.image_url as character_image_url,
+          (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url,
           ar.global_rank,
           RANK() OVER (ORDER BY u.total_points DESC) as rank
         FROM users u
         INNER JOIN friends f ON f.id = u.id
         INNER JOIN all_ranked ar ON ar.id = u.id
         LEFT JOIN characters c ON c.user_id = u.id
-        LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
         WHERE u.total_points >= ${league.minBeads}
         ${league.maxRank ? sql`AND ar.global_rank <= ${league.maxRank}` : sql``}
       )
