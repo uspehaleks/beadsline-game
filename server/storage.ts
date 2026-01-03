@@ -547,6 +547,7 @@ export class DatabaseStorage implements IStorage {
         FROM users u, user_info ui
         WHERE u.deleted_at IS NULL 
           AND u.id != ${userId}
+          AND u.total_points > 0
           AND (
             (ui.referred_by IS NOT NULL AND u.referred_by = ui.referred_by)
             OR (ui.referral_code IS NOT NULL AND u.referred_by = ui.referral_code)
@@ -3066,12 +3067,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserRank(userId: string): Promise<number> {
-    // Only count registered users (with telegramId) for ranking
+    // Only count registered users (with telegramId) and points > 0 for ranking
     const result = await db.execute(sql`
       SELECT rank FROM (
         SELECT id, RANK() OVER (ORDER BY total_points DESC) as rank
         FROM users
-        WHERE deleted_at IS NULL AND telegram_id IS NOT NULL
+        WHERE deleted_at IS NULL AND telegram_id IS NOT NULL AND total_points > 0
       ) ranked
       WHERE id = ${userId}
     `);
@@ -3142,7 +3143,7 @@ export class DatabaseStorage implements IStorage {
           FROM users u
           LEFT JOIN characters c ON c.user_id = u.id
           LEFT JOIN base_bodies bb ON bb.gender = c.gender AND bb.is_default = false
-          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
         )
         SELECT * FROM ranked_users
         WHERE total_points >= ${league.minBeads}
@@ -3239,7 +3240,7 @@ export class DatabaseStorage implements IStorage {
           u.total_points,
           RANK() OVER (ORDER BY u.total_points DESC) as global_rank
         FROM users u
-        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
       ),
       friends AS (
         SELECT u.id
@@ -3301,7 +3302,7 @@ export class DatabaseStorage implements IStorage {
           u.total_points,
           RANK() OVER (ORDER BY u.total_points DESC) as rank
         FROM users u
-        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
       )
       SELECT COUNT(*) as count FROM ranked_users
       WHERE total_points >= ${league.minBeads}
