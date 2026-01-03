@@ -1132,7 +1132,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   if (!hasGap && rollbackHadGap) {
     rollbackActiveUntil = 0;
     rollbackHadGap = false;
-    rollbackStartLeadPosition = 0;
+    portalRetreatArmed = false;
   }
   
   // Log every 60 frames (~1 second at 60fps) if there are gaps
