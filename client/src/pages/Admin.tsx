@@ -53,7 +53,8 @@ import {
   Upload,
   ShoppingCart,
   ArrowDownToLine,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
@@ -4358,7 +4359,156 @@ function MaintenanceTab() {
           </ul>
         </CardContent>
       </Card>
+
+      <DataManagementSection />
     </div>
+  );
+}
+
+function DataManagementSection() {
+  const { toast } = useToast();
+  const [showClearScoresConfirm, setShowClearScoresConfirm] = useState(false);
+  const [showResetPointsConfirm, setShowResetPointsConfirm] = useState(false);
+
+  const clearScoresMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/admin/clear-game-scores");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/game-scores"] });
+      setShowClearScoresConfirm(false);
+      toast({
+        title: "Записи игр очищены",
+        description: "Все игровые результаты были удалены",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось очистить записи игр",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetPointsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/admin/reset-user-points");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setShowResetPointsConfirm(false);
+      toast({
+        title: "Очки сброшены",
+        description: "Очки всех пользователей были обнулены",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сбросить очки",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Card className="border-destructive/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-destructive">
+          <AlertTriangle className="w-5 h-5" />
+          Управление данными
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Опасные операции с данными. Действия необратимы!
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {!showClearScoresConfirm ? (
+            <Button 
+              variant="outline"
+              className="border-orange-500 text-orange-500 hover:bg-orange-500/10"
+              onClick={() => setShowClearScoresConfirm(true)}
+              data-testid="button-clear-scores-start"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Очистить записи игр
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 p-2 bg-orange-500/10 rounded-lg">
+              <span className="text-sm text-orange-500">Удалить все игровые сессии?</span>
+              <Button 
+                size="sm"
+                variant="destructive"
+                onClick={() => clearScoresMutation.mutate()}
+                disabled={clearScoresMutation.isPending}
+                data-testid="button-clear-scores-confirm"
+              >
+                {clearScoresMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Да, удалить"
+                )}
+              </Button>
+              <Button 
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowClearScoresConfirm(false)}
+                data-testid="button-clear-scores-cancel"
+              >
+                Отмена
+              </Button>
+            </div>
+          )}
+
+          {!showResetPointsConfirm ? (
+            <Button 
+              variant="outline"
+              className="border-red-500 text-red-500 hover:bg-red-500/10"
+              onClick={() => setShowResetPointsConfirm(true)}
+              data-testid="button-reset-points-start"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Сбросить очки всех
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-lg">
+              <span className="text-sm text-red-500">Обнулить очки всех?</span>
+              <Button 
+                size="sm"
+                variant="destructive"
+                onClick={() => resetPointsMutation.mutate()}
+                disabled={resetPointsMutation.isPending}
+                data-testid="button-reset-points-confirm"
+              >
+                {resetPointsMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Да, сбросить"
+                )}
+              </Button>
+              <Button 
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowResetPointsConfirm(false)}
+                data-testid="button-reset-points-cancel"
+              >
+                Отмена
+              </Button>
+            </div>
+          )}
+        </div>
+        
+        <p className="text-xs text-muted-foreground">
+          <strong>Очистить записи игр:</strong> Удалит все записи из таблицы game_scores (история игр).
+          <br />
+          <strong>Сбросить очки всех:</strong> Обнулит total_points у всех пользователей.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

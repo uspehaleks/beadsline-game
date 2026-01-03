@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { insertGameScoreSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -2501,6 +2503,48 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Reset user levels error:", error);
       res.status(500).json({ error: "Failed to reset user levels" });
+    }
+  });
+
+  // Clear all game scores (admin only)
+  app.delete("/api/admin/game-scores", requireAdmin, async (req, res) => {
+    try {
+      const result = await db.execute(sql`DELETE FROM game_scores`);
+      const deletedCount = result.rowCount || 0;
+      
+      console.log(`Admin cleared ${deletedCount} game scores`);
+      
+      res.json({ 
+        success: true, 
+        deletedCount,
+        message: `Удалено ${deletedCount} записей игр`
+      });
+    } catch (error) {
+      console.error("Clear game scores error:", error);
+      res.status(500).json({ error: "Failed to clear game scores" });
+    }
+  });
+
+  // Reset all user points to zero (admin only)
+  app.post("/api/admin/reset-all-points", requireAdmin, async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        UPDATE users 
+        SET total_points = 0, games_played = 0, best_score = 0 
+        WHERE deleted_at IS NULL
+      `);
+      const updatedCount = result.rowCount || 0;
+      
+      console.log(`Admin reset points for ${updatedCount} users`);
+      
+      res.json({ 
+        success: true, 
+        updatedCount,
+        message: `Обнулено ${updatedCount} пользователей`
+      });
+    } catch (error) {
+      console.error("Reset all points error:", error);
+      res.status(500).json({ error: "Failed to reset points" });
     }
   });
 
