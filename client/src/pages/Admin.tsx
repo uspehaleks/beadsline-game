@@ -7208,12 +7208,48 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: 'Отклонено',
 };
 
+interface WithdrawalConfig {
+  enabled: boolean;
+  minBtc: number;
+  minEth: number;
+  minUsdt: number;
+  feeBtc: number;
+  feeEth: number;
+  feeUsdt: number;
+}
+
 function WithdrawalsTab() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalWithUser | null>(null);
   const [txHash, setTxHash] = useState('');
   const [adminNote, setAdminNote] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+
+  const { data: config, isLoading: configLoading } = useQuery<WithdrawalConfig>({
+    queryKey: ['/api/withdrawal/config'],
+  });
+
+  const [editConfig, setEditConfig] = useState<WithdrawalConfig | null>(null);
+
+  useEffect(() => {
+    if (config && !editConfig) {
+      setEditConfig(config);
+    }
+  }, [config]);
+
+  const updateConfigMutation = useMutation({
+    mutationFn: async (newConfig: Partial<WithdrawalConfig>) => {
+      return apiRequest('PATCH', '/api/admin/withdrawal/config', newConfig);
+    },
+    onSuccess: () => {
+      toast({ title: 'Успешно', description: 'Настройки вывода обновлены' });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawal/config'] });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить настройки', variant: 'destructive' });
+    },
+  });
 
   const { data: withdrawals = [], isLoading, refetch } = useQuery<WithdrawalWithUser[]>({
     queryKey: ['/api/admin/withdrawals', statusFilter === 'all' ? '' : statusFilter],
@@ -7358,6 +7394,135 @@ function WithdrawalsTab() {
             </div>
           )}
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Настройки вывода
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(!showSettings)} data-testid="button-toggle-settings">
+              {showSettings ? 'Скрыть' : 'Показать'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showSettings && editConfig && (
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Вывод включён</Label>
+                <p className="text-sm text-muted-foreground">Разрешить пользователям создавать заявки на вывод</p>
+              </div>
+              <Switch
+                checked={editConfig.enabled}
+                onCheckedChange={(checked) => setEditConfig({ ...editConfig, enabled: checked })}
+                data-testid="switch-withdrawal-enabled"
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-semibold">Минимальные суммы вывода</h4>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>BTC минимум</Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={editConfig.minBtc}
+                    onChange={(e) => setEditConfig({ ...editConfig, minBtc: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-min-btc"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>ETH минимум</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={editConfig.minEth}
+                    onChange={(e) => setEditConfig({ ...editConfig, minEth: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-min-eth"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>USDT минимум</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={editConfig.minUsdt}
+                    onChange={(e) => setEditConfig({ ...editConfig, minUsdt: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-min-usdt"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-semibold">Комиссии сети</h4>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>BTC комиссия</Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={editConfig.feeBtc}
+                    onChange={(e) => setEditConfig({ ...editConfig, feeBtc: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-fee-btc"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>ETH комиссия</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={editConfig.feeEth}
+                    onChange={(e) => setEditConfig({ ...editConfig, feeEth: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-fee-eth"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>USDT комиссия</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={editConfig.feeUsdt}
+                    onChange={(e) => setEditConfig({ ...editConfig, feeUsdt: parseFloat(e.target.value) || 0 })}
+                    data-testid="input-fee-usdt"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => updateConfigMutation.mutate(editConfig)} 
+              disabled={updateConfigMutation.isPending}
+              data-testid="button-save-config"
+            >
+              {updateConfigMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Сохранить настройки
+                </>
+              )}
+            </Button>
+          </CardContent>
+        )}
       </Card>
 
       <Dialog open={!!selectedWithdrawal} onOpenChange={(open) => !open && setSelectedWithdrawal(null)}>

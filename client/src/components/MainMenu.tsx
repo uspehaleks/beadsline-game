@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap, ArrowDownToLine } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
@@ -1340,10 +1340,11 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           </button>
           <button 
             className="flex flex-col items-center gap-1 p-2 text-muted-foreground hover:text-primary transition-colors"
-            data-testid="nav-settings"
+            onClick={() => navigate('/withdraw')}
+            data-testid="nav-withdraw"
           >
-            <Settings className="w-5 h-5" />
-            <span className="text-xs">Ещё</span>
+            <ArrowDownToLine className="w-5 h-5" style={{ color: '#00ff88' }} />
+            <span className="text-xs">Вывод</span>
           </button>
         </div>
       </div>
