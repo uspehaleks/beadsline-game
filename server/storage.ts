@@ -186,6 +186,7 @@ export interface IStorage {
   getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>>;
   buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }>;
   useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }>;
+  setUserBoostQuantity(userId: string, boostId: string, quantity: number): Promise<{ success: boolean; error?: string }>;
   
   // Character System
   getCharacter(userId: string): Promise<Character | undefined>;
@@ -2309,6 +2310,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userBoostInventory.id, inventoryItem.id));
 
     return { success: true, boost };
+  }
+
+  async setUserBoostQuantity(userId: string, boostId: string, quantity: number): Promise<{ success: boolean; error?: string }> {
+    const [existing] = await db
+      .select()
+      .from(userBoostInventory)
+      .where(and(
+        eq(userBoostInventory.userId, userId),
+        eq(userBoostInventory.boostId, boostId)
+      ));
+
+    if (existing) {
+      await db
+        .update(userBoostInventory)
+        .set({ quantity, updatedAt: new Date() })
+        .where(eq(userBoostInventory.id, existing.id));
+    } else {
+      await db.insert(userBoostInventory).values({
+        userId,
+        boostId,
+        quantity,
+      });
+    }
+    return { success: true };
   }
 
   // Character System Methods

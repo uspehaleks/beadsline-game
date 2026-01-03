@@ -3876,6 +3876,36 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get user boosts
+  app.get("/api/admin/users/:userId/boosts", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const inventory = await storage.getUserBoostInventory(userId);
+      res.json(inventory);
+    } catch (error) {
+      console.error("Get user boosts error:", error);
+      res.status(500).json({ error: "Failed to get user boosts" });
+    }
+  });
+
+  // Admin: Set user boost quantity
+  app.put("/api/admin/users/:userId/boosts/:boostId", requireAdmin, async (req, res) => {
+    try {
+      const { userId, boostId } = req.params;
+      const { quantity } = req.body;
+      
+      if (typeof quantity !== 'number' || quantity < 0) {
+        return res.status(400).json({ error: "Invalid quantity" });
+      }
+      
+      const result = await storage.setUserBoostQuantity(userId, boostId, quantity);
+      res.json(result);
+    } catch (error) {
+      console.error("Set user boost error:", error);
+      res.status(500).json({ error: "Failed to set user boost" });
+    }
+  });
+
   // ========== WITHDRAWAL REQUESTS ==========
   
   // Get withdrawal config (public)

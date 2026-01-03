@@ -1011,9 +1011,17 @@ function UsdtFundTab() {
   );
 }
 
+interface UserBoostItem {
+  id: string;
+  boostId: string;
+  quantity: number;
+  boost: Boost;
+}
+
 function UsersTab({ users, total }: { users: User[]; total: number }) {
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showBoostsDialog, setShowBoostsDialog] = useState(false);
   const [editForm, setEditForm] = useState({ 
     username: "", 
     totalPoints: 0, 
@@ -1097,6 +1105,33 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     },
     onError: () => {
       toast({ title: "Ошибка", description: "Не удалось сбросить уровни", variant: "destructive" });
+    },
+  });
+
+  const { data: allBoosts } = useQuery<Boost[]>({
+    queryKey: ["/api/admin/boosts"],
+  });
+
+  const { data: userBoosts, refetch: refetchUserBoosts } = useQuery<UserBoostItem[]>({
+    queryKey: ["/api/admin/users", editingUser?.id, "boosts"],
+    queryFn: async () => {
+      if (!editingUser) return [];
+      const res = await fetch(`/api/admin/users/${editingUser.id}/boosts`);
+      return res.json();
+    },
+    enabled: !!editingUser && showBoostsDialog,
+  });
+
+  const setBoostQuantityMutation = useMutation({
+    mutationFn: async ({ userId, boostId, quantity }: { userId: string; boostId: string; quantity: number }) => {
+      return apiRequest("PUT", `/api/admin/users/${userId}/boosts/${boostId}`, { quantity });
+    },
+    onSuccess: () => {
+      refetchUserBoosts();
+      toast({ title: "Обновлено", description: "Количество буста изменено" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось изменить буст", variant: "destructive" });
     },
   });
 
@@ -1386,7 +1421,110 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                 </p>
               )}
             </div>
+            <Separator />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowBoostsDialog(true)}
+              data-testid="button-manage-boosts"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Управление бустами
+            </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBoostsDialog} onOpenChange={setShowBoostsDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Бусты пользователя: {editingUser?.username}
+            </DialogTitle>
+            <DialogDescription>
+              Добавляйте или удаляйте бусты вручную
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-4 max-h-[400px] overflow-y-auto">
+            {allBoosts?.filter(b => b.isActive).map((boost) => {
+              const userBoost = userBoosts?.find(ub => ub.boostId === boost.id);
+              const quantity = userBoost?.quantity || 0;
+              
+              return (
+                <div key={boost.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium">{boost.nameRu}</div>
+                    <div className="text-xs text-muted-foreground">{boost.descriptionRu}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        if (editingUser && quantity > 0) {
+                          setBoostQuantityMutation.mutate({
+                            userId: editingUser.id,
+                            boostId: boost.id,
+                            quantity: quantity - 1,
+                          });
+                        }
+                      }}
+                      disabled={quantity <= 0 || setBoostQuantityMutation.isPending}
+                      data-testid={`boost-minus-${boost.id}`}
+                    >
+                      -
+                    </Button>
+                    <span className="w-8 text-center font-bold">{quantity}</span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        if (editingUser) {
+                          setBoostQuantityMutation.mutate({
+                            userId: editingUser.id,
+                            boostId: boost.id,
+                            quantity: quantity + 1,
+                          });
+                        }
+                      }}
+                      disabled={setBoostQuantityMutation.isPending}
+                      data-testid={`boost-plus-${boost.id}`}
+                    >
+                      +
+                    </Button>
+                    <Input
+                      type="number"
+                      min="0"
+                      className="w-16 text-center"
+                      value={quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        if (editingUser && val >= 0) {
+                          setBoostQuantityMutation.mutate({
+                            userId: editingUser.id,
+                            boostId: boost.id,
+                            quantity: val,
+                          });
+                        }
+                      }}
+                      data-testid={`boost-input-${boost.id}`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {(!allBoosts || allBoosts.filter(b => b.isActive).length === 0) && (
+              <p className="text-center text-muted-foreground py-4">
+                Нет активных бустов
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBoostsDialog(false)}>
+              Закрыть
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
