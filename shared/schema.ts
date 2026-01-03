@@ -616,6 +616,66 @@ export const insertRevenueShareSchema = createInsertSchema(revenueShares).omit({
 export type InsertRevenueShare = z.infer<typeof insertRevenueShareSchema>;
 export type RevenueShare = typeof revenueShares.$inferSelect;
 
+// Crypto withdrawal requests (semi-automatic)
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  cryptoType: varchar("crypto_type", { length: 10 }).notNull(), // 'btc', 'eth', 'usdt'
+  network: varchar("network", { length: 20 }), // 'bep20', 'trc20', 'erc20', 'btc', 'eth', 'ton'
+  amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  networkFee: numeric("network_fee", { precision: 18, scale: 8 }).default("0").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // 'pending', 'approved', 'rejected', 'completed'
+  adminNote: text("admin_note"),
+  txHash: text("tx_hash"), // Transaction hash after completion
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by", { length: 255 }).references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const withdrawalRequestsRelations = relations(withdrawalRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [withdrawalRequests.userId],
+    references: [users.id],
+  }),
+  processedByUser: one(users, {
+    fields: [withdrawalRequests.processedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({
+  id: true,
+  status: true,
+  adminNote: true,
+  txHash: true,
+  processedAt: true,
+  processedBy: true,
+  createdAt: true,
+});
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+
+// Withdrawal config interface
+export interface WithdrawalConfig {
+  btc: {
+    minAmount: number;
+    networkFee: number;
+    enabled: boolean;
+  };
+  eth: {
+    minAmount: number;
+    networkFee: number;
+    enabled: boolean;
+  };
+  usdt: {
+    bep20: { minAmount: number; networkFee: number; enabled: boolean };
+    trc20: { minAmount: number; networkFee: number; enabled: boolean };
+    erc20: { minAmount: number; networkFee: number; enabled: boolean };
+    ton: { minAmount: number; networkFee: number; enabled: boolean };
+  };
+}
+
 // Revenue summary config
 export interface RevenueSummary {
   totalSalesStars: number;
