@@ -1035,12 +1035,13 @@ export function moveBallsForward(balls: Ball[], deltaTime: number): Ball[] {
 let rollbackLogCounter = 0;
 let rollbackActiveUntil = 0;
 let rollbackHadGap = false; // Track if we've seen a real gap during this rollback
-let rollbackStartLeadPosition = 0; // Position of lead ball when rollback started
+let portalRetreatArmed = false; // Explicit flag: only true when match at game start
 
-export function activateRollback() {
+// Activate rollback. If isEarlyGame is true, also arm portal retreat.
+export function activateRollback(isEarlyGame: boolean = false) {
   rollbackActiveUntil = Date.now() + 2000;
   rollbackHadGap = false; // Reset gap tracking for new rollback session
-  rollbackStartLeadPosition = 0; // Will be set on first processRollback call
+  portalRetreatArmed = isEarlyGame; // Only arm portal retreat if explicitly at game start
 }
 
 export function isRollbackActive(): boolean {
@@ -1052,6 +1053,7 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   const rollbackActive = now < rollbackActiveUntil;
   
   if (!rollbackActive) {
+    portalRetreatArmed = false;
     return balls;
   }
   
@@ -1070,27 +1072,20 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
   // Find lead ball (highest pathProgress)
   const leadBall = newBalls.reduce((max, b) => b.pathProgress > max.pathProgress ? b : max, newBalls[0]);
   
-  // Remember lead position at start of rollback
-  if (rollbackStartLeadPosition === 0 && leadBall.pathProgress > 0) {
-    rollbackStartLeadPosition = leadBall.pathProgress;
-  }
-  
-  // SPECIAL CASE: Portal rollback - only when chain is very short (< 5 balls) 
-  // AND lead ball is very close to portal (< 0.10)
-  // This creates the "rollback into portal" effect when matches happen at game start
-  const portalThreshold = 0.10;
-  const maxBallsForPortalRetreat = 5;
-  if (newBalls.length <= maxBallsForPortalRetreat && 
-      leadBall.pathProgress < portalThreshold && 
-      leadBall.pathProgress > 0) {
-    const retreatAmount = Math.min(0.005 * deltaTime * 0.06, leadBall.pathProgress);
+  // PORTAL RETREAT: Only runs when explicitly armed (match at game start)
+  // This creates the "rollback into portal" effect
+  if (portalRetreatArmed && leadBall.pathProgress > 0) {
+    const retreatAmount = Math.min(0.008 * deltaTime * 0.06, leadBall.pathProgress);
     for (let i = 0; i < newBalls.length; i++) {
       newBalls[i] = {
         ...newBalls[i],
         pathProgress: Math.max(0, newBalls[i].pathProgress - retreatAmount),
       };
     }
-    // Don't deactivate early when doing portal retreat
+    // If all balls reached portal, disarm
+    if (leadBall.pathProgress - retreatAmount <= 0) {
+      portalRetreatArmed = false;
+    }
     return newBalls;
   }
   

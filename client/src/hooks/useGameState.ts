@@ -412,7 +412,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
                 const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, chainCombo);
                 
                 const processedBalls = removeBalls(currentState.balls, ballIndicesToRemove);
-                activateRollback();
+                // Only arm portal retreat if very early in game (< 10 balls spawned)
+                const isEarlyGame = totalSpawnedRef.current < 10;
+                activateRollback(isEarlyGame);
                 
                 if (pending.newLeftBallId || pending.newRightBallId) {
                   gapContextRef.current = { 
@@ -762,7 +764,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           const rightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
           
           newBalls = removeBalls(newBalls, matches);
-          activateRollback();
+          // Only arm portal retreat if very early in game (< 10 balls spawned)
+          const isEarlyGame = totalSpawnedRef.current < 10;
+          activateRollback(isEarlyGame);
           
           let totalPoints = points;
           let totalCryptoCollected = { ...cryptoCollected };
@@ -820,7 +824,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
             currentRightBall = newMaxIdx < newBalls.length - 1 ? newBalls[newMaxIdx + 1] : null;
             
             newBalls = removeBalls(newBalls, chainMatches);
-            activateRollback();
+            // Keep same early game state for chain reactions
+            activateRollback(isEarlyGame);
             
             // Play combo sound
             const hasChainCrypto = chainMatchedBalls.some(b => b.crypto || b.isUsdtFund);
