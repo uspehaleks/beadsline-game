@@ -86,7 +86,7 @@ interface PendingChainReaction {
   combo: number;
 }
 
-const CHAIN_REACTION_DELAY = 250;
+const CHAIN_REACTION_DELAY = 150;
 
 // Debug log buffer - accumulates logs and sends them in batches
 const debugLogBuffer: string[] = [];

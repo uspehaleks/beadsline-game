@@ -1038,7 +1038,7 @@ let rollbackHadGap = false; // Track if we've seen a real gap during this rollba
 
 // Activate rollback to close gaps after ball removal
 export function activateRollback(_isEarlyGame: boolean = false) {
-  rollbackActiveUntil = Date.now() + 2000;
+  rollbackActiveUntil = Date.now() + 800; // Shorter rollback window
   rollbackHadGap = false; // Reset gap tracking for new rollback session
 }
 
