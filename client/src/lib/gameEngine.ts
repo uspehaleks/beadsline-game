@@ -1054,8 +1054,9 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     return balls;
   }
   
-  // With fewer than 2 balls, we can't detect gaps - keep rollback active but don't process
+  // With fewer than 2 balls, no gaps possible - immediately deactivate
   if (balls.length < 2) {
+    rollbackActiveUntil = 0;
     return balls;
   }
   
@@ -1099,9 +1100,8 @@ export function processRollback(balls: Ball[], deltaTime: number, _spawnFinished
     }
   }
   
-  // Only deactivate early if we previously had a gap and it's now closed
-  // This prevents premature deactivation when chain was empty after match
-  if (!hasGap && rollbackHadGap) {
+  // Immediately deactivate if no gaps found (edge matches or already closed)
+  if (!hasGap) {
     rollbackActiveUntil = 0;
     rollbackHadGap = false;
   }
