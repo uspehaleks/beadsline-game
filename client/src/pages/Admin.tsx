@@ -7208,14 +7208,23 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: 'Отклонено',
 };
 
-interface WithdrawalConfig {
+interface CryptoConfig {
+  minAmount: number;
+  networkFee: number;
   enabled: boolean;
-  minBtc: number;
-  minEth: number;
-  minUsdt: number;
-  feeBtc: number;
-  feeEth: number;
-  feeUsdt: number;
+}
+
+interface UsdtNetworkConfig {
+  bep20: CryptoConfig;
+  trc20: CryptoConfig;
+  erc20: CryptoConfig;
+  ton: CryptoConfig;
+}
+
+interface WithdrawalConfig {
+  btc: CryptoConfig;
+  eth: CryptoConfig;
+  usdt: UsdtNetworkConfig;
 }
 
 function WithdrawalsTab() {
@@ -7410,54 +7419,49 @@ function WithdrawalsTab() {
         </CardHeader>
         {showSettings && editConfig && (
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Вывод включён</Label>
-                <p className="text-sm text-muted-foreground">Разрешить пользователям создавать заявки на вывод</p>
-              </div>
-              <Switch
-                checked={editConfig.enabled}
-                onCheckedChange={(checked) => setEditConfig({ ...editConfig, enabled: checked })}
-                data-testid="switch-withdrawal-enabled"
-              />
-            </div>
-
-            <Separator />
-
             <div className="space-y-4">
-              <h4 className="font-semibold">Минимальные суммы вывода</h4>
-              <div className="grid gap-4 md:grid-cols-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Bitcoin className="w-5 h-5 text-amber-500" />
+                Bitcoin (BTC)
+              </h4>
+              <div className="flex items-center gap-4 mb-2">
+                <Switch
+                  checked={editConfig.btc.enabled}
+                  onCheckedChange={(checked) => setEditConfig({ 
+                    ...editConfig, 
+                    btc: { ...editConfig.btc, enabled: checked } 
+                  })}
+                  data-testid="switch-btc-enabled"
+                />
+                <span className="text-sm">{editConfig.btc.enabled ? 'Включено' : 'Выключено'}</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>BTC минимум</Label>
+                  <Label>Минимум</Label>
                   <Input
                     type="number"
                     step="0.0001"
                     min="0"
-                    value={editConfig.minBtc}
-                    onChange={(e) => setEditConfig({ ...editConfig, minBtc: parseFloat(e.target.value) || 0 })}
+                    value={editConfig.btc.minAmount}
+                    onChange={(e) => setEditConfig({ 
+                      ...editConfig, 
+                      btc: { ...editConfig.btc, minAmount: parseFloat(e.target.value) || 0 } 
+                    })}
                     data-testid="input-min-btc"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>ETH минимум</Label>
+                  <Label>Комиссия сети</Label>
                   <Input
                     type="number"
-                    step="0.001"
+                    step="0.00001"
                     min="0"
-                    value={editConfig.minEth}
-                    onChange={(e) => setEditConfig({ ...editConfig, minEth: parseFloat(e.target.value) || 0 })}
-                    data-testid="input-min-eth"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>USDT минимум</Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={editConfig.minUsdt}
-                    onChange={(e) => setEditConfig({ ...editConfig, minUsdt: parseFloat(e.target.value) || 0 })}
-                    data-testid="input-min-usdt"
+                    value={editConfig.btc.networkFee}
+                    onChange={(e) => setEditConfig({ 
+                      ...editConfig, 
+                      btc: { ...editConfig.btc, networkFee: parseFloat(e.target.value) || 0 } 
+                    })}
+                    data-testid="input-fee-btc"
                   />
                 </div>
               </div>
@@ -7466,40 +7470,220 @@ function WithdrawalsTab() {
             <Separator />
 
             <div className="space-y-4">
-              <h4 className="font-semibold">Комиссии сети</h4>
-              <div className="grid gap-4 md:grid-cols-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <SiEthereum className="w-5 h-5 text-blue-500" />
+                Ethereum (ETH)
+              </h4>
+              <div className="flex items-center gap-4 mb-2">
+                <Switch
+                  checked={editConfig.eth.enabled}
+                  onCheckedChange={(checked) => setEditConfig({ 
+                    ...editConfig, 
+                    eth: { ...editConfig.eth, enabled: checked } 
+                  })}
+                  data-testid="switch-eth-enabled"
+                />
+                <span className="text-sm">{editConfig.eth.enabled ? 'Включено' : 'Выключено'}</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>BTC комиссия</Label>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    value={editConfig.feeBtc}
-                    onChange={(e) => setEditConfig({ ...editConfig, feeBtc: parseFloat(e.target.value) || 0 })}
-                    data-testid="input-fee-btc"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>ETH комиссия</Label>
+                  <Label>Минимум</Label>
                   <Input
                     type="number"
                     step="0.001"
                     min="0"
-                    value={editConfig.feeEth}
-                    onChange={(e) => setEditConfig({ ...editConfig, feeEth: parseFloat(e.target.value) || 0 })}
-                    data-testid="input-fee-eth"
+                    value={editConfig.eth.minAmount}
+                    onChange={(e) => setEditConfig({ 
+                      ...editConfig, 
+                      eth: { ...editConfig.eth, minAmount: parseFloat(e.target.value) || 0 } 
+                    })}
+                    data-testid="input-min-eth"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>USDT комиссия</Label>
+                  <Label>Комиссия сети</Label>
                   <Input
                     type="number"
-                    step="0.1"
+                    step="0.0001"
                     min="0"
-                    value={editConfig.feeUsdt}
-                    onChange={(e) => setEditConfig({ ...editConfig, feeUsdt: parseFloat(e.target.value) || 0 })}
-                    data-testid="input-fee-usdt"
+                    value={editConfig.eth.networkFee}
+                    onChange={(e) => setEditConfig({ 
+                      ...editConfig, 
+                      eth: { ...editConfig.eth, networkFee: parseFloat(e.target.value) || 0 } 
+                    })}
+                    data-testid="input-fee-eth"
                   />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2">
+                <SiTether className="w-5 h-5 text-green-500" />
+                Tether (USDT) - по сетям
+              </h4>
+              
+              <div className="space-y-4 pl-4 border-l-2 border-muted">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">BEP-20 (BSC)</Label>
+                    <Switch
+                      checked={editConfig.usdt.bep20.enabled}
+                      onCheckedChange={(checked) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, bep20: { ...editConfig.usdt.bep20, enabled: checked } }
+                      })}
+                      data-testid="switch-usdt-bep20"
+                    />
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Минимум"
+                      value={editConfig.usdt.bep20.minAmount}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, bep20: { ...editConfig.usdt.bep20, minAmount: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-min-usdt-bep20"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Комиссия"
+                      value={editConfig.usdt.bep20.networkFee}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, bep20: { ...editConfig.usdt.bep20, networkFee: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-fee-usdt-bep20"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">TRC-20 (TRON)</Label>
+                    <Switch
+                      checked={editConfig.usdt.trc20.enabled}
+                      onCheckedChange={(checked) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, trc20: { ...editConfig.usdt.trc20, enabled: checked } }
+                      })}
+                      data-testid="switch-usdt-trc20"
+                    />
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Минимум"
+                      value={editConfig.usdt.trc20.minAmount}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, trc20: { ...editConfig.usdt.trc20, minAmount: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-min-usdt-trc20"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Комиссия"
+                      value={editConfig.usdt.trc20.networkFee}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, trc20: { ...editConfig.usdt.trc20, networkFee: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-fee-usdt-trc20"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">ERC-20 (Ethereum)</Label>
+                    <Switch
+                      checked={editConfig.usdt.erc20.enabled}
+                      onCheckedChange={(checked) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, erc20: { ...editConfig.usdt.erc20, enabled: checked } }
+                      })}
+                      data-testid="switch-usdt-erc20"
+                    />
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Минимум"
+                      value={editConfig.usdt.erc20.minAmount}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, erc20: { ...editConfig.usdt.erc20, minAmount: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-min-usdt-erc20"
+                    />
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Комиссия"
+                      value={editConfig.usdt.erc20.networkFee}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, erc20: { ...editConfig.usdt.erc20, networkFee: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-fee-usdt-erc20"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">TON</Label>
+                    <Switch
+                      checked={editConfig.usdt.ton.enabled}
+                      onCheckedChange={(checked) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, ton: { ...editConfig.usdt.ton, enabled: checked } }
+                      })}
+                      data-testid="switch-usdt-ton"
+                    />
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="Минимум"
+                      value={editConfig.usdt.ton.minAmount}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, ton: { ...editConfig.usdt.ton, minAmount: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-min-usdt-ton"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Комиссия"
+                      value={editConfig.usdt.ton.networkFee}
+                      onChange={(e) => setEditConfig({ 
+                        ...editConfig, 
+                        usdt: { ...editConfig.usdt, ton: { ...editConfig.usdt.ton, networkFee: parseFloat(e.target.value) || 0 } }
+                      })}
+                      data-testid="input-fee-usdt-ton"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -7507,6 +7691,7 @@ function WithdrawalsTab() {
             <Button 
               onClick={() => updateConfigMutation.mutate(editConfig)} 
               disabled={updateConfigMutation.isPending}
+              className="w-full"
               data-testid="button-save-config"
             >
               {updateConfigMutation.isPending ? (
