@@ -63,11 +63,11 @@ export function GameOverScreen({
     (user?.totalPoints || 0) >= lifeCost;
 
   useEffect(() => {
-    if (canContinue && !hasAutoShown) {
+    if (!won && canContinue && !hasAutoShown) {
       setShowConfirmDialog(true);
       setHasAutoShown(true);
     }
-  }, [canContinue, hasAutoShown]);
+  }, [won, canContinue, hasAutoShown]);
 
   useEffect(() => {
     if (won) {
@@ -286,9 +286,6 @@ export function GameOverScreen({
 
       <AlertDialog open={showConfirmDialog} onOpenChange={(open) => {
         setShowConfirmDialog(open);
-        if (!open && !canContinue) {
-          onMainMenu();
-        }
       }}>
         <AlertDialogContent className="max-w-md p-6 border-2 border-amber-500/50">
           <AlertDialogHeader className="space-y-4">
