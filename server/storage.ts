@@ -315,8 +315,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    // Try exact match first
+    let [user] = await db.select().from(users).where(eq(users.username, username));
+    if (user) return user;
+    
+    // Try with leading hyphen if not found
+    if (!username.startsWith('-')) {
+      [user] = await db.select().from(users).where(eq(users.username, `-${username}`));
+      if (user) return user;
+    }
+    
+    // Try without leading hyphen if original had one
+    if (username.startsWith('-')) {
+      [user] = await db.select().from(users).where(eq(users.username, username.substring(1)));
+      if (user) return user;
+    }
+    
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
