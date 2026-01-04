@@ -282,7 +282,7 @@ export default function Admin() {
                     data-testid="input-admin-code"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Код действителен 5 минут. Проверьте консоль сервера.
+                    Код отправлен в Telegram. Действителен 5 минут.
                   </p>
                 </div>
 
