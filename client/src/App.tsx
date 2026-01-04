@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -72,6 +72,7 @@ function TelegramRequiredScreen() {
 
 function MaintenanceWrapper() {
   const { user, isLoading: userLoading, error } = useUser();
+  const [location] = useLocation();
 
   const {
     data: maintenance,
@@ -83,17 +84,18 @@ function MaintenanceWrapper() {
     staleTime: 0,
   });
 
-  const isInitialLoading = maintenanceLoading || userLoading;
+  const isAdminPage = location === '/admin';
+  const isInitialLoading = maintenanceLoading || (userLoading && !isAdminPage);
 
   if (isInitialLoading) {
     return <LoadingScreen />;
   }
 
-  if (error === 'telegram_required') {
+  if (error === 'telegram_required' && !isAdminPage) {
     return <TelegramRequiredScreen />;
   }
 
-  if (maintenance?.enabled && !user?.isAdmin) {
+  if (maintenance?.enabled && !user?.isAdmin && !isAdminPage) {
     return (
       <MaintenancePage
         endTime={maintenance.endTime}
