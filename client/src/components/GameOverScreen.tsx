@@ -51,10 +51,10 @@ export function GameOverScreen({
   
   const economy = getEconomyConfig();
   const SATS_PER_BTC = 100_000_000;
-  const GWEI_PER_ETH = 1_000_000_000;
+  const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18
   
   const earnedBtcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
-  const earnedEthGwei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * GWEI_PER_ETH);
+  const earnedEthWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
   const earnedUsdt = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
   
   const canContinue = !won && 
@@ -186,7 +186,7 @@ export function GameOverScreen({
             <StatCard icon={<Target className="w-4 h-4" />} label="Точность" value={`${accuracy}%`} />
           </motion.div>
 
-          {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
+          {(earnedBtcSats > 0 || earnedEthWei > 0 || earnedUsdt > 0) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -196,7 +196,7 @@ export function GameOverScreen({
               <div className="text-sm text-muted-foreground mb-2">Заработано крипты:</div>
               <div className="flex items-center justify-center gap-4 p-3 rounded-lg bg-muted/50" data-testid="crypto-collected-stats">
                 {earnedBtcSats > 0 && <CryptoEarned type="btc" amount={earnedBtcSats} />}
-                {earnedEthGwei > 0 && <CryptoEarned type="eth" amount={earnedEthGwei} />}
+                {earnedEthWei > 0 && <CryptoEarned type="eth" amount={earnedEthWei} />}
                 {earnedUsdt > 0 && <CryptoEarned type="usdt" amount={earnedUsdt} />}
               </div>
             </motion.div>
@@ -342,7 +342,7 @@ export function GameOverScreen({
                 </div>
 
                 {/* Crypto earned this game */}
-                {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
+                {(earnedBtcSats > 0 || earnedEthWei > 0 || earnedUsdt > 0) && (
                   <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
                     <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
                       <Wallet className="w-4 h-4" />
@@ -358,13 +358,13 @@ export function GameOverScreen({
                           <span className="font-mono text-foreground font-semibold">+{(earnedBtcSats / 100000000).toFixed(8)} BTC</span>
                         </div>
                       )}
-                      {earnedEthGwei > 0 && (
+                      {earnedEthWei > 0 && (
                         <div className="flex items-center justify-between px-2">
                           <div className="flex items-center gap-2">
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{(earnedEthGwei / 1000000000).toFixed(9)} ETH</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedEthWei / 1000000000000000000).toFixed(9)} ETH</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -519,7 +519,7 @@ export function GameOverScreen({
                 </div>
 
                 {/* Crypto earned this game */}
-                {(earnedBtcSats > 0 || earnedEthGwei > 0 || earnedUsdt > 0) && (
+                {(earnedBtcSats > 0 || earnedEthWei > 0 || earnedUsdt > 0) && (
                   <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-600/50">
                     <div className="flex items-center justify-center gap-2 mb-3 text-muted-foreground">
                       <Wallet className="w-4 h-4" />
@@ -535,13 +535,13 @@ export function GameOverScreen({
                           <span className="font-mono text-foreground font-semibold">+{(earnedBtcSats / 100000000).toFixed(8)} BTC</span>
                         </div>
                       )}
-                      {earnedEthGwei > 0 && (
+                      {earnedEthWei > 0 && (
                         <div className="flex items-center justify-between px-2">
                           <div className="flex items-center gap-2">
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{(earnedEthGwei / 1000000000).toFixed(9)} ETH</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedEthWei / 1000000000000000000).toFixed(9)} ETH</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -617,7 +617,7 @@ function CryptoEarned({ type, amount }: CryptoEarnedProps) {
   const formatted = type === 'usdt' 
     ? `$${amount.toFixed(4)}` 
     : type === 'eth' 
-      ? `${(amount / 1000000000).toFixed(9)} ETH` 
+      ? `${(amount / 1000000000000000000).toFixed(9)} ETH` 
       : `${(amount / 100000000).toFixed(8)} BTC`;
 
   return (
@@ -644,7 +644,7 @@ function CryptoBalance({ type, amount }: CryptoBalanceProps) {
     if (type === 'btc') {
       return `${(Number(amount) / 100000000).toFixed(8)} BTC`;
     } else if (type === 'eth') {
-      return `${(Number(amount) / 1000000000).toFixed(9)} ETH`;
+      return `${(Number(amount) / 1000000000000000000).toFixed(9)} ETH`;
     } else {
       return `$${Number(amount).toFixed(4)}`;
     }

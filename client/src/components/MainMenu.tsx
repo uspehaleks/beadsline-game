@@ -701,7 +701,7 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
             />
             <CryptoCard 
               type="eth" 
-              balance={`${((Number(user.ethBalanceWei) || 0) / 1000000000).toFixed(9)} ETH`}
+              balance={`${((Number(user.ethBalanceWei) || 0) / 1000000000000000000).toFixed(9)} ETH`}
               label="ETH"
             />
             <CryptoCard 

@@ -1188,7 +1188,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                         <SiEthereum className="w-3 h-3" />
-                        {(((user as User & { ethBalanceWei?: number }).ethBalanceWei ?? 0) / 1000000000).toFixed(9)} ETH
+                        {(((user as User & { ethBalanceWei?: number }).ethBalanceWei ?? 0) / 1000000000000000000).toFixed(9)} ETH
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">
                         <SiTether className="w-3 h-3" />
@@ -1331,7 +1331,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
               <div>
                 <Label htmlFor="edit-eth" className="flex items-center gap-1 text-xs">
                   <SiEthereum className="w-3 h-3 text-blue-500" />
-                  ETH (gwei)
+                  ETH (wei)
                 </Label>
                 <Input
                   id="edit-eth"
@@ -1339,10 +1339,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                   step="1"
                   value={editForm.ethBalanceWei}
                   onChange={(e) => setEditForm({ ...editForm, ethBalanceWei: parseInt(e.target.value) || 0 })}
-                  placeholder="Кол-во gwei"
+                  placeholder="Кол-во wei"
                   data-testid="input-edit-eth"
                 />
-                <p className="text-xs text-muted-foreground mt-0.5">{(editForm.ethBalanceWei / 1000000000).toFixed(9)} ETH</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{(editForm.ethBalanceWei / 1000000000000000000).toFixed(9)} ETH</p>
               </div>
               <div>
                 <Label htmlFor="edit-usdt" className="flex items-center gap-1 text-xs">

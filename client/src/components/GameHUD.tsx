@@ -46,7 +46,7 @@ export function GameHUD({
   
   const economy = getEconomyConfig();
   const SATS_PER_BTC = 100_000_000;
-  const WEI_PER_ETH = 1_000_000_000;
+  const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18
   
   const btcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
   const ethWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
