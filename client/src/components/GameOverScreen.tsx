@@ -355,7 +355,7 @@ export function GameOverScreen({
                             <SiBitcoin className="w-5 h-5 text-orange-500" />
                             <span className="text-orange-400 font-bold">Bitcoin:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedBtcSats} sats</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedBtcSats / 100000000).toFixed(8)} BTC</span>
                         </div>
                       )}
                       {earnedEthGwei > 0 && (
@@ -364,7 +364,7 @@ export function GameOverScreen({
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei.toFixed(2)} gwei</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedEthGwei / 1000000000).toFixed(9)} ETH</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -532,7 +532,7 @@ export function GameOverScreen({
                             <SiBitcoin className="w-5 h-5 text-orange-500" />
                             <span className="text-orange-400 font-bold">Bitcoin:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedBtcSats} sats</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedBtcSats / 100000000).toFixed(8)} BTC</span>
                         </div>
                       )}
                       {earnedEthGwei > 0 && (
@@ -541,7 +541,7 @@ export function GameOverScreen({
                             <SiEthereum className="w-5 h-5 text-purple-400" />
                             <span className="text-purple-400 font-bold">Ethereum:</span>
                           </div>
-                          <span className="font-mono text-foreground font-semibold">+{earnedEthGwei.toFixed(2)} gwei</span>
+                          <span className="font-mono text-foreground font-semibold">+{(earnedEthGwei / 1000000000).toFixed(9)} ETH</span>
                         </div>
                       )}
                       {earnedUsdt > 0 && (
@@ -608,17 +608,17 @@ interface CryptoEarnedProps {
 
 function CryptoEarned({ type, amount }: CryptoEarnedProps) {
   const config = {
-    btc: { icon: <SiBitcoin className="w-5 h-5 text-orange-500" />, unit: 'sats' },
-    eth: { icon: <SiEthereum className="w-5 h-5 text-purple-400" />, unit: 'gwei' },
-    usdt: { icon: <SiTether className="w-5 h-5 text-green-500" />, unit: '$' },
+    btc: { icon: <SiBitcoin className="w-5 h-5 text-orange-500" /> },
+    eth: { icon: <SiEthereum className="w-5 h-5 text-purple-400" /> },
+    usdt: { icon: <SiTether className="w-5 h-5 text-green-500" /> },
   };
 
-  const { icon, unit } = config[type];
+  const { icon } = config[type];
   const formatted = type === 'usdt' 
     ? `$${amount.toFixed(4)}` 
     : type === 'eth' 
-      ? `${amount.toFixed(2)} ${unit}` 
-      : `${amount.toFixed(2)} ${unit}`;
+      ? `${(amount / 1000000000).toFixed(9)} ETH` 
+      : `${(amount / 100000000).toFixed(8)} BTC`;
 
   return (
     <div className="flex items-center gap-1.5">
@@ -642,9 +642,9 @@ function CryptoBalance({ type, amount }: CryptoBalanceProps) {
 
   const formatAmount = () => {
     if (type === 'btc') {
-      return `${Number(amount).toFixed(2)} sat`;
+      return `${(Number(amount) / 100000000).toFixed(8)} BTC`;
     } else if (type === 'eth') {
-      return `${Number(amount).toFixed(2)} gwei`;
+      return `${(Number(amount) / 1000000000).toFixed(9)} ETH`;
     } else {
       return `$${Number(amount).toFixed(4)}`;
     }

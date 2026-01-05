@@ -1184,11 +1184,11 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                     <div className="flex items-center gap-2 mt-1">
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
                         <Bitcoin className="w-3 h-3" />
-                        {((user as User & { btcBalanceSats?: number }).btcBalanceSats ?? 0).toLocaleString()} sat
+                        {(((user as User & { btcBalanceSats?: number }).btcBalanceSats ?? 0) / 100000000).toFixed(8)} BTC
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                         <SiEthereum className="w-3 h-3" />
-                        {((user as User & { ethBalanceWei?: number }).ethBalanceWei ?? 0).toLocaleString()} gwei
+                        {(((user as User & { ethBalanceWei?: number }).ethBalanceWei ?? 0) / 1000000000).toFixed(9)} ETH
                       </span>
                       <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">
                         <SiTether className="w-3 h-3" />
@@ -1315,7 +1315,7 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
               <div>
                 <Label htmlFor="edit-btc" className="flex items-center gap-1 text-xs">
                   <Bitcoin className="w-3 h-3 text-amber-500" />
-                  BTC (sat)
+                  BTC (sats)
                 </Label>
                 <Input
                   id="edit-btc"
@@ -1323,8 +1323,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                   step="1"
                   value={editForm.btcBalanceSats}
                   onChange={(e) => setEditForm({ ...editForm, btcBalanceSats: parseInt(e.target.value) || 0 })}
+                  placeholder="Кол-во сатоши"
                   data-testid="input-edit-btc"
                 />
+                <p className="text-xs text-muted-foreground mt-0.5">{(editForm.btcBalanceSats / 100000000).toFixed(8)} BTC</p>
               </div>
               <div>
                 <Label htmlFor="edit-eth" className="flex items-center gap-1 text-xs">
@@ -1337,8 +1339,10 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                   step="1"
                   value={editForm.ethBalanceWei}
                   onChange={(e) => setEditForm({ ...editForm, ethBalanceWei: parseInt(e.target.value) || 0 })}
+                  placeholder="Кол-во gwei"
                   data-testid="input-edit-eth"
                 />
+                <p className="text-xs text-muted-foreground mt-0.5">{(editForm.ethBalanceWei / 1000000000).toFixed(9)} ETH</p>
               </div>
               <div>
                 <Label htmlFor="edit-usdt" className="flex items-center gap-1 text-xs">
@@ -2681,9 +2685,9 @@ function CryptoRewardsTab() {
   const formatAmount = (type: string, amount: number) => {
     switch (type.toLowerCase()) {
       case "btc":
-        return `${(amount * 100000000).toFixed(2)} sat`;
+        return `${amount.toFixed(8)} BTC`;
       case "eth":
-        return `${(amount * 1000000000).toFixed(2)} gwei`;
+        return `${amount.toFixed(9)} ETH`;
       case "usdt":
         return `$${amount.toFixed(4)}`;
       default:

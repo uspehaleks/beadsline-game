@@ -696,12 +696,12 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           <div className="flex gap-3">
             <CryptoCard 
               type="btc" 
-              balance={`${(Number(user.btcBalanceSats) || 0).toFixed(2)} sat`}
+              balance={`${((Number(user.btcBalanceSats) || 0) / 100000000).toFixed(8)} BTC`}
               label="BTC"
             />
             <CryptoCard 
               type="eth" 
-              balance={`${(Number(user.ethBalanceWei) || 0).toFixed(2)} gwei`}
+              balance={`${((Number(user.ethBalanceWei) || 0) / 1000000000).toFixed(9)} ETH`}
               label="ETH"
             />
             <CryptoCard 
