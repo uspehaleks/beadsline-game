@@ -61,6 +61,9 @@ export function GameOverScreen({
   const previousEthWei = Math.max(0, (user?.ethBalanceWei || 0) - earnedEthWei);
   const previousUsdt = Math.max(0, (user?.usdtBalance || 0) - earnedUsdt);
   
+  const previousBeads = won ? Math.max(0, (user?.totalPoints || 0) - score) : (user?.totalPoints || 0);
+  const currentBeads = user?.totalPoints || 0;
+  
   const canContinue = !won && 
     onContinue && 
     extraLivesBought < maxExtraLives && 
@@ -175,6 +178,11 @@ export function GameOverScreen({
             ) : (
               <div className="text-sm text-muted-foreground">
                 Beads начисляются только при победе
+              </div>
+            )}
+            {won && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Баланс: {previousBeads.toLocaleString()} → {currentBeads.toLocaleString()}
               </div>
             )}
           </motion.div>
