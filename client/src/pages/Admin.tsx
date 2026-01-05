@@ -2510,26 +2510,28 @@ function TransactionsTab() {
                         {tx.description || "Без описания"}
                       </div>
                       {tx.gameScoreId && (tx.cryptoBtc || tx.cryptoEth || tx.cryptoUsdt) ? (
-                        <div className="flex items-center gap-2 text-xs mt-1">
+                        <div className="flex flex-col gap-1 text-xs mt-1">
                           <span className="text-muted-foreground">Шарики:</span>
-                          {tx.cryptoBtc ? (
-                            <Badge variant="outline" className="text-amber-500 border-amber-500/30">
-                              <Bitcoin className="w-3 h-3 mr-1" />
-                              {tx.cryptoBtc}
-                            </Badge>
-                          ) : null}
-                          {tx.cryptoEth ? (
-                            <Badge variant="outline" className="text-blue-500 border-blue-500/30">
-                              <SiEthereum className="w-3 h-3 mr-1" />
-                              {tx.cryptoEth}
-                            </Badge>
-                          ) : null}
-                          {tx.cryptoUsdt ? (
-                            <Badge variant="outline" className="text-green-500 border-green-500/30">
-                              <SiTether className="w-3 h-3 mr-1" />
-                              {tx.cryptoUsdt}
-                            </Badge>
-                          ) : null}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {tx.cryptoBtc ? (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500/30">
+                                <Bitcoin className="w-3 h-3 mr-1" />
+                                {tx.cryptoBtc} = {(tx.cryptoBtc * 0.00000001).toFixed(8)} BTC
+                              </Badge>
+                            ) : null}
+                            {tx.cryptoEth ? (
+                              <Badge variant="outline" className="text-blue-500 border-blue-500/30">
+                                <SiEthereum className="w-3 h-3 mr-1" />
+                                {tx.cryptoEth} = {(tx.cryptoEth * 0.0000000003).toFixed(9)} ETH
+                              </Badge>
+                            ) : null}
+                            {tx.cryptoUsdt ? (
+                              <Badge variant="outline" className="text-green-500 border-green-500/30">
+                                <SiTether className="w-3 h-3 mr-1" />
+                                {tx.cryptoUsdt} = {(tx.cryptoUsdt * 0.001).toFixed(4)} USDT
+                              </Badge>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
