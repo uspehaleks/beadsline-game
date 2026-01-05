@@ -2544,6 +2544,28 @@ function TransactionsTab() {
                               </Badge>
                             ) : null}
                           </div>
+                          {((tx as any).btcBalanceTransition || (tx as any).ethBalanceTransition || (tx as any).usdtBalanceTransition) && (
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-muted-foreground">
+                              {(tx as any).btcBalanceTransition && (
+                                <span className="flex items-center gap-1">
+                                  <Bitcoin className="w-3 h-3 text-amber-500" />
+                                  {(tx as any).btcBalanceTransition}
+                                </span>
+                              )}
+                              {(tx as any).ethBalanceTransition && (
+                                <span className="flex items-center gap-1">
+                                  <SiEthereum className="w-3 h-3 text-blue-500" />
+                                  {(tx as any).ethBalanceTransition}
+                                </span>
+                              )}
+                              {(tx as any).usdtBalanceTransition && (
+                                <span className="flex items-center gap-1">
+                                  <SiTether className="w-3 h-3 text-green-500" />
+                                  {(tx as any).usdtBalanceTransition}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ) : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">

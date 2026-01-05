@@ -1264,35 +1264,41 @@ export class DatabaseStorage implements IStorage {
 
       // Save to real_rewards table for audit trail with balance change descriptions
       if (btcSatsAwarded > 0) {
-        const prevBtc = (prevBtcSats / SATS_PER_BTC).toFixed(8);
-        const newBtc = ((prevBtcSats + btcSatsAwarded) / SATS_PER_BTC).toFixed(8);
+        const prevBtc = prevBtcSats / SATS_PER_BTC;
+        const newBtc = (prevBtcSats + btcSatsAwarded) / SATS_PER_BTC;
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'btc',
           amount: btcAwarded,
-          description: `${prevBtc} → ${newBtc}`,
+          balanceBefore: prevBtcSats,
+          balanceAfter: prevBtcSats + btcSatsAwarded,
+          description: `${prevBtc.toFixed(8)} → ${newBtc.toFixed(8)}`,
           gameScoreId: gameScoreId || null,
         });
       }
       if (ethWeiAwarded > 0) {
-        const prevEth = (prevEthWei / WEI_PER_ETH).toFixed(9);
-        const newEth = ((prevEthWei + ethWeiAwarded) / WEI_PER_ETH).toFixed(9);
+        const prevEth = prevEthWei / WEI_PER_ETH;
+        const newEth = (prevEthWei + ethWeiAwarded) / WEI_PER_ETH;
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'eth',
           amount: ethAwarded,
-          description: `${prevEth} → ${newEth}`,
+          balanceBefore: prevEthWei,
+          balanceAfter: prevEthWei + ethWeiAwarded,
+          description: `${prevEth.toFixed(9)} → ${newEth.toFixed(9)}`,
           gameScoreId: gameScoreId || null,
         });
       }
       if (usdtAwarded > 0) {
-        const prevU = prevUsdt.toFixed(4);
-        const newU = (prevUsdt + usdtAwarded).toFixed(4);
+        const prevU = prevUsdt;
+        const newU = prevUsdt + usdtAwarded;
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'usdt',
           amount: usdtAwarded,
-          description: `$${prevU} → $${newU}`,
+          balanceBefore: prevU,
+          balanceAfter: newU,
+          description: `$${prevU.toFixed(4)} → $${newU.toFixed(4)}`,
           gameScoreId: gameScoreId || null,
         });
       }
@@ -1920,7 +1926,15 @@ export class DatabaseStorage implements IStorage {
     offset?: number;
     type?: string;
     search?: string;
-  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string; cryptoBtc?: number; cryptoEth?: number; cryptoUsdt?: number }>; total: number }> {
+  }): Promise<{ transactions: Array<BeadsTransaction & { 
+    username?: string; 
+    cryptoBtc?: number; 
+    cryptoEth?: number; 
+    cryptoUsdt?: number;
+    btcBalanceTransition?: string;
+    ethBalanceTransition?: string;
+    usdtBalanceTransition?: string;
+  }>; total: number }> {
     const { limit = 20, offset = 0, type, search } = options;
     
     const conditions: any[] = [];
@@ -1976,14 +1990,52 @@ export class DatabaseStorage implements IStorage {
         .where(whereClause),
     ]);
     
+    // Fetch crypto balance transitions from real_rewards table
+    const gameScoreIds = transactionsResult
+      .map(tx => tx.gameScoreId)
+      .filter((id): id is string => id !== null);
+    
+    let cryptoTransitions: Record<string, { btc?: string; eth?: string; usdt?: string }> = {};
+    
+    if (gameScoreIds.length > 0) {
+      const rewards = await db.select({
+        gameScoreId: realRewards.gameScoreId,
+        cryptoType: realRewards.cryptoType,
+        description: realRewards.description,
+      })
+        .from(realRewards)
+        .where(sql`${realRewards.gameScoreId} IN (${sql.join(gameScoreIds.map(id => sql`${id}`), sql`, `)})`);
+      
+      for (const reward of rewards) {
+        if (reward.gameScoreId) {
+          if (!cryptoTransitions[reward.gameScoreId]) {
+            cryptoTransitions[reward.gameScoreId] = {};
+          }
+          if (reward.cryptoType === 'btc') {
+            cryptoTransitions[reward.gameScoreId].btc = reward.description || undefined;
+          } else if (reward.cryptoType === 'eth') {
+            cryptoTransitions[reward.gameScoreId].eth = reward.description || undefined;
+          } else if (reward.cryptoType === 'usdt') {
+            cryptoTransitions[reward.gameScoreId].usdt = reward.description || undefined;
+          }
+        }
+      }
+    }
+    
     return {
-      transactions: transactionsResult.map(tx => ({
-        ...tx,
-        username: tx.username ?? undefined,
-        cryptoBtc: tx.cryptoBtc ?? undefined,
-        cryptoEth: tx.cryptoEth ?? undefined,
-        cryptoUsdt: tx.cryptoUsdt ?? undefined,
-      })),
+      transactions: transactionsResult.map(tx => {
+        const transitions = tx.gameScoreId ? cryptoTransitions[tx.gameScoreId] : undefined;
+        return {
+          ...tx,
+          username: tx.username ?? undefined,
+          cryptoBtc: tx.cryptoBtc ?? undefined,
+          cryptoEth: tx.cryptoEth ?? undefined,
+          cryptoUsdt: tx.cryptoUsdt ?? undefined,
+          btcBalanceTransition: transitions?.btc,
+          ethBalanceTransition: transitions?.eth,
+          usdtBalanceTransition: transitions?.usdt,
+        };
+      }),
       total: countResult[0]?.count || 0,
     };
   }
