@@ -142,7 +142,7 @@ export interface IStorage {
   
   getGameEconomyConfig(): Promise<GameEconomyConfig>;
   updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
-  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }>;
+  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number, gameScoreId?: string): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }>;
   
   getUserByReferralCode(referralCode: string): Promise<User | undefined>;
   generateReferralCode(): string;
