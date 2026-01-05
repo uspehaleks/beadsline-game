@@ -57,6 +57,10 @@ export function GameOverScreen({
   const earnedEthWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
   const earnedUsdt = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
   
+  const previousBtcSats = Math.max(0, (user?.btcBalanceSats || 0) - earnedBtcSats);
+  const previousEthWei = Math.max(0, (user?.ethBalanceWei || 0) - earnedEthWei);
+  const previousUsdt = Math.max(0, (user?.usdtBalance || 0) - earnedUsdt);
+  
   const canContinue = !won && 
     onContinue && 
     extraLivesBought < maxExtraLives && 
@@ -214,9 +218,9 @@ export function GameOverScreen({
                 <span className="text-sm">Ваш баланс</span>
               </div>
               <div className="flex items-center justify-center gap-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <CryptoBalance type="btc" amount={user.btcBalanceSats || 0} />
-                <CryptoBalance type="eth" amount={user.ethBalanceWei || 0} />
-                <CryptoBalance type="usdt" amount={user.usdtBalance || 0} />
+                <CryptoBalance type="btc" amount={user.btcBalanceSats || 0} previousAmount={earnedBtcSats > 0 ? previousBtcSats : undefined} />
+                <CryptoBalance type="eth" amount={user.ethBalanceWei || 0} previousAmount={earnedEthWei > 0 ? previousEthWei : undefined} />
+                <CryptoBalance type="usdt" amount={user.usdtBalance || 0} previousAmount={earnedUsdt > 0 ? previousUsdt : undefined} />
               </div>
             </motion.div>
           )}
@@ -631,29 +635,40 @@ function CryptoEarned({ type, amount }: CryptoEarnedProps) {
 interface CryptoBalanceProps {
   type: 'btc' | 'eth' | 'usdt';
   amount: number;
+  previousAmount?: number;
 }
 
-function CryptoBalance({ type, amount }: CryptoBalanceProps) {
+function CryptoBalance({ type, amount, previousAmount }: CryptoBalanceProps) {
   const icons = {
     btc: <SiBitcoin className="w-4 h-4 text-orange-500" />,
     eth: <SiEthereum className="w-4 h-4 text-purple-400" />,
     usdt: <SiTether className="w-4 h-4 text-green-500" />,
   };
 
-  const formatAmount = () => {
+  const formatAmount = (val: number) => {
     if (type === 'btc') {
-      return `${(Number(amount) / 100000000).toFixed(8)} BTC`;
+      return `${(Number(val) / 100000000).toFixed(8)}`;
     } else if (type === 'eth') {
-      return `${(Number(amount) / 1000000000000000000).toFixed(9)} ETH`;
+      return `${(Number(val) / 1000000000000000000).toFixed(9)}`;
     } else {
-      return `$${Number(amount).toFixed(4)}`;
+      return `$${Number(val).toFixed(4)}`;
     }
   };
 
+  const suffix = type === 'btc' ? ' BTC' : type === 'eth' ? ' ETH' : '';
+  const hasTransition = previousAmount !== undefined && previousAmount !== amount;
+
   return (
-    <div className="flex items-center gap-1" data-testid={`balance-${type}`}>
-      {icons[type]}
-      <span className="text-sm font-medium tabular-nums">{formatAmount()}</span>
+    <div className="flex flex-col items-center gap-0.5" data-testid={`balance-${type}`}>
+      <div className="flex items-center gap-1">
+        {icons[type]}
+        <span className="text-sm font-medium tabular-nums">{formatAmount(amount)}{suffix}</span>
+      </div>
+      {hasTransition && (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {formatAmount(previousAmount)} → {formatAmount(amount)}
+        </span>
+      )}
     </div>
   );
 }
