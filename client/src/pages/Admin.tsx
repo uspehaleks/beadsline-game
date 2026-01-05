@@ -3661,19 +3661,20 @@ function EconomyTab() {
             <p className="text-sm text-muted-foreground">Максимальное количество крипто-наград в день для каждого пользователя</p>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>BTC макс сатоши/день</Label>
+                <Label>BTC макс/день</Label>
                 <Input
                   type="text"
-                  inputMode="numeric"
-                  value={rawInputs['btcDailyLimit'] ?? String(editConfig.dailyLimits.btcMaxSatsPerDay)}
+                  inputMode="decimal"
+                  value={rawInputs['btcDailyLimit'] ?? (Number.isFinite(editConfig.dailyLimits.btcMaxSatsPerDay) ? (editConfig.dailyLimits.btcMaxSatsPerDay / 100000000).toFixed(8) : '')}
                   onChange={(e) => {
                     const val = e.target.value;
                     setRawInputs(prev => ({ ...prev, btcDailyLimit: val }));
-                    const num = parseInt(val);
+                    const num = parseFloat(val);
                     if (!isNaN(num) && num >= 0) {
+                      const sats = Math.round(num * 100000000);
                       setEditConfig({
                         ...editConfig,
-                        dailyLimits: { ...editConfig.dailyLimits, btcMaxSatsPerDay: num }
+                        dailyLimits: { ...editConfig.dailyLimits, btcMaxSatsPerDay: sats }
                       });
                     }
                   }}
@@ -3681,7 +3682,7 @@ function EconomyTab() {
                   data-testid="input-btc-daily-limit"
                 />
                 <p className="text-xs text-muted-foreground">
-                  1000 сат = 0.00001 BTC
+                  Вводите в BTC (0.001 = 100,000 сат)
                 </p>
               </div>
               <div className="space-y-2">
@@ -3746,19 +3747,20 @@ function EconomyTab() {
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>BTC пул (сатоши)</Label>
+                <Label>BTC пул</Label>
                 <Input
                   type="text"
-                  inputMode="numeric"
-                  value={rawInputs['btcPool'] ?? String(editConfig.pools.btcBalanceSats)}
+                  inputMode="decimal"
+                  value={rawInputs['btcPool'] ?? (Number.isFinite(editConfig.pools.btcBalanceSats) ? (editConfig.pools.btcBalanceSats / 100000000).toFixed(8) : '')}
                   onChange={(e) => {
                     const val = e.target.value;
                     setRawInputs(prev => ({ ...prev, btcPool: val }));
-                    const num = parseInt(val);
+                    const num = parseFloat(val);
                     if (!isNaN(num) && num >= 0) {
+                      const sats = Math.round(num * 100000000);
                       setEditConfig({
                         ...editConfig,
-                        pools: { ...editConfig.pools, btcBalanceSats: num }
+                        pools: { ...editConfig.pools, btcBalanceSats: sats }
                       });
                     }
                   }}
@@ -3766,7 +3768,7 @@ function EconomyTab() {
                   data-testid="input-btc-pool"
                 />
                 <p className="text-xs text-muted-foreground">
-                  100000 сат = 0.001 BTC
+                  Вводите в BTC (0.001 = 100,000 сат)
                 </p>
               </div>
               <div className="space-y-2">
