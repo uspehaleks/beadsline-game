@@ -2371,6 +2371,14 @@ function TransactionsTab() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; desc: string } | null>(null);
   const perPage = 20;
 
+  // Fetch economy config for crypto rates
+  const { data: economyConfig } = useQuery<GameEconomyConfig>({
+    queryKey: ["/api/admin/game-economy"],
+  });
+  const btcPerBall = economyConfig?.cryptoRewards?.btcPerBall ?? 0.00000005;
+  const ethPerBall = economyConfig?.cryptoRewards?.ethPerBall ?? 0.000001;
+  const usdtPerBall = economyConfig?.cryptoRewards?.usdtPerBall ?? 0.02;
+
   const { data, isLoading } = useQuery<TransactionsResponse>({
     queryKey: ["/api/admin/transactions", page, type, search],
     queryFn: async () => {
@@ -2516,19 +2524,19 @@ function TransactionsTab() {
                             {tx.cryptoBtc ? (
                               <Badge variant="outline" className="text-amber-500 border-amber-500/30">
                                 <Bitcoin className="w-3 h-3 mr-1" />
-                                {tx.cryptoBtc} = {(tx.cryptoBtc * 0.00000001).toFixed(8)} BTC
+                                {tx.cryptoBtc} = {(tx.cryptoBtc * btcPerBall).toFixed(8)} BTC
                               </Badge>
                             ) : null}
                             {tx.cryptoEth ? (
                               <Badge variant="outline" className="text-blue-500 border-blue-500/30">
                                 <SiEthereum className="w-3 h-3 mr-1" />
-                                {tx.cryptoEth} = {(tx.cryptoEth * 0.0000000003).toFixed(9)} ETH
+                                {tx.cryptoEth} = {(tx.cryptoEth * ethPerBall).toFixed(9)} ETH
                               </Badge>
                             ) : null}
                             {tx.cryptoUsdt ? (
                               <Badge variant="outline" className="text-green-500 border-green-500/30">
                                 <SiTether className="w-3 h-3 mr-1" />
-                                {tx.cryptoUsdt} = {(tx.cryptoUsdt * 0.001).toFixed(4)} USDT
+                                {tx.cryptoUsdt} = {(tx.cryptoUsdt * usdtPerBall).toFixed(4)} USDT
                               </Badge>
                             ) : null}
                           </div>
