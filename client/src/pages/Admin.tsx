@@ -2774,29 +2774,21 @@ function CryptoRewardsTab() {
                           )}
                         </div>
                       </div>
-                      {reward.gameScoreId && (reward.cryptoBtc || reward.cryptoEth || reward.cryptoUsdt) ? (
-                        <div className="flex items-center gap-2 text-xs mt-2">
-                          <span className="text-muted-foreground">Шарики в игре:</span>
-                          {reward.cryptoBtc ? (
-                            <Badge variant="outline" className="text-amber-500 border-amber-500/30">
-                              <Bitcoin className="w-3 h-3 mr-1" />
-                              {reward.cryptoBtc}
-                            </Badge>
-                          ) : null}
-                          {reward.cryptoEth ? (
-                            <Badge variant="outline" className="text-blue-500 border-blue-500/30">
-                              <SiEthereum className="w-3 h-3 mr-1" />
-                              {reward.cryptoEth}
-                            </Badge>
-                          ) : null}
-                          {reward.cryptoUsdt ? (
-                            <Badge variant="outline" className="text-green-500 border-green-500/30">
-                              <SiTether className="w-3 h-3 mr-1" />
-                              {reward.cryptoUsdt}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ) : null}
+                      {reward.gameScoreId ? (() => {
+                        const type = reward.cryptoType.toLowerCase();
+                        const ballCount = type === 'btc' ? reward.cryptoBtc 
+                          : type === 'eth' ? reward.cryptoEth 
+                          : type === 'usdt' ? reward.cryptoUsdt : 0;
+                        const rate = ballCount && ballCount > 0 ? reward.amount / ballCount : 0;
+                        const rateStr = type === 'btc' ? rate.toFixed(8)
+                          : type === 'eth' ? rate.toFixed(9)
+                          : rate.toFixed(4);
+                        return ballCount ? (
+                          <div className="text-xs mt-2 text-muted-foreground">
+                            <span>Шарики: {ballCount} × {rateStr} = {formatAmount(reward.cryptoType, reward.amount)}</span>
+                          </div>
+                        ) : null;
+                      })() : null}
                       <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                         <span>Game: {reward.gameScoreId?.slice(0, 8) || "—"}...</span>
                         <span>{formatDate(reward.createdAt)}</span>
