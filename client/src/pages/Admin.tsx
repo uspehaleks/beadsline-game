@@ -1331,18 +1331,22 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
               <div>
                 <Label htmlFor="edit-eth" className="flex items-center gap-1 text-xs">
                   <SiEthereum className="w-3 h-3 text-blue-500" />
-                  ETH (wei)
+                  ETH
                 </Label>
                 <Input
                   id="edit-eth"
-                  type="number"
-                  step="1"
-                  value={editForm.ethBalanceWei}
-                  onChange={(e) => setEditForm({ ...editForm, ethBalanceWei: parseInt(e.target.value) || 0 })}
-                  placeholder="Кол-во wei"
+                  type="text"
+                  inputMode="decimal"
+                  value={(editForm.ethBalanceWei / 1000000000000000000).toFixed(9)}
+                  onChange={(e) => {
+                    const num = parseFloat(e.target.value) || 0;
+                    const wei = Math.round(num * 1000000000000000000);
+                    setEditForm({ ...editForm, ethBalanceWei: wei });
+                  }}
+                  placeholder="Кол-во ETH"
                   data-testid="input-edit-eth"
                 />
-                <p className="text-xs text-muted-foreground mt-0.5">{(editForm.ethBalanceWei / 1000000000000000000).toFixed(9)} ETH</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Wei: {editForm.ethBalanceWei.toLocaleString()}</p>
               </div>
               <div>
                 <Label htmlFor="edit-usdt" className="flex items-center gap-1 text-xs">
@@ -3688,19 +3692,20 @@ function EconomyTab() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>ETH макс gwei/день</Label>
+                <Label>ETH макс/день</Label>
                 <Input
                   type="text"
-                  inputMode="numeric"
-                  value={rawInputs['ethDailyLimit'] ?? formatNumber(editConfig.dailyLimits.ethMaxWeiPerDay)}
+                  inputMode="decimal"
+                  value={rawInputs['ethDailyLimit'] ?? (Number.isFinite(editConfig.dailyLimits.ethMaxWeiPerDay) ? (editConfig.dailyLimits.ethMaxWeiPerDay / 1000000000000000000).toFixed(9) : '')}
                   onChange={(e) => {
                     const val = e.target.value;
                     setRawInputs(prev => ({ ...prev, ethDailyLimit: val }));
                     const num = parseFloat(val);
                     if (!isNaN(num) && num >= 0) {
+                      const wei = Math.round(num * 1000000000000000000);
                       setEditConfig({
                         ...editConfig,
-                        dailyLimits: { ...editConfig.dailyLimits, ethMaxWeiPerDay: num }
+                        dailyLimits: { ...editConfig.dailyLimits, ethMaxWeiPerDay: wei }
                       });
                     }
                   }}
@@ -3708,7 +3713,7 @@ function EconomyTab() {
                   data-testid="input-eth-daily-limit"
                 />
                 <p className="text-xs text-muted-foreground">
-                  10M gwei = 0.01 ETH
+                  Вводите в ETH (0.001 = 10^15 wei)
                 </p>
               </div>
               <div className="space-y-2">
@@ -3774,18 +3779,20 @@ function EconomyTab() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>ETH пул (wei/gwei)</Label>
+                <Label>ETH пул</Label>
                 <Input
                   type="text"
-                  value={rawInputs['ethPool'] ?? formatNumber(editConfig.pools.ethBalanceWei)}
+                  inputMode="decimal"
+                  value={rawInputs['ethPool'] ?? (Number.isFinite(editConfig.pools.ethBalanceWei) ? (editConfig.pools.ethBalanceWei / 1000000000000000000).toFixed(9) : '')}
                   onChange={(e) => {
                     const val = e.target.value;
                     setRawInputs(prev => ({ ...prev, ethPool: val }));
                     const num = parseFloat(val);
                     if (!isNaN(num) && num >= 0) {
+                      const wei = Math.round(num * 1000000000000000000);
                       setEditConfig({
                         ...editConfig,
-                        pools: { ...editConfig.pools, ethBalanceWei: num }
+                        pools: { ...editConfig.pools, ethBalanceWei: wei }
                       });
                     }
                   }}
@@ -3793,7 +3800,7 @@ function EconomyTab() {
                   data-testid="input-eth-pool"
                 />
                 <p className="text-xs text-muted-foreground">
-                  1e15 wei = 0.001 ETH
+                  Вводите в ETH (0.001 = 10^15 wei)
                 </p>
               </div>
               <div className="space-y-2">
