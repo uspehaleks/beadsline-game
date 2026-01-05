@@ -96,6 +96,7 @@ export const realRewards = pgTable("real_rewards", {
   userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
   cryptoType: varchar("crypto_type", { length: 10 }).notNull(),
   amount: real("amount").notNull(),
+  description: varchar("description", { length: 100 }),
   gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

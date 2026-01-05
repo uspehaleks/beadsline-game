@@ -2337,6 +2337,7 @@ interface CryptoRewardData {
   userId: string;
   cryptoType: string;
   amount: number;
+  description?: string | null;
   gameScoreId: string | null;
   createdAt: string;
   username?: string;
@@ -2762,9 +2763,16 @@ function CryptoRewardsTab() {
                             @{reward.username || "—"}
                           </span>
                         </div>
-                        <span className="font-bold text-green-500">
-                          +{formatAmount(reward.cryptoType, reward.amount)}
-                        </span>
+                        <div className="text-right">
+                          <span className="font-bold text-green-500">
+                            +{formatAmount(reward.cryptoType, reward.amount)}
+                          </span>
+                          {reward.description && (
+                            <div className="text-xs text-muted-foreground">
+                              Баланс: {reward.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       {reward.gameScoreId && (reward.cryptoBtc || reward.cryptoEth || reward.cryptoUsdt) ? (
                         <div className="flex items-center gap-2 text-xs mt-2">

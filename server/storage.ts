@@ -1174,6 +1174,9 @@ export class DatabaseStorage implements IStorage {
       WITH locked_user AS (
         SELECT 
           id,
+          btc_balance_sats as prev_btc_sats,
+          eth_balance_wei as prev_eth_wei,
+          usdt_balance as prev_usdt,
           CASE WHEN btc_today_date = ${today} THEN btc_today_sats ELSE 0 END as current_btc_today,
           CASE WHEN eth_today_date = ${today} THEN eth_today_wei ELSE 0 END as current_eth_today,
           CASE WHEN usdt_today_date = ${today} THEN usdt_today::numeric ELSE 0 END as current_usdt_today
@@ -1201,7 +1204,10 @@ export class DatabaseStorage implements IStorage {
           ) as usdt_to_add,
           current_btc_today,
           current_eth_today,
-          current_usdt_today
+          current_usdt_today,
+          prev_btc_sats,
+          prev_eth_wei,
+          prev_usdt
         FROM locked_user
       )
       UPDATE users u SET
@@ -1221,13 +1227,21 @@ export class DatabaseStorage implements IStorage {
       RETURNING 
         (SELECT btc_to_add FROM amounts) as btc_sats_awarded,
         (SELECT eth_to_add FROM amounts) as eth_wei_awarded,
-        (SELECT usdt_to_add FROM amounts) as usdt_awarded
+        (SELECT usdt_to_add FROM amounts) as usdt_awarded,
+        (SELECT prev_btc_sats FROM amounts) as prev_btc_sats,
+        (SELECT prev_eth_wei FROM amounts) as prev_eth_wei,
+        (SELECT prev_usdt FROM amounts) as prev_usdt
     `);
 
     const row = (result.rows?.[0] as any) || {};
     const btcSatsAwarded = Number(row.btc_sats_awarded) || 0;
     const ethWeiAwarded = Number(row.eth_wei_awarded) || 0;
     const usdtAwarded = Number(row.usdt_awarded) || 0;
+    
+    // Previous balances for description
+    const prevBtcSats = Number(row.prev_btc_sats) || 0;
+    const prevEthWei = Number(row.prev_eth_wei) || 0;
+    const prevUsdt = Number(row.prev_usdt) || 0;
 
     const btcAwarded = btcSatsAwarded / SATS_PER_BTC;
     const ethAwarded = ethWeiAwarded / WEI_PER_ETH;
@@ -1244,28 +1258,37 @@ export class DatabaseStorage implements IStorage {
       });
       console.log(`Pools updated: BTC ${btcPoolAvailable} -> ${btcPoolAvailable - btcSatsAwarded} sats, ETH ${ethPoolAvailable} -> ${ethPoolAvailable - ethWeiAwarded} wei, USDT ${usdtPoolAvailable} -> ${usdtPoolAvailable - usdtAwarded}`);
 
-      // Save to real_rewards table for audit trail
+      // Save to real_rewards table for audit trail with balance change descriptions
       if (btcSatsAwarded > 0) {
+        const prevBtc = (prevBtcSats / SATS_PER_BTC).toFixed(8);
+        const newBtc = ((prevBtcSats + btcSatsAwarded) / SATS_PER_BTC).toFixed(8);
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'btc',
           amount: btcAwarded,
+          description: `${prevBtc} → ${newBtc}`,
           gameScoreId: gameScoreId || null,
         });
       }
       if (ethWeiAwarded > 0) {
+        const prevEth = (prevEthWei / WEI_PER_ETH).toFixed(9);
+        const newEth = ((prevEthWei + ethWeiAwarded) / WEI_PER_ETH).toFixed(9);
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'eth',
           amount: ethAwarded,
+          description: `${prevEth} → ${newEth}`,
           gameScoreId: gameScoreId || null,
         });
       }
       if (usdtAwarded > 0) {
+        const prevU = prevUsdt.toFixed(4);
+        const newU = (prevUsdt + usdtAwarded).toFixed(4);
         await db.insert(realRewards).values({
           userId,
           cryptoType: 'usdt',
           amount: usdtAwarded,
+          description: `$${prevU} → $${newU}`,
           gameScoreId: gameScoreId || null,
         });
       }
@@ -2123,6 +2146,7 @@ export class DatabaseStorage implements IStorage {
         userId: realRewards.userId,
         cryptoType: realRewards.cryptoType,
         amount: realRewards.amount,
+        description: realRewards.description,
         gameScoreId: realRewards.gameScoreId,
         createdAt: realRewards.createdAt,
         username: users.username,
