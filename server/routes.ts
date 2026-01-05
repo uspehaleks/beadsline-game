@@ -958,7 +958,6 @@ export async function registerRoutes(
       
       // Only process crypto rewards if player won
       let cryptoRewards = { btcAwarded: 0, ethAwarded: 0, usdtAwarded: 0, btcSatsAwarded: 0, ethWeiAwarded: 0 };
-      let rewardResult: { usdtAwarded: number; rewardId?: string } = { usdtAwarded: 0 };
       
       if (isVictory) {
         cryptoRewards = await storage.processCryptoRewards(
@@ -968,15 +967,6 @@ export async function registerRoutes(
           validatedData.cryptoUsdt ?? 0,
           score.id
         );
-        
-        const usdtCollected = validatedData.cryptoUsdt ?? 0;
-        if (usdtCollected > 0) {
-          rewardResult = await storage.processUsdtReward(
-            userId, 
-            usdtCollected, 
-            score.id
-          );
-        }
       }
       
       if (isVictory && beadsAwarded > 0) {
@@ -997,8 +987,7 @@ export async function registerRoutes(
         ...score, 
         beadsAwarded,
         isVictory,
-        usdtAwarded: rewardResult.usdtAwarded,
-        rewardId: rewardResult.rewardId,
+        usdtAwarded: cryptoRewards.usdtAwarded,
         cryptoRewards,
         gamesPlayed: updatedUser?.gamesPlayed ?? 0,
       });
