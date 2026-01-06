@@ -3281,24 +3281,26 @@ export class DatabaseStorage implements IStorage {
         characterImageUrl: row.character_image_url || null,
       }));
     } else {
-      // Sum scores from game_scores table for week/today
-      // Note: game_scores uses "user_id" column for od_user_id field
+      // Sum Beads earned from beads_transactions for week/today
       const dateCondition = period === 'today' 
-        ? sql`gs.created_at >= CURRENT_DATE`
-        : sql`gs.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
+        ? sql`bt.created_at >= CURRENT_DATE`
+        : sql`bt.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
         
       const result = await db.execute(sql`
-        WITH period_scores AS (
+        WITH period_beads AS (
           SELECT 
             u.id,
-            COALESCE(SUM(gs.score), 0) as period_points,
+            COALESCE(SUM(bt.amount), 0) as period_points,
             u.total_points,
             u.photo_url,
             c.name as character_name,
             c.gender as character_gender,
             (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
           FROM users u
-          LEFT JOIN game_scores gs ON gs.user_id = u.id AND ${dateCondition}
+          LEFT JOIN beads_transactions bt ON bt.user_id = u.id 
+            AND bt.type = 'game_win_reward'
+            AND bt.deleted_at IS NULL
+            AND ${dateCondition}
           LEFT JOIN characters c ON c.user_id = u.id
           WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
           GROUP BY u.id, u.total_points, u.photo_url, c.name, c.gender
@@ -3308,7 +3310,7 @@ export class DatabaseStorage implements IStorage {
             *,
             RANK() OVER (ORDER BY total_points DESC) as global_rank,
             RANK() OVER (ORDER BY period_points DESC) as period_rank
-          FROM period_scores
+          FROM period_beads
         )
         SELECT * FROM ranked_users
         WHERE total_points >= ${league.minBeads}
