@@ -624,8 +624,14 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
   
   // Verify user has Telegram authentication (no guests allowed)
+  // Exception: admins can authenticate via admin code without Telegram
   const user = await storage.getUser(req.session.userId);
-  if (!user || !user.telegramId) {
+  if (!user) {
+    req.session.destroy(() => {});
+    return res.status(401).json({ error: "User not found" });
+  }
+  
+  if (!user.telegramId && !user.isAdmin) {
     req.session.destroy(() => {});
     return res.status(403).json({ error: "Требуется авторизация через Telegram" });
   }
