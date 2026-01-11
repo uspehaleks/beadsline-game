@@ -180,7 +180,15 @@ export interface IStorage {
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
   awardSignupBonus(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
-  recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void>;
+  recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<{
+    leaguePromotion?: { 
+      previousLeague: string; 
+      newLeague: string; 
+      newLeagueNameRu: string;
+      playerName: string;
+      telegramId: string;
+    } 
+  }>;
   
   getBoosts(): Promise<Boost[]>;
   getBoost(id: string): Promise<Boost | undefined>;
@@ -2263,10 +2271,23 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean, maxCombo: number = 0): Promise<void> {
+  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean, maxCombo: number = 0): Promise<{
+    leaguePromotion?: { 
+      previousLeague: string; 
+      newLeague: string; 
+      newLeagueNameRu: string;
+      playerName: string;
+      telegramId: string;
+    } 
+  }> {
     // First get current user stats for rating calculation
     const user = await this.getUser(userId);
-    if (!user) return;
+    if (!user) return {};
+
+    // Get current league BEFORE updating stats
+    const previousLeagueInfo = await this.getUserLeague(userId);
+    const previousLeagueSlug = previousLeagueInfo?.league.slug || 'bronze';
+    const previousLeagueSortOrder = previousLeagueInfo?.league.sortOrder || 0;
 
     // Calculate new values
     const newTotalScore = (user.totalScore ?? 0) + score; // Cumulative total of all game scores
@@ -2311,6 +2332,35 @@ export class DatabaseStorage implements IStorage {
         ratingScore: newRatingScore,
       })
       .where(eq(users.id, userId));
+
+    // Check for league promotion AFTER updating stats
+    // Only check if user has telegram account (guests don't participate in leagues)
+    if (!user.telegramId) {
+      return {};
+    }
+    
+    const newLeagueInfo = await this.getUserLeague(userId);
+    if (newLeagueInfo && 
+        newLeagueInfo.league.slug !== previousLeagueSlug && 
+        newLeagueInfo.league.sortOrder > previousLeagueSortOrder) {
+      // Player got promoted to a higher league!
+      const character = await this.getCharacter(userId);
+      const playerName = character?.name || user.firstName || user.username || 'Игрок';
+      
+      console.log(`[League Promotion] ${playerName} promoted from ${previousLeagueSlug} to ${newLeagueInfo.league.slug}`);
+      
+      return {
+        leaguePromotion: {
+          previousLeague: previousLeagueSlug,
+          newLeague: newLeagueInfo.league.slug,
+          newLeagueNameRu: newLeagueInfo.league.nameRu,
+          playerName,
+          telegramId: user.telegramId,
+        }
+      };
+    }
+
+    return {};
   }
 
   async getBoosts(): Promise<Boost[]> {

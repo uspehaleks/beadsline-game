@@ -951,7 +951,21 @@ export async function registerRoutes(
       }
       
       // Atomically update games_played, best_score, completed_levels, and rating_score
-      await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory, validatedData.maxCombo ?? 0);
+      const gameResult = await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory, validatedData.maxCombo ?? 0);
+      
+      // Send league promotion congratulation to chat
+      if (gameResult.leaguePromotion) {
+        const { playerName, newLeagueNameRu } = gameResult.leaguePromotion;
+        const chatId = "@Beads_Line_chat";
+        const message = `🎉 <b>Поздравляем!</b>\n\n` +
+          `<b>${playerName}</b> перешёл в лигу <b>${newLeagueNameRu}</b>!\n\n` +
+          `Так держать! 💪`;
+        
+        // Send async - don't wait for result
+        sendTelegramMessage(chatId, message).catch(err => {
+          console.error("Failed to send league promotion message:", err);
+        });
+      }
       
       // Get updated user to return gamesPlayed
       const updatedUser = await storage.getUser(userId);
