@@ -3590,7 +3590,8 @@ export async function registerRoutes(
   // Get crypto wallet addresses from config
   app.get("/api/crypto-wallets", async (req, res) => {
     try {
-      const wallets = await storage.getGameConfig("crypto_wallets");
+      const config = await storage.getGameConfig("crypto_wallets");
+      const wallets = config?.value as Record<string, string> | undefined;
       res.json(wallets || {
         usdt_trc20: "",
         usdt_bep20: "",
