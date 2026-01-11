@@ -965,3 +965,69 @@ export interface GameplayConfig {
     activeColors?: string[];
   };
 }
+
+// ===== BEADS BOX SYSTEM =====
+
+// Stores each user's daily box session
+export const beadsBoxSessions = pgTable("beads_box_sessions", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  sessionDate: date("session_date").notNull(),
+  boxes: jsonb("boxes").notNull(), // Array of 6 box rewards generated for this session
+  selectedBoxIndex: integer("selected_box_index"), // 0-5, null if not selected yet
+  rewardClaimed: boolean("reward_claimed").default(false).notNull(),
+  rewardType: varchar("reward_type", { length: 50 }), // beads, boost, lives, crypto_ticket
+  rewardValue: jsonb("reward_value"), // { amount: 100 } or { boostId: "...", quantity: 1 }
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  claimedAt: timestamp("claimed_at"),
+});
+
+export const insertBeadsBoxSessionSchema = createInsertSchema(beadsBoxSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type BeadsBoxSession = typeof beadsBoxSessions.$inferSelect;
+export type InsertBeadsBoxSession = z.infer<typeof insertBeadsBoxSessionSchema>;
+
+// Crypto game tickets earned from BEADS BOX special prize
+export const cryptoGameTickets = pgTable("crypto_game_tickets", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  sourceSessionId: varchar("source_session_id", { length: 255 }).references(() => beadsBoxSessions.id),
+  status: varchar("status", { length: 20 }).default("available").notNull(), // available, used, expired
+  usedAt: timestamp("used_at"),
+  gameScoreId: varchar("game_score_id", { length: 255 }).references(() => gameScores.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Optional expiration
+});
+
+export const insertCryptoGameTicketSchema = createInsertSchema(cryptoGameTickets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CryptoGameTicket = typeof cryptoGameTickets.$inferSelect;
+export type InsertCryptoGameTicket = z.infer<typeof insertCryptoGameTicketSchema>;
+
+// Box reward types
+export type BeadsBoxRewardType = 'beads' | 'boost' | 'lives' | 'crypto_ticket';
+
+export interface BeadsBoxReward {
+  type: BeadsBoxRewardType;
+  value: number; // For beads/lives: amount. For boost: quantity.
+  boostId?: string; // For boost type
+  boostType?: string; // For display purposes
+}
+
+export interface BeadsBoxConfig {
+  enabled: boolean;
+  boxCount: number; // Default 6
+  rewards: {
+    beads: { min: number; max: number; weight: number };
+    boost: { quantity: number; weight: number };
+    lives: { min: number; max: number; weight: number };
+    cryptoTicket: { weight: number }; // Only for level 10+ players
+  };
+  cryptoTicketMinLevel: number; // Minimum completed levels to get crypto ticket
+}
