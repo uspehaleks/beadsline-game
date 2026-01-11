@@ -111,6 +111,7 @@ export interface IStorage {
   getAllUsers(limit?: number, offset?: number, includeDeleted?: boolean): Promise<User[]>;
   getActiveUsers(limit?: number, offset?: number): Promise<User[]>;
   getUserCount(includeDeleted?: boolean): Promise<number>;
+  getAdmins(): Promise<User[]>;
   
   createGameScore(score: InsertGameScore): Promise<GameScore>;
   getUserScores(userId: string, limit?: number): Promise<GameScore[]>;
@@ -261,7 +262,7 @@ export interface IStorage {
   createCryptoPaymentRequest(userId: string, packageId: string, network: string, priceUsd: number): Promise<CryptoPayment>;
   getPendingCryptoPayments(): Promise<Array<CryptoPayment & { user: User; package: BoostPackage }>>;
   getUserCryptoPayments(userId: string): Promise<CryptoPayment[]>;
-  confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }>;
+  confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string; userId?: string; packageId?: string }>;
   rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }>;
   
   // Team Members & Revenue
@@ -473,6 +474,13 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(isNull(users.deletedAt));
     return Number(result[0]?.count || 0);
+  }
+
+  async getAdmins(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(eq(users.isAdmin, true), isNull(users.deletedAt)));
   }
 
   async createGameScore(insertScore: InsertGameScore): Promise<GameScore> {
@@ -3052,7 +3060,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(cryptoPayments.createdAt));
   }
 
-  async confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }> {
+  async confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string; userId?: string; packageId?: string }> {
     const [payment] = await db
       .select()
       .from(cryptoPayments)
@@ -3086,7 +3094,7 @@ export class DatabaseStorage implements IStorage {
       await this.recordRevenueFromPurchase(paymentId, 0, priceUsd, 'crypto');
     }
 
-    return result;
+    return { ...result, userId: payment.userId, packageId: payment.packageId };
   }
 
   async rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }> {

@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertGameScoreSchema } from "@shared/schema";
@@ -339,6 +339,20 @@ async function sendTelegramMessageWithButton(
   } catch (error) {
     console.error("Failed to send Telegram message:", error);
     return false;
+  }
+}
+
+// Send notification to all admins via Telegram
+async function notifyAdminsViaTelegram(storage: IStorage, message: string): Promise<void> {
+  try {
+    const admins = await storage.getAdmins();
+    for (const admin of admins) {
+      if (admin.telegramId) {
+        await sendTelegramMessage(admin.telegramId, message);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to notify admins:", error);
   }
 }
 
@@ -3630,6 +3644,25 @@ export async function registerRoutes(
 
       const payment = await storage.createCryptoPaymentRequest(userId, id, network, priceUsd);
       
+      // Get user info for admin notification
+      const user = await storage.getUser(userId);
+      const networkLabels: Record<string, string> = {
+        usdt_trc20: 'USDT TRC-20',
+        usdt_bep20: 'USDT BEP-20',
+        usdt_erc20: 'USDT ERC-20',
+        usdt_ton: 'USDT TON',
+      };
+      
+      // Notify admins about new payment request
+      notifyAdminsViaTelegram(storage, 
+        `💰 <b>Новый крипто-платёж!</b>\n\n` +
+        `👤 Пользователь: ${user?.username || user?.firstName || userId}\n` +
+        `📦 Пакет: ${pkg.nameRu}\n` +
+        `💵 Сумма: $${priceUsd.toFixed(2)} USD\n` +
+        `🔗 Сеть: ${networkLabels[network] || network}\n\n` +
+        `Подтвердите платёж в админ-панели.`
+      );
+      
       res.json({ 
         success: true, 
         paymentId: payment.id,
@@ -3679,6 +3712,21 @@ export async function registerRoutes(
       if (!result.success) {
         return res.status(400).json({ error: result.error });
       }
+      
+      // Notify user about confirmed payment
+      if (result.userId && result.packageId) {
+        const user = await storage.getUser(result.userId);
+        const pkg = await storage.getBoostPackage(result.packageId);
+        if (user?.telegramId) {
+          sendTelegramMessage(user.telegramId, 
+            `✅ <b>Платёж подтверждён!</b>\n\n` +
+            `📦 Пакет: ${pkg?.nameRu || 'Бусты'}\n` +
+            `🚀 Бусты добавлены в ваш инвентарь!\n\n` +
+            `Спасибо за покупку!`
+          );
+        }
+      }
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Confirm crypto payment error:", error);
