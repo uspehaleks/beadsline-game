@@ -33,8 +33,14 @@ Key features include:
     - 75% split among active team members proportionally (based on sharePercent, default 15% each)
     - Tracks both Stars and USD revenue from all purchases
     - Editable team member names and roles
+-   **BEADS BOX Daily Lottery**: Daily reward system with 6 mystery boxes. Players select one box per day to receive random rewards:
+    - Rewards: Beads (10-100), Boosts (x1), Lives (1-3), Crypto Game Tickets (special prize for level 10+ players)
+    - Weighted probability system (configurable via admin panel): Beads 40%, Boost 25%, Lives 30%, Crypto Ticket 5%
+    - One selection per day (UTC reset), all boxes revealed after selection
+    - Database tables: beads_box_sessions (daily sessions), crypto_game_tickets (special tickets tracking)
+    - Crypto tickets are one-time use for special crypto game mode (future implementation)
 
-The system uses a `game_config` table for dynamic configuration, allowing admins to adjust economy parameters like points, combo multipliers, crypto spawn chances, and referral rewards at runtime.
+The system uses a `game_config` table for dynamic configuration, allowing admins to adjust economy parameters like points, combo multipliers, crypto spawn chances, referral rewards, and BEADS BOX probabilities at runtime.
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
