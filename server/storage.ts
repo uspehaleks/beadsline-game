@@ -87,6 +87,12 @@ import {
   type WithdrawalRequest,
   type InsertWithdrawalRequest,
   type WithdrawalConfig,
+  seasons,
+  seasonResults,
+  type Season,
+  type InsertSeason,
+  type SeasonResult,
+  type InsertSeasonResult,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -269,7 +275,8 @@ export interface IStorage {
     rank: number;
     odoserId: string;
     name: string;
-    totalPoints: number;
+    ratingScore: number;
+    beadsBalance: number;
     photoUrl: string | null;
     characterType: string | null;
     characterImageUrl: string | null;
@@ -279,7 +286,8 @@ export interface IStorage {
     rank: number;
     odoserId: string;
     name: string;
-    totalPoints: number;
+    ratingScore: number;
+    beadsBalance: number;
     photoUrl: string | null;
     characterType: string | null;
     characterImageUrl: string | null;
@@ -301,6 +309,15 @@ export interface IStorage {
   updateWithdrawalRequest(id: string, updates: { status?: string; adminNote?: string; txHash?: string; processedBy?: string; processedAt?: Date }): Promise<WithdrawalRequest | undefined>;
   getWithdrawalConfig(): Promise<WithdrawalConfig>;
   updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig>;
+  
+  // Seasons
+  getActiveSeason(): Promise<Season | undefined>;
+  getAllSeasons(): Promise<Season[]>;
+  getSeasonByNumber(seasonNumber: number): Promise<Season | undefined>;
+  endCurrentSeason(): Promise<{ success: boolean; season?: Season; resultsCount?: number; error?: string }>;
+  startNewSeason(): Promise<{ success: boolean; season?: Season; error?: string }>;
+  getSeasonResults(seasonId: string): Promise<SeasonResult[]>;
+  getUserSeasonResults(userId: string): Promise<Array<SeasonResult & { season: Season }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3630,6 +3647,186 @@ export class DatabaseStorage implements IStorage {
     });
     
     return newConfig;
+  }
+
+  // Season Management
+  async getActiveSeason(): Promise<Season | undefined> {
+    const [season] = await db
+      .select()
+      .from(seasons)
+      .where(eq(seasons.isActive, true));
+    return season || undefined;
+  }
+
+  async getAllSeasons(): Promise<Season[]> {
+    return db
+      .select()
+      .from(seasons)
+      .orderBy(desc(seasons.seasonNumber));
+  }
+
+  async getSeasonByNumber(seasonNumber: number): Promise<Season | undefined> {
+    const [season] = await db
+      .select()
+      .from(seasons)
+      .where(eq(seasons.seasonNumber, seasonNumber));
+    return season || undefined;
+  }
+
+  async endCurrentSeason(): Promise<{ success: boolean; season?: Season; resultsCount?: number; error?: string }> {
+    const activeSeason = await this.getActiveSeason();
+    if (!activeSeason) {
+      return { success: false, error: 'Нет активного сезона' };
+    }
+
+    try {
+      // 1. Get all players with rating_score > 0 and save their results
+      const playersResult = await db.execute(sql`
+        WITH ranked_users AS (
+          SELECT 
+            u.id,
+            u.rating_score,
+            u.total_wins,
+            u.games_played,
+            u.best_win_streak,
+            RANK() OVER (ORDER BY u.rating_score DESC) as rank
+          FROM users u
+          WHERE u.deleted_at IS NULL 
+            AND u.telegram_id IS NOT NULL 
+            AND u.rating_score > 0
+        )
+        SELECT ru.*, l.slug as league_slug
+        FROM ranked_users ru
+        CROSS JOIN LATERAL (
+          SELECT slug FROM leagues 
+          WHERE (max_rank IS NULL OR ru.rank <= max_rank)
+          ORDER BY sort_order DESC
+          LIMIT 1
+        ) l
+      `);
+
+      // 2. Insert season results for each player
+      let resultsCount = 0;
+      for (const player of playersResult.rows as any[]) {
+        await db.insert(seasonResults).values({
+          seasonId: activeSeason.id,
+          userId: player.id,
+          leagueSlug: player.league_slug || 'bronze',
+          finalRatingScore: Number(player.rating_score),
+          finalRank: Number(player.rank),
+          totalWins: Number(player.total_wins) || 0,
+          totalGames: Number(player.games_played) || 0,
+          bestWinStreak: Number(player.best_win_streak) || 0,
+        });
+        resultsCount++;
+      }
+
+      // 3. Apply soft reset to all players' rating_score (multiply by 0.7)
+      await db.execute(sql`
+        UPDATE users 
+        SET rating_score = FLOOR(rating_score * 0.7)
+        WHERE rating_score > 0 AND deleted_at IS NULL
+      `);
+
+      // 4. Mark the season as ended
+      const [endedSeason] = await db
+        .update(seasons)
+        .set({ 
+          isActive: false, 
+          endDate: new Date() 
+        })
+        .where(eq(seasons.id, activeSeason.id))
+        .returning();
+
+      return { 
+        success: true, 
+        season: endedSeason, 
+        resultsCount 
+      };
+    } catch (error) {
+      console.error('Error ending season:', error);
+      return { success: false, error: 'Ошибка при завершении сезона' };
+    }
+  }
+
+  async startNewSeason(): Promise<{ success: boolean; season?: Season; error?: string }> {
+    // Check if there's already an active season
+    const activeSeason = await this.getActiveSeason();
+    if (activeSeason) {
+      return { success: false, error: 'Уже есть активный сезон. Сначала завершите текущий.' };
+    }
+
+    try {
+      // Get the last season number
+      const allSeasons = await this.getAllSeasons();
+      const lastSeasonNumber = allSeasons.length > 0 ? allSeasons[0].seasonNumber : 0;
+      const newSeasonNumber = lastSeasonNumber + 1;
+
+      // Calculate month and year for the new season
+      const now = new Date();
+      const month = now.getMonth() + 1; // 1-12
+      const year = now.getFullYear();
+
+      // Create new season
+      const [newSeason] = await db
+        .insert(seasons)
+        .values({
+          seasonNumber: newSeasonNumber,
+          month,
+          year,
+          startDate: now,
+          isActive: true,
+        })
+        .returning();
+
+      return { success: true, season: newSeason };
+    } catch (error) {
+      console.error('Error starting new season:', error);
+      return { success: false, error: 'Ошибка при создании нового сезона' };
+    }
+  }
+
+  async getSeasonResults(seasonId: string): Promise<SeasonResult[]> {
+    return db
+      .select()
+      .from(seasonResults)
+      .where(eq(seasonResults.seasonId, seasonId))
+      .orderBy(seasonResults.finalRank);
+  }
+
+  async getUserSeasonResults(userId: string): Promise<Array<SeasonResult & { season: Season }>> {
+    const results = await db
+      .select({
+        id: seasonResults.id,
+        seasonId: seasonResults.seasonId,
+        userId: seasonResults.userId,
+        leagueSlug: seasonResults.leagueSlug,
+        finalRatingScore: seasonResults.finalRatingScore,
+        finalRank: seasonResults.finalRank,
+        totalWins: seasonResults.totalWins,
+        totalGames: seasonResults.totalGames,
+        bestWinStreak: seasonResults.bestWinStreak,
+        createdAt: seasonResults.createdAt,
+        season: seasons,
+      })
+      .from(seasonResults)
+      .innerJoin(seasons, eq(seasonResults.seasonId, seasons.id))
+      .where(eq(seasonResults.userId, userId))
+      .orderBy(desc(seasons.seasonNumber));
+
+    return results.map(r => ({
+      id: r.id,
+      seasonId: r.seasonId,
+      userId: r.userId,
+      leagueSlug: r.leagueSlug,
+      finalRatingScore: r.finalRatingScore,
+      finalRank: r.finalRank,
+      totalWins: r.totalWins,
+      totalGames: r.totalGames,
+      bestWinStreak: r.bestWinStreak,
+      createdAt: r.createdAt,
+      season: r.season,
+    }));
   }
 }
 

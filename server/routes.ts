@@ -1164,6 +1164,114 @@ export async function registerRoutes(
     }
   });
 
+  // Season Management API
+  app.get("/api/season/active", async (req, res) => {
+    try {
+      const season = await storage.getActiveSeason();
+      res.json(season || null);
+    } catch (error) {
+      console.error("Get active season error:", error);
+      res.status(500).json({ error: "Failed to get active season" });
+    }
+  });
+
+  app.get("/api/admin/seasons", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const allSeasons = await storage.getAllSeasons();
+      const activeSeason = await storage.getActiveSeason();
+      
+      res.json({ seasons: allSeasons, activeSeason });
+    } catch (error) {
+      console.error("Get seasons error:", error);
+      res.status(500).json({ error: "Failed to get seasons" });
+    }
+  });
+
+  app.post("/api/admin/seasons/end", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const result = await storage.endCurrentSeason();
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      
+      res.json({ 
+        message: `Сезон ${result.season?.seasonNumber} завершён. Сохранено ${result.resultsCount} результатов. Рейтинги сброшены на 70%.`,
+        season: result.season,
+        resultsCount: result.resultsCount
+      });
+    } catch (error) {
+      console.error("End season error:", error);
+      res.status(500).json({ error: "Failed to end season" });
+    }
+  });
+
+  app.post("/api/admin/seasons/start", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const result = await storage.startNewSeason();
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      
+      res.json({ 
+        message: `Сезон ${result.season?.seasonNumber} начался!`,
+        season: result.season
+      });
+    } catch (error) {
+      console.error("Start season error:", error);
+      res.status(500).json({ error: "Failed to start season" });
+    }
+  });
+
+  app.get("/api/admin/seasons/:id/results", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const { id } = req.params;
+      const results = await storage.getSeasonResults(id);
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Get season results error:", error);
+      res.status(500).json({ error: "Failed to get season results" });
+    }
+  });
+
+  app.get("/api/user/season-history", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const results = await storage.getUserSeasonResults(userId);
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Get user season history error:", error);
+      res.status(500).json({ error: "Failed to get season history" });
+    }
+  });
+
   app.get("/api/config/:key", async (req, res) => {
     try {
       const { key } = req.params;

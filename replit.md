@@ -15,7 +15,7 @@ Key features include:
 -   **Rating Score System**: League rankings use Rating Score formula: (Wins × 10) + (Total Score ÷ 100) + (Completed Levels × 50) + (Combo 5+ × 20) + (Best Win Streak × 15). Rating is calculated after each game and determines league placement.
 -   **Leaderboard**: Real-time ranking system by Rating Score.
 -   **6-Tier League System**: Bronze (no limit), Silver (Top 1000 + 1K Beads), Gold (Top 500 + 5K Beads), Platinum (Top 200 + 10K Beads), Diamond (Top 50 + 25K Beads), Champion (Top 10 + 50K Beads). Leagues are determined by Rating Score rank and minimum Beads balance.
--   **Seasons System**: Monthly seasons with soft rating reset (rating × 0.7). Framework ready for season transitions.
+-   **Seasons System**: Monthly seasons with soft rating reset (rating × 0.7). Admin panel has buttons to end current season (saves all player results, applies 70% rating reset) and start new season. Season 1 started January 2026. Player season history preserved in season_results table.
 -   **Beads Economic System**: In-game currency ("Beads") awarded for victories, managed via a central "House Account." Players can purchase extra lives with Beads. All transactions are audited.
 -   **Crypto Ball Integration**: Special BTC, ETH, USDT balls provide bonus points and crypto rewards, subject to daily and per-game limits, tracked in user balances.
 -   **Level System**: 10 progressively difficult levels, unlocked sequentially upon completion. Progress is persisted per user.
