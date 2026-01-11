@@ -326,12 +326,12 @@ export default function LeagueLeaderboard() {
                           <div 
                             className={`font-bold ${isTopThree ? 'text-lg' : 'text-base'}`}
                             style={{ color: league.themeColor }}
-                            data-testid={`text-points-${entry.rank}`}
+                            data-testid={`text-rating-${entry.rank}`}
                           >
-                            {entry.totalPoints.toLocaleString()}
+                            {entry.ratingScore.toLocaleString()}
                           </div>
                           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                            Beads
+                            Рейтинг
                           </div>
                         </div>
                       </motion.div>
