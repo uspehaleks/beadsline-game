@@ -483,11 +483,13 @@ export class DatabaseStorage implements IStorage {
 
   async getLeaderboard(limit: number = 50, period: 'all' | 'week' | 'today' = 'all'): Promise<LeaderboardEntry[]> {
     if (period === 'all') {
+      // Rank by rating_score for overall leaderboard
       const result = await db.execute(sql`
         SELECT 
           u.id,
           u.username,
           u.photo_url,
+          u.rating_score,
           u.total_points,
           u.games_played,
           u.best_score,
@@ -495,8 +497,8 @@ export class DatabaseStorage implements IStorage {
           (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
         FROM users u
         LEFT JOIN characters c ON c.user_id = u.id
-        WHERE u.deleted_at IS NULL AND u.total_points > 0
-        ORDER BY u.total_points DESC
+        WHERE u.deleted_at IS NULL AND u.rating_score > 0
+        ORDER BY u.rating_score DESC
         LIMIT ${limit}
       `);
 
@@ -505,7 +507,7 @@ export class DatabaseStorage implements IStorage {
         userId: row.id,
         username: row.username,
         photoUrl: row.photo_url,
-        totalPoints: Number(row.total_points),
+        totalPoints: Number(row.rating_score),
         gamesPlayed: row.games_played,
         bestScore: row.best_score,
         characterName: row.character_name || null,
@@ -558,6 +560,7 @@ export class DatabaseStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) return [];
     
+    // Rank friends by rating_score for league-based ranking
     const result = await db.execute(sql`
       WITH user_info AS (
         SELECT referred_by, referral_code FROM users WHERE id = ${userId}
@@ -567,7 +570,7 @@ export class DatabaseStorage implements IStorage {
         FROM users u, user_info ui
         WHERE u.deleted_at IS NULL 
           AND u.id != ${userId}
-          AND u.total_points > 0
+          AND u.rating_score > 0
           AND (
             (ui.referred_by IS NOT NULL AND u.referred_by = ui.referred_by)
             OR (ui.referral_code IS NOT NULL AND u.referred_by = ui.referral_code)
@@ -578,16 +581,17 @@ export class DatabaseStorage implements IStorage {
         u.id,
         u.username,
         u.photo_url,
+        u.rating_score,
         u.total_points,
         u.games_played,
         u.best_score,
         c.name as character_name,
         (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url,
-        RANK() OVER (ORDER BY u.total_points DESC) as rank
+        RANK() OVER (ORDER BY u.rating_score DESC) as rank
       FROM users u
       INNER JOIN friends f ON f.id = u.id
       LEFT JOIN characters c ON c.user_id = u.id
-      ORDER BY u.total_points DESC
+      ORDER BY u.rating_score DESC
       LIMIT ${limit}
     `);
     
@@ -596,7 +600,7 @@ export class DatabaseStorage implements IStorage {
       userId: row.id,
       username: row.username,
       photoUrl: row.photo_url,
-      totalPoints: Number(row.total_points),
+      totalPoints: Number(row.rating_score),
       gamesPlayed: row.games_played,
       bestScore: row.best_score,
       characterName: row.character_name || null,
@@ -2242,12 +2246,40 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<void> {
+  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean, maxCombo: number = 0): Promise<void> {
+    // First get current user stats for rating calculation
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    // Calculate new values
+    const newTotalScore = (user.totalScore ?? 0) + score; // Cumulative total of all game scores
+    const newTotalWins = isVictory ? (user.totalWins ?? 0) + 1 : (user.totalWins ?? 0);
+    const newWinStreak = isVictory ? (user.currentWinStreak ?? 0) + 1 : 0;
+    const newBestWinStreak = Math.max(user.bestWinStreak ?? 0, newWinStreak);
+    const newCombo5Plus = maxCombo >= 5 ? (user.totalCombo5Plus ?? 0) + 1 : (user.totalCombo5Plus ?? 0);
+    
+    // Count completed levels (will be updated below)
+    const currentLevels = user.completedLevels || [];
+    const newLevelCount = isVictory && !currentLevels.includes(levelId) 
+      ? currentLevels.length + 1 
+      : currentLevels.length;
+    
+    // Calculate Rating Score using the formula:
+    // (Wins × 10) + (Total Score ÷ 100) + (Levels × 50) + (Combo5+ × 20) + (Best Win Streak × 15)
+    const newRatingScore = Math.floor(
+      (newTotalWins * 10) +
+      (newTotalScore / 100) + // Cumulative total of all game scores
+      (newLevelCount * 50) +
+      (newCombo5Plus * 20) +
+      (newBestWinStreak * 15)
+    );
+
     await db
       .update(users)
       .set({
         gamesPlayed: sql`COALESCE(${users.gamesPlayed}, 0) + 1`,
         bestScore: sql`GREATEST(COALESCE(${users.bestScore}, 0), ${score})`,
+        totalScore: newTotalScore,
         completedLevels: isVictory 
           ? sql`CASE 
               WHEN ${levelId} = ANY(COALESCE(${users.completedLevels}, ARRAY[]::integer[])) 
@@ -2255,6 +2287,11 @@ export class DatabaseStorage implements IStorage {
               ELSE array_append(COALESCE(${users.completedLevels}, ARRAY[]::integer[]), ${levelId})
             END`
           : sql`COALESCE(${users.completedLevels}, ARRAY[]::integer[])`,
+        totalWins: newTotalWins,
+        currentWinStreak: newWinStreak,
+        bestWinStreak: newBestWinStreak,
+        totalCombo5Plus: newCombo5Plus,
+        ratingScore: newRatingScore,
       })
       .where(eq(users.id, userId));
   }
@@ -3187,12 +3224,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserRank(userId: string): Promise<number> {
-    // Only count registered users (with telegramId) and points > 0 for ranking
+    // Rank by rating_score (not total_points) for league placement
+    // Only count registered users (with telegramId) and rating_score > 0 for ranking
     const result = await db.execute(sql`
       SELECT rank FROM (
-        SELECT id, RANK() OVER (ORDER BY total_points DESC) as rank
+        SELECT id, RANK() OVER (ORDER BY rating_score DESC) as rank
         FROM users
-        WHERE deleted_at IS NULL AND telegram_id IS NOT NULL AND total_points > 0
+        WHERE deleted_at IS NULL AND telegram_id IS NOT NULL AND rating_score > 0
       ) ranked
       WHERE id = ${userId}
     `);
@@ -3210,18 +3248,22 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
+    // Rank is determined by rating_score (not Beads balance)
     const rank = await this.getUserRank(userId);
     const allLeagues = await this.getLeagues();
     
     // Find the highest league the user qualifies for
     // Sort by sortOrder descending to check highest leagues first
+    // League qualification requires BOTH conditions:
+    // 1. Rating Score rank within maxRank (e.g., Top 1000 for Silver)
+    // 2. Beads balance >= minBeads (e.g., 1000 Beads for Silver)
     const sortedLeagues = [...allLeagues].sort((a, b) => b.sortOrder - a.sortOrder);
     
     for (const league of sortedLeagues) {
-      // User must have minimum beads
+      // Condition 1: User must have minimum Beads balance
       if (user.totalPoints < league.minBeads) continue;
       
-      // If league has max rank requirement, user must be within that rank
+      // Condition 2: User's rating_score rank must be within maxRank
       if (league.maxRank !== null && rank > league.maxRank) continue;
       
       return { league, rank };
@@ -3240,7 +3282,8 @@ export class DatabaseStorage implements IStorage {
     rank: number;
     odoserId: string;
     name: string;
-    totalPoints: number;
+    ratingScore: number;
+    beadsBalance: number;
     photoUrl: string | null;
     characterType: string | null;
     characterImageUrl: string | null;
@@ -3249,20 +3292,22 @@ export class DatabaseStorage implements IStorage {
     if (!league) return [];
     
     if (period === 'all') {
-      // Use total_points from users table for all-time
+      // Rank by rating_score for league leaderboard
+      // League eligibility: rating_score rank within maxRank AND beads >= minBeads
       const result = await db.execute(sql`
         WITH ranked_users AS (
           SELECT 
             u.id,
+            u.rating_score,
             u.total_points,
             u.photo_url,
-            RANK() OVER (ORDER BY u.total_points DESC) as rank,
+            RANK() OVER (ORDER BY u.rating_score DESC) as rank,
             c.name as character_name,
             c.gender as character_gender,
             (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
           FROM users u
           LEFT JOIN characters c ON c.user_id = u.id
-          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
+          WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.rating_score > 0
         )
         SELECT * FROM ranked_users
         WHERE total_points >= ${league.minBeads}
@@ -3275,13 +3320,15 @@ export class DatabaseStorage implements IStorage {
         rank: Number(row.rank),
         odoserId: row.id,
         name: row.character_name || 'Игрок',
-        totalPoints: Number(row.total_points),
+        ratingScore: Number(row.rating_score),
+        beadsBalance: Number(row.total_points),
         photoUrl: row.photo_url,
         characterType: row.character_gender || null,
         characterImageUrl: row.character_image_url || null,
       }));
     } else {
       // Sum Beads earned from beads_transactions for week/today
+      // But filter by rating_score rank for league membership
       const dateCondition = period === 'today' 
         ? sql`bt.created_at >= CURRENT_DATE`
         : sql`bt.created_at >= CURRENT_DATE - INTERVAL '7 days'`;
@@ -3292,6 +3339,7 @@ export class DatabaseStorage implements IStorage {
             u.id,
             COALESCE(SUM(bt.amount), 0) as period_points,
             u.total_points,
+            u.rating_score,
             u.photo_url,
             c.name as character_name,
             c.gender as character_gender,
@@ -3303,12 +3351,12 @@ export class DatabaseStorage implements IStorage {
             AND ${dateCondition}
           LEFT JOIN characters c ON c.user_id = u.id
           WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL
-          GROUP BY u.id, u.total_points, u.photo_url, c.name, c.gender
+          GROUP BY u.id, u.total_points, u.rating_score, u.photo_url, c.name, c.gender
         ),
         ranked_users AS (
           SELECT 
             *,
-            RANK() OVER (ORDER BY total_points DESC) as global_rank,
+            RANK() OVER (ORDER BY rating_score DESC) as global_rank,
             RANK() OVER (ORDER BY period_points DESC) as period_rank
           FROM period_beads
         )
@@ -3324,7 +3372,8 @@ export class DatabaseStorage implements IStorage {
         rank: index + 1,
         odoserId: row.id,
         name: row.character_name || 'Игрок',
-        totalPoints: Number(row.period_points),
+        ratingScore: Number(row.rating_score),
+        beadsBalance: Number(row.period_points),
         photoUrl: row.photo_url,
         characterType: row.character_gender || null,
         characterImageUrl: row.character_image_url || null,
@@ -3336,7 +3385,8 @@ export class DatabaseStorage implements IStorage {
     rank: number;
     odoserId: string;
     name: string;
-    totalPoints: number;
+    ratingScore: number;
+    beadsBalance: number;
     photoUrl: string | null;
     characterType: string | null;
     characterImageUrl: string | null;
@@ -3349,7 +3399,7 @@ export class DatabaseStorage implements IStorage {
     if (!league) return [];
     
     // Find friends: users who share the same referrer (referred_by) OR users referred by this user
-    // Filter by league eligibility (minBeads and optionally maxRank)
+    // Filter by league eligibility (minBeads and optionally maxRank by rating_score)
     const result = await db.execute(sql`
       WITH user_info AS (
         SELECT referred_by, referral_code FROM users WHERE id = ${userId}
@@ -3357,10 +3407,11 @@ export class DatabaseStorage implements IStorage {
       all_ranked AS (
         SELECT 
           u.id,
+          u.rating_score,
           u.total_points,
-          RANK() OVER (ORDER BY u.total_points DESC) as global_rank
+          RANK() OVER (ORDER BY u.rating_score DESC) as global_rank
         FROM users u
-        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.rating_score > 0
       ),
       friends AS (
         SELECT u.id
@@ -3380,13 +3431,14 @@ export class DatabaseStorage implements IStorage {
       ranked_friends AS (
         SELECT 
           u.id,
+          u.rating_score,
           u.total_points,
           u.photo_url,
           c.name as character_name,
           c.gender as character_gender,
           (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url,
           ar.global_rank,
-          RANK() OVER (ORDER BY u.total_points DESC) as rank
+          RANK() OVER (ORDER BY u.rating_score DESC) as rank
         FROM users u
         INNER JOIN friends f ON f.id = u.id
         INNER JOIN all_ranked ar ON ar.id = u.id
@@ -3403,7 +3455,8 @@ export class DatabaseStorage implements IStorage {
       rank: Number(row.rank),
       odoserId: row.id,
       name: row.character_name || 'Игрок',
-      totalPoints: Number(row.total_points),
+      ratingScore: Number(row.rating_score),
+      beadsBalance: Number(row.total_points),
       photoUrl: row.photo_url,
       characterType: row.character_gender || null,
       characterImageUrl: row.character_image_url || null,
@@ -3419,9 +3472,10 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           u.id,
           u.total_points,
-          RANK() OVER (ORDER BY u.total_points DESC) as rank
+          u.rating_score,
+          RANK() OVER (ORDER BY u.rating_score DESC) as rank
         FROM users u
-        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.total_points > 0
+        WHERE u.deleted_at IS NULL AND u.telegram_id IS NOT NULL AND u.rating_score > 0
       )
       SELECT COUNT(*) as count FROM ranked_users
       WHERE total_points >= ${league.minBeads}

@@ -31,6 +31,12 @@ export const users = pgTable("users", {
   directReferralsCount: integer("direct_referrals_count").default(0).notNull(),
   completedLevels: integer("completed_levels").array().default([]).notNull(),
   signupBonusReceived: boolean("signup_bonus_received").default(false).notNull(),
+  ratingScore: integer("rating_score").default(0).notNull(),
+  totalScore: integer("total_score").default(0).notNull(),
+  totalWins: integer("total_wins").default(0).notNull(),
+  currentWinStreak: integer("current_win_streak").default(0).notNull(),
+  bestWinStreak: integer("best_win_streak").default(0).notNull(),
+  totalCombo5Plus: integer("total_combo_5_plus").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -111,6 +117,41 @@ export const realRewardsRelations = relations(realRewards, ({ one }) => ({
   gameScore: one(gameScores, {
     fields: [realRewards.gameScoreId],
     references: [gameScores.id],
+  }),
+}));
+
+export const seasons = pgTable("seasons", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  seasonNumber: integer("season_number").notNull().unique(),
+  month: integer("month").notNull(),
+  year: integer("year").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const seasonResults = pgTable("season_results", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  seasonId: varchar("season_id", { length: 255 }).notNull().references(() => seasons.id),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  leagueSlug: varchar("league_slug", { length: 50 }).notNull(),
+  finalRatingScore: integer("final_rating_score").notNull(),
+  finalRank: integer("final_rank").notNull(),
+  totalWins: integer("total_wins").default(0).notNull(),
+  totalGames: integer("total_games").default(0).notNull(),
+  bestWinStreak: integer("best_win_streak").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const seasonResultsRelations = relations(seasonResults, ({ one }) => ({
+  season: one(seasons, {
+    fields: [seasonResults.seasonId],
+    references: [seasons.id],
+  }),
+  user: one(users, {
+    fields: [seasonResults.userId],
+    references: [users.id],
   }),
 }));
 
@@ -460,6 +501,21 @@ export const insertRealRewardSchema = createInsertSchema(realRewards).omit({
   id: true,
   createdAt: true,
 });
+
+export const insertSeasonSchema = createInsertSchema(seasons).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSeasonResultSchema = createInsertSchema(seasonResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSeason = z.infer<typeof insertSeasonSchema>;
+export type Season = typeof seasons.$inferSelect;
+export type InsertSeasonResult = z.infer<typeof insertSeasonResultSchema>;
+export type SeasonResult = typeof seasonResults.$inferSelect;
 
 export const insertReferralRewardSchema = createInsertSchema(referralRewards).omit({
   id: true,

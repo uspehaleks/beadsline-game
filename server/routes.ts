@@ -950,8 +950,8 @@ export async function registerRoutes(
         }
       }
       
-      // Atomically update games_played, best_score, and completed_levels
-      await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory);
+      // Atomically update games_played, best_score, completed_levels, and rating_score
+      await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory, validatedData.maxCombo ?? 0);
       
       // Get updated user to return gamesPlayed
       const updatedUser = await storage.getUser(userId);

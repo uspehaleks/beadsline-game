@@ -28,7 +28,8 @@ interface LeaderboardEntry {
   rank: number;
   odoserId: string;
   name: string;
-  totalPoints: number;
+  ratingScore: number;
+  beadsBalance: number;
   photoUrl: string | null;
   characterType: string | null;
   characterImageUrl: string | null;
