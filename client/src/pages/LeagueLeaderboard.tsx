@@ -1,12 +1,10 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, Sparkles, UserPlus, User } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, Sparkles, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
@@ -47,31 +45,16 @@ interface MyPositionData {
   playerCount: number;
 }
 
-type FilterPeriod = 'all' | 'week' | 'today' | 'friends';
-
-const FILTER_LABELS: Record<FilterPeriod, string> = {
-  all: 'Всё время',
-  week: 'Неделя',
-  today: 'Сегодня',
-  friends: 'Друзья',
-};
-
 export default function LeagueLeaderboard() {
   const params = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const slug = params.slug;
-  const [filter, setFilter] = useState<FilterPeriod>('all');
 
   const { data, isLoading, isFetching } = useQuery<LeagueLeaderboardData>({
-    queryKey: ["/api/leagues", slug, "leaderboard", filter],
+    queryKey: ["/api/leagues", slug, "leaderboard"],
     queryFn: async () => {
-      if (filter === 'friends') {
-        const res = await fetch(`/api/leagues/${slug}/leaderboard/friends?limit=100`);
-        if (!res.ok) throw new Error("Failed to load friends leaderboard");
-        return res.json();
-      }
-      const res = await fetch(`/api/leagues/${slug}/leaderboard?limit=100&period=${filter}`);
+      const res = await fetch(`/api/leagues/${slug}/leaderboard?limit=100`);
       if (!res.ok) throw new Error("Failed to load leaderboard");
       return res.json();
     },
@@ -199,47 +182,18 @@ export default function LeagueLeaderboard() {
       </div>
 
       <div className="p-4">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterPeriod)} className="mb-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all" data-testid="tab-all">
-              {FILTER_LABELS.all}
-            </TabsTrigger>
-            <TabsTrigger value="week" data-testid="tab-week">
-              {FILTER_LABELS.week}
-            </TabsTrigger>
-            <TabsTrigger value="today" data-testid="tab-today">
-              {FILTER_LABELS.today}
-            </TabsTrigger>
-            <TabsTrigger value="friends" data-testid="tab-friends" disabled={!user?.telegramId}>
-              {FILTER_LABELS.friends}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Trophy className="w-5 h-5" />
-              {filter === 'friends' ? 'Рейтинг друзей' : `Топ-100 ${FILTER_LABELS[filter].toLowerCase()}`}
+              Рейтинг лиги
               {isFetching && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {leaderboard.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {filter === 'friends' ? (
-                  <div className="space-y-3">
-                    <UserPlus className="w-12 h-12 mx-auto opacity-50" />
-                    <p>У вас пока нет друзей</p>
-                    <p className="text-sm">Пригласите друзей по реферальной ссылке</p>
-                  </div>
-                ) : filter === 'today' ? (
-                  <p>Сегодня ещё никто не играл</p>
-                ) : filter === 'week' ? (
-                  <p>На этой неделе ещё нет игр</p>
-                ) : (
-                  <p>В этой лиге пока нет игроков</p>
-                )}
+                <p>В этой лиге пока нет игроков</p>
               </div>
             ) : (
               <ScrollArea className="h-[50vh]">
