@@ -257,6 +257,13 @@ export interface IStorage {
   grantUserSkin(userId: string, skinId: string): Promise<UserSkin>;
   setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }>;
   
+  // Manual Crypto Payments (semi-automatic)
+  createCryptoPaymentRequest(userId: string, packageId: string, network: string, priceUsd: number): Promise<CryptoPayment>;
+  getPendingCryptoPayments(): Promise<Array<CryptoPayment & { user: User; package: BoostPackage }>>;
+  getUserCryptoPayments(userId: string): Promise<CryptoPayment[]>;
+  confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }>;
+  rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }>;
+  
   // Team Members & Revenue
   getTeamMembers(activeOnly?: boolean): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;
@@ -3006,6 +3013,106 @@ export class DatabaseStorage implements IStorage {
       .set({ isActive: true })
       .where(eq(userSkins.id, owned.id));
     
+    return { success: true };
+  }
+
+  // Manual Crypto Payments (semi-automatic)
+  async createCryptoPaymentRequest(userId: string, packageId: string, network: string, priceUsd: number): Promise<CryptoPayment> {
+    const [payment] = await db.insert(cryptoPayments).values({
+      userId,
+      packageId,
+      network,
+      priceUsd: priceUsd.toFixed(2),
+      status: 'pending',
+    }).returning();
+    return payment;
+  }
+
+  async getPendingCryptoPayments(): Promise<Array<CryptoPayment & { user: User; package: BoostPackage }>> {
+    const payments = await db
+      .select()
+      .from(cryptoPayments)
+      .innerJoin(users, eq(cryptoPayments.userId, users.id))
+      .innerJoin(boostPackages, eq(cryptoPayments.packageId, boostPackages.id))
+      .where(eq(cryptoPayments.status, 'pending'))
+      .orderBy(desc(cryptoPayments.createdAt));
+    
+    return payments.map(p => ({
+      ...p.crypto_payments,
+      user: p.users,
+      package: p.boost_packages,
+    }));
+  }
+
+  async getUserCryptoPayments(userId: string): Promise<CryptoPayment[]> {
+    return await db
+      .select()
+      .from(cryptoPayments)
+      .where(eq(cryptoPayments.userId, userId))
+      .orderBy(desc(cryptoPayments.createdAt));
+  }
+
+  async confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }> {
+    const [payment] = await db
+      .select()
+      .from(cryptoPayments)
+      .where(eq(cryptoPayments.id, paymentId));
+    
+    if (!payment) {
+      return { success: false, error: 'Платёж не найден' };
+    }
+    
+    if (payment.status !== 'pending') {
+      return { success: false, error: 'Платёж уже обработан' };
+    }
+
+    // Update payment status
+    await db
+      .update(cryptoPayments)
+      .set({
+        status: 'confirmed',
+        confirmedBy: adminId,
+        adminNote: note || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(cryptoPayments.id, paymentId));
+
+    // Process the boost package purchase
+    const result = await this.purchaseBoostPackage(payment.userId, payment.packageId, `crypto_${paymentId}`);
+    
+    if (result.success) {
+      // Record revenue for accounting
+      const priceUsd = Number(payment.priceUsd) || 0;
+      await this.recordRevenueFromPurchase(paymentId, 0, priceUsd, 'crypto');
+    }
+
+    return result;
+  }
+
+  async rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }> {
+    const [payment] = await db
+      .select()
+      .from(cryptoPayments)
+      .where(eq(cryptoPayments.id, paymentId));
+    
+    if (!payment) {
+      return { success: false, error: 'Платёж не найден' };
+    }
+    
+    if (payment.status !== 'pending') {
+      return { success: false, error: 'Платёж уже обработан' };
+    }
+
+    await db
+      .update(cryptoPayments)
+      .set({
+        status: 'rejected',
+        confirmedBy: adminId,
+        adminNote: note || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(cryptoPayments.id, paymentId));
+
     return { success: true };
   }
 

@@ -291,19 +291,16 @@ export const boostPackagePurchases = pgTable("boost_package_purchases", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// NOWPayments crypto payment records
+// Manual crypto payment requests (semi-automatic)
 export const cryptoPayments = pgTable("crypto_payments", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
   packageId: varchar("package_id", { length: 255 }).notNull().references(() => boostPackages.id),
-  nowPaymentId: varchar("now_payment_id", { length: 255 }).unique(), // NOWPayments payment_id
-  payAddress: text("pay_address"), // crypto address to pay to
-  payCurrency: varchar("pay_currency", { length: 20 }), // btc, eth, usdt, etc.
-  payAmount: numeric("pay_amount", { precision: 30, scale: 18 }), // amount in crypto
-  priceAmount: numeric("price_amount", { precision: 10, scale: 2 }).notNull(), // price in USD
-  priceCurrency: varchar("price_currency", { length: 10 }).default("usd").notNull(),
-  actuallyPaid: numeric("actually_paid", { precision: 30, scale: 18 }), // amount actually paid
-  status: varchar("status", { length: 30 }).default("waiting").notNull(), // waiting, confirming, confirmed, sending, finished, failed, expired
+  network: varchar("network", { length: 30 }).notNull(), // usdt_trc20, usdt_bep20, usdt_erc20, usdt_ton
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }).notNull(), // price in USD
+  status: varchar("status", { length: 30 }).default("pending").notNull(), // pending, confirmed, rejected
+  adminNote: text("admin_note"), // note from admin when confirming/rejecting
+  confirmedBy: varchar("confirmed_by", { length: 255 }), // admin who confirmed
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -3585,6 +3585,149 @@ export async function registerRoutes(
     }
   });
 
+  // ===== SEMI-AUTOMATIC CRYPTO PAYMENTS =====
+
+  // Get crypto wallet addresses from config
+  app.get("/api/crypto-wallets", async (req, res) => {
+    try {
+      const wallets = await storage.getGameConfig("crypto_wallets");
+      res.json(wallets || {
+        usdt_trc20: "",
+        usdt_bep20: "",
+        usdt_erc20: "",
+        usdt_ton: "",
+      });
+    } catch (error) {
+      console.error("Get crypto wallets error:", error);
+      res.status(500).json({ error: "Failed to get wallet addresses" });
+    }
+  });
+
+  // Create crypto payment request ("I paid" button)
+  app.post("/api/boost-packages/:id/crypto-payment", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { network } = req.body; // usdt_trc20, usdt_bep20, usdt_erc20, usdt_ton
+
+      if (!network || !['usdt_trc20', 'usdt_bep20', 'usdt_erc20', 'usdt_ton'].includes(network)) {
+        return res.status(400).json({ error: "Invalid network" });
+      }
+
+      const pkg = await storage.getBoostPackage(id);
+      if (!pkg) {
+        return res.status(404).json({ error: "Package not found" });
+      }
+
+      if (!pkg.isActive) {
+        return res.status(400).json({ error: "Package is not available" });
+      }
+
+      const priceUsd = pkg.priceUsd ? parseFloat(pkg.priceUsd) : (pkg.priceStars / 50);
+
+      const payment = await storage.createCryptoPaymentRequest(userId, id, network, priceUsd);
+      
+      res.json({ 
+        success: true, 
+        paymentId: payment.id,
+        message: "Заявка отправлена. Ожидайте подтверждения от администратора." 
+      });
+    } catch (error) {
+      console.error("Create crypto payment request error:", error);
+      res.status(500).json({ error: "Failed to create payment request" });
+    }
+  });
+
+  // Get user's pending crypto payments
+  app.get("/api/user/crypto-payments", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const payments = await storage.getUserCryptoPayments(userId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Get user crypto payments error:", error);
+      res.status(500).json({ error: "Failed to get payments" });
+    }
+  });
+
+  // Admin: Get pending crypto payments
+  app.get("/api/admin/pending-crypto-payments", requireAdmin, async (req, res) => {
+    try {
+      const payments = await storage.getPendingCryptoPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Get pending crypto payments error:", error);
+      res.status(500).json({ error: "Failed to get pending payments" });
+    }
+  });
+
+  // Admin: Confirm crypto payment
+  app.post("/api/admin/crypto-payments/:id/confirm", requireAdmin, async (req, res) => {
+    try {
+      const adminId = req.session?.userId;
+      if (!adminId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { note } = req.body;
+
+      const result = await storage.confirmCryptoPayment(id, adminId, note);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Confirm crypto payment error:", error);
+      res.status(500).json({ error: "Failed to confirm payment" });
+    }
+  });
+
+  // Admin: Reject crypto payment
+  app.post("/api/admin/crypto-payments/:id/reject", requireAdmin, async (req, res) => {
+    try {
+      const adminId = req.session?.userId;
+      if (!adminId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { note } = req.body;
+
+      const result = await storage.rejectCryptoPayment(id, adminId, note);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Reject crypto payment error:", error);
+      res.status(500).json({ error: "Failed to reject payment" });
+    }
+  });
+
+  // Admin: Update crypto wallet addresses
+  app.post("/api/admin/crypto-wallets", requireAdmin, async (req, res) => {
+    try {
+      const { usdt_trc20, usdt_bep20, usdt_erc20, usdt_ton } = req.body;
+      
+      await storage.setGameConfig({
+        key: "crypto_wallets",
+        value: {
+          usdt_trc20: usdt_trc20 || "",
+          usdt_bep20: usdt_bep20 || "",
+          usdt_erc20: usdt_erc20 || "",
+          usdt_ton: usdt_ton || "",
+        },
+        description: "Адреса кошельков для криптоплатежей",
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Update crypto wallets error:", error);
+      res.status(500).json({ error: "Failed to update wallet addresses" });
+    }
+  });
+
   // Purchase a boost package (requires auth) - called after successful payment
   app.post("/api/boost-packages/:id/purchase", requireAuth, async (req, res) => {
     try {
