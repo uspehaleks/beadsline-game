@@ -93,6 +93,14 @@ import {
   type InsertSeason,
   type SeasonResult,
   type InsertSeasonResult,
+  beadsBoxSessions,
+  cryptoGameTickets,
+  type BeadsBoxSession,
+  type InsertBeadsBoxSession,
+  type CryptoGameTicket,
+  type InsertCryptoGameTicket,
+  type BeadsBoxReward,
+  type BeadsBoxConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
@@ -327,6 +335,16 @@ export interface IStorage {
   startNewSeason(): Promise<{ success: boolean; season?: Season; error?: string }>;
   getSeasonResults(seasonId: string): Promise<SeasonResult[]>;
   getUserSeasonResults(userId: string): Promise<Array<SeasonResult & { season: Season }>>;
+  
+  // BEADS BOX System
+  getBeadsBoxConfig(): Promise<BeadsBoxConfig>;
+  updateBeadsBoxConfig(config: Partial<BeadsBoxConfig>): Promise<BeadsBoxConfig>;
+  getUserDailyBoxSession(userId: string, date: string): Promise<BeadsBoxSession | undefined>;
+  createDailyBoxSession(userId: string, date: string, boxes: BeadsBoxReward[]): Promise<BeadsBoxSession>;
+  selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }>;
+  getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]>;
+  useCryptoTicket(ticketId: string, gameScoreId: string): Promise<{ success: boolean; error?: string }>;
+  createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3921,6 +3939,158 @@ export class DatabaseStorage implements IStorage {
       createdAt: r.createdAt,
       season: r.season,
     }));
+  }
+
+  // ===== BEADS BOX SYSTEM =====
+  
+  async getBeadsBoxConfig(): Promise<BeadsBoxConfig> {
+    const config = await this.getGameConfig('beads_box_config');
+    if (config) {
+      return config.value as BeadsBoxConfig;
+    }
+    // Default config
+    const defaultConfig: BeadsBoxConfig = {
+      enabled: true,
+      boxCount: 6,
+      rewards: {
+        beads: { min: 10, max: 100, weight: 40 },
+        boost: { quantity: 1, weight: 25 },
+        lives: { min: 1, max: 3, weight: 30 },
+        cryptoTicket: { weight: 5 },
+      },
+      cryptoTicketMinLevel: 10,
+    };
+    await this.setGameConfig({ key: 'beads_box_config', value: defaultConfig, description: 'Настройки BEADS BOX' });
+    return defaultConfig;
+  }
+
+  async updateBeadsBoxConfig(config: Partial<BeadsBoxConfig>): Promise<BeadsBoxConfig> {
+    const current = await this.getBeadsBoxConfig();
+    const updated = { ...current, ...config };
+    await this.setGameConfig({ key: 'beads_box_config', value: updated, description: 'Настройки BEADS BOX' });
+    return updated;
+  }
+
+  async getUserDailyBoxSession(userId: string, date: string): Promise<BeadsBoxSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(beadsBoxSessions)
+      .where(and(
+        eq(beadsBoxSessions.userId, userId),
+        eq(beadsBoxSessions.sessionDate, date)
+      ));
+    return session || undefined;
+  }
+
+  async createDailyBoxSession(userId: string, date: string, boxes: BeadsBoxReward[]): Promise<BeadsBoxSession> {
+    const [session] = await db
+      .insert(beadsBoxSessions)
+      .values({
+        userId,
+        sessionDate: date,
+        boxes,
+        rewardClaimed: false,
+      })
+      .returning();
+    return session;
+  }
+
+  async selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }> {
+    // Get the session
+    const [session] = await db.select().from(beadsBoxSessions).where(eq(beadsBoxSessions.id, sessionId));
+    if (!session) {
+      return { success: false, error: 'Сессия не найдена' };
+    }
+    if (session.selectedBoxIndex !== null) {
+      return { success: false, error: 'Бокс уже выбран сегодня' };
+    }
+    if (boxIndex < 0 || boxIndex >= 6) {
+      return { success: false, error: 'Неверный индекс бокса' };
+    }
+
+    const boxes = session.boxes as BeadsBoxReward[];
+    const reward = boxes[boxIndex];
+
+    // Update session with selection
+    await db
+      .update(beadsBoxSessions)
+      .set({
+        selectedBoxIndex: boxIndex,
+        rewardClaimed: true,
+        rewardType: reward.type,
+        rewardValue: reward,
+        claimedAt: new Date(),
+      })
+      .where(eq(beadsBoxSessions.id, sessionId));
+
+    // Apply reward based on type
+    const user = await this.getUser(session.userId);
+    if (!user) {
+      return { success: false, error: 'Пользователь не найден' };
+    }
+
+    switch (reward.type) {
+      case 'beads':
+        await this.awardBeadsWithHouse(session.userId, reward.value, 'bonus', `BEADS BOX награда: ${reward.value} Beads`);
+        break;
+      case 'lives':
+        await this.awardBeadsWithHouse(session.userId, reward.value * 50, 'bonus', `BEADS BOX: ${reward.value} жизней (${reward.value * 50} Beads)`);
+        break;
+      case 'boost':
+        if (reward.boostId) {
+          await this.setUserBoostQuantity(session.userId, reward.boostId, (await this.getUserBoostInventory(session.userId)).find(b => b.boostId === reward.boostId)?.quantity || 0 + reward.value);
+        }
+        break;
+      case 'crypto_ticket':
+        await this.createCryptoTicket(session.userId, sessionId);
+        break;
+    }
+
+    return { success: true, reward };
+  }
+
+  async getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]> {
+    return db
+      .select()
+      .from(cryptoGameTickets)
+      .where(and(
+        eq(cryptoGameTickets.userId, userId),
+        eq(cryptoGameTickets.status, 'available')
+      ))
+      .orderBy(desc(cryptoGameTickets.createdAt));
+  }
+
+  async useCryptoTicket(ticketId: string, gameScoreId: string): Promise<{ success: boolean; error?: string }> {
+    const [ticket] = await db.select().from(cryptoGameTickets).where(eq(cryptoGameTickets.id, ticketId));
+    if (!ticket) {
+      return { success: false, error: 'Билет не найден' };
+    }
+    if (ticket.status !== 'available') {
+      return { success: false, error: 'Билет уже использован' };
+    }
+
+    await db
+      .update(cryptoGameTickets)
+      .set({
+        status: 'used',
+        usedAt: new Date(),
+        gameScoreId,
+      })
+      .where(eq(cryptoGameTickets.id, ticketId));
+
+    return { success: true };
+  }
+
+  async createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket> {
+    const [ticket] = await db
+      .insert(cryptoGameTickets)
+      .values({
+        userId,
+        sourceSessionId: sessionId,
+        status: 'available',
+      })
+      .returning();
+    return ticket;
   }
 }
 
