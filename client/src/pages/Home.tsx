@@ -9,6 +9,7 @@ import { BoostShop } from '@/components/BoostShop';
 import { AccessoryShop } from '@/components/AccessoryShop';
 import { CharacterCustomize } from '@/components/CharacterCustomize';
 import { CommunityInviteDialog } from '@/components/CommunityInviteDialog';
+import { BeadsBox } from '@/components/BeadsBox';
 import CharacterCreation from '@/pages/CharacterCreation';
 import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -22,6 +23,7 @@ export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig>(LEVELS[0]);
   const [showCommunityInvite, setShowCommunityInvite] = useState(false);
+  const [showBeadsBox, setShowBeadsBox] = useState(false);
   const [leaderboardFilter, setLeaderboardFilter] = useState<LeaderboardFilter>('all');
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
 
@@ -109,6 +111,10 @@ export default function Home() {
     setCurrentScreen('customize');
   }, []);
 
+  const handleBeadsBox = useCallback(() => {
+    setShowBeadsBox(true);
+  }, []);
+
   const handleCharacterCreated = useCallback(() => {
     refetchCharacter();
   }, [refetchCharacter]);
@@ -180,6 +186,7 @@ export default function Home() {
             onShop={handleShop}
             onAccessoryShop={handleAccessoryShop}
             onCustomize={handleCustomize}
+            onBeadsBox={handleBeadsBox}
             isLoading={submitScoreMutation.isPending}
           />
         );
@@ -193,6 +200,9 @@ export default function Home() {
         open={showCommunityInvite} 
         onOpenChange={setShowCommunityInvite} 
       />
+      {showBeadsBox && (
+        <BeadsBox onClose={() => setShowBeadsBox(false)} />
+      )}
     </>
   );
 }

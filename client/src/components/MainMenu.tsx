@@ -22,6 +22,7 @@ interface MainMenuProps {
   onShop: () => void;
   onAccessoryShop?: () => void;
   onCustomize?: () => void;
+  onBeadsBox?: () => void;
   isLoading?: boolean;
 }
 
@@ -361,7 +362,7 @@ function CryptoCard({ type, balance, label }: { type: 'btc' | 'eth' | 'usdt'; ba
   );
 }
 
-export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop, onCustomize, isLoading }: MainMenuProps) {
+export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop, onCustomize, onBeadsBox, isLoading }: MainMenuProps) {
   const [, navigate] = useLocation();
   const [showReferral, setShowReferral] = useState(false);
   const [showReferralStats, setShowReferralStats] = useState(false);
@@ -921,6 +922,24 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                 <div className="flex flex-col items-center gap-1 text-center">
                   <Gift className="w-6 h-6" style={{ color: '#a855f7' }} />
                   <span className="font-display text-sm font-semibold" style={{ color: '#a855f7' }}>Аксессуары</span>
+                </div>
+              </Card>
+            )}
+            
+            {onBeadsBox && (
+              <Card 
+                className="flex-1 p-3 cursor-pointer hover-elevate active-elevate-2 border-0 relative overflow-visible"
+                onClick={onBeadsBox}
+                data-testid="button-beads-box"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+                  boxShadow: '0 0 15px rgba(16, 185, 129, 0.4)',
+                }}
+              >
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <Gift className="w-6 h-6" style={{ color: '#000' }} />
+                  <span className="font-display text-sm font-semibold" style={{ color: '#000' }}>BEADS BOX</span>
                 </div>
               </Card>
             )}
