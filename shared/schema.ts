@@ -766,7 +766,8 @@ export type TransactionType =
   | 'admin_adjustment'
   | 'house_deposit'
   | 'house_withdrawal'
-  | 'signup_bonus';
+  | 'signup_bonus'
+  | 'beads_box_reward';
 
 export interface HouseAccountConfig {
   balance: number;

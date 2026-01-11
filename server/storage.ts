@@ -4031,10 +4031,10 @@ export class DatabaseStorage implements IStorage {
 
     switch (reward.type) {
       case 'beads':
-        await this.awardBeadsWithHouse(session.userId, reward.value, 'bonus', `BEADS BOX награда: ${reward.value} Beads`);
+        await this.awardBeadsWithHouse(session.userId, reward.value, 'beads_box_reward', `BEADS BOX награда: ${reward.value} Beads`);
         break;
       case 'lives':
-        await this.awardBeadsWithHouse(session.userId, reward.value * 50, 'bonus', `BEADS BOX: ${reward.value} жизней (${reward.value * 50} Beads)`);
+        await this.awardBeadsWithHouse(session.userId, reward.value * 50, 'beads_box_reward', `BEADS BOX: ${reward.value} жизней (${reward.value * 50} Beads)`);
         break;
       case 'boost':
         if (reward.boostId) {

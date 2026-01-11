@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertGameScoreSchema } from "@shared/schema";
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -82,6 +82,72 @@ function formatNumbersInObject(obj: any): any {
     return result;
   }
   return obj;
+}
+
+// Generate 6 random boxes with rewards based on config and player level
+function generateDailyBoxes(config: BeadsBoxConfig, completedLevels: number): BeadsBoxReward[] {
+  const boxes: BeadsBoxReward[] = [];
+  const { rewards, cryptoTicketMinLevel } = config;
+  
+  // Calculate total weight
+  let totalWeight = rewards.beads.weight + rewards.boost.weight + rewards.lives.weight;
+  const canGetCryptoTicket = completedLevels >= cryptoTicketMinLevel;
+  if (canGetCryptoTicket) {
+    totalWeight += rewards.cryptoTicket.weight;
+  }
+  
+  // Available boost types
+  const boostTypes = [
+    { id: 'slowdown', name: 'Замедление' },
+    { id: 'bomb', name: 'Бомба' },
+    { id: 'rainbow', name: 'Радуга' },
+    { id: 'rewind', name: 'Отмотка' },
+  ];
+  
+  for (let i = 0; i < 6; i++) {
+    const roll = Math.random() * totalWeight;
+    let cumWeight = 0;
+    
+    // Beads reward
+    cumWeight += rewards.beads.weight;
+    if (roll < cumWeight) {
+      const amount = Math.floor(Math.random() * (rewards.beads.max - rewards.beads.min + 1)) + rewards.beads.min;
+      boxes.push({ type: 'beads', value: amount });
+      continue;
+    }
+    
+    // Boost reward
+    cumWeight += rewards.boost.weight;
+    if (roll < cumWeight) {
+      const boost = boostTypes[Math.floor(Math.random() * boostTypes.length)];
+      boxes.push({ 
+        type: 'boost', 
+        value: rewards.boost.quantity, 
+        boostId: boost.id,
+        boostType: boost.name 
+      });
+      continue;
+    }
+    
+    // Lives reward
+    cumWeight += rewards.lives.weight;
+    if (roll < cumWeight) {
+      const amount = Math.floor(Math.random() * (rewards.lives.max - rewards.lives.min + 1)) + rewards.lives.min;
+      boxes.push({ type: 'lives', value: amount });
+      continue;
+    }
+    
+    // Crypto ticket (only if player qualifies)
+    if (canGetCryptoTicket) {
+      boxes.push({ type: 'crypto_ticket', value: 1 });
+    } else {
+      // Fallback to beads if can't get crypto ticket
+      const amount = Math.floor(Math.random() * (rewards.beads.max - rewards.beads.min + 1)) + rewards.beads.min;
+      boxes.push({ type: 'beads', value: amount });
+    }
+  }
+  
+  return boxes;
 }
 
 async function initializeDefaultGameSkins(): Promise<string | null> {
@@ -1297,6 +1363,139 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get user season history error:", error);
       res.status(500).json({ error: "Failed to get season history" });
+    }
+  });
+
+  // ===== BEADS BOX SYSTEM =====
+  
+  // Get or create daily box session
+  app.get("/api/beads-box/daily", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const config = await storage.getBeadsBoxConfig();
+      if (!config.enabled) {
+        return res.json({ enabled: false, message: "BEADS BOX временно недоступен" });
+      }
+
+      // Get today's date in UTC
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check for existing session
+      let session = await storage.getUserDailyBoxSession(userId, today);
+      
+      if (!session) {
+        // Generate 6 random boxes with rewards
+        const boxes = generateDailyBoxes(config, user.completedLevels?.length || 0);
+        session = await storage.createDailyBoxSession(userId, today, boxes);
+      }
+
+      // Get user's crypto tickets
+      const cryptoTickets = await storage.getUserCryptoTickets(userId);
+
+      res.json({
+        enabled: true,
+        session: {
+          id: session.id,
+          boxes: session.selectedBoxIndex === null ? Array(6).fill({ hidden: true }) : session.boxes,
+          selectedBoxIndex: session.selectedBoxIndex,
+          rewardClaimed: session.rewardClaimed,
+          claimedReward: session.rewardValue,
+        },
+        cryptoTickets: cryptoTickets.length,
+        canGetCryptoTicket: (user.completedLevels?.length || 0) >= config.cryptoTicketMinLevel,
+      });
+    } catch (error) {
+      console.error("Get daily box error:", error);
+      res.status(500).json({ error: "Failed to get daily box" });
+    }
+  });
+
+  // Choose a box
+  app.post("/api/beads-box/choose", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { sessionId, boxIndex } = req.body;
+
+      if (!sessionId || boxIndex === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Verify session belongs to user
+      const today = new Date().toISOString().split('T')[0];
+      const session = await storage.getUserDailyBoxSession(userId, today);
+      if (!session || session.id !== sessionId) {
+        return res.status(403).json({ error: "Invalid session" });
+      }
+
+      const result = await storage.selectBox(sessionId, boxIndex);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      // Return all boxes with their rewards now that one is selected
+      const fullSession = await storage.getUserDailyBoxSession(userId, today);
+
+      res.json({
+        success: true,
+        selectedIndex: boxIndex,
+        reward: result.reward,
+        allBoxes: fullSession?.boxes,
+      });
+    } catch (error) {
+      console.error("Choose box error:", error);
+      res.status(500).json({ error: "Failed to choose box" });
+    }
+  });
+
+  // Get BEADS BOX config (admin)
+  app.get("/api/admin/beads-box/config", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const config = await storage.getBeadsBoxConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get beads box config error:", error);
+      res.status(500).json({ error: "Failed to get config" });
+    }
+  });
+
+  // Update BEADS BOX config (admin)
+  app.post("/api/admin/beads-box/config", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const config = await storage.updateBeadsBoxConfig(req.body);
+      res.json(config);
+    } catch (error) {
+      console.error("Update beads box config error:", error);
+      res.status(500).json({ error: "Failed to update config" });
+    }
+  });
+
+  // Get user crypto tickets
+  app.get("/api/user/crypto-tickets", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const tickets = await storage.getUserCryptoTickets(userId);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Get crypto tickets error:", error);
+      res.status(500).json({ error: "Failed to get crypto tickets" });
     }
   });
 
