@@ -54,11 +54,15 @@ import {
   ShoppingCart,
   ArrowDownToLine,
   ExternalLink,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  Play,
+  StopCircle
 } from "lucide-react";
 import { SiEthereum, SiTether } from "react-icons/si";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -603,6 +607,10 @@ export default function Admin() {
                 <Trophy className="w-4 h-4 mr-1.5" />
                 Лиги
               </TabsTrigger>
+              <TabsTrigger value="seasons" data-testid="tab-seasons" className="w-full justify-start">
+                <Calendar className="w-4 h-4 mr-1.5" />
+                Сезоны
+              </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="w-full justify-start">
                 <Bot className="w-4 h-4 mr-1.5" />
                 Уведомления
@@ -687,6 +695,9 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="leagues">
             <LeaguesTab />
+          </TabsContent>
+          <TabsContent value="seasons">
+            <SeasonsTab />
           </TabsContent>
           <TabsContent value="notifications">
             <NotificationsTab />
@@ -7404,6 +7415,264 @@ function LeaguesTab() {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface SeasonData {
+  id: number;
+  seasonNumber: number;
+  month: number;
+  year: number;
+  startDate: string;
+  endDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface SeasonResultData {
+  id: number;
+  seasonId: number;
+  userId: string;
+  finalRank: number;
+  finalLeague: string;
+  finalRatingScore: number;
+  totalWins: number;
+  totalGames: number;
+  bestWinStreak: number;
+  beadsEarned: number;
+  createdAt: string;
+}
+
+interface SeasonsResponse {
+  seasons: SeasonData[];
+  activeSeason: SeasonData | null;
+}
+
+function SeasonsTab() {
+  const { toast } = useToast();
+
+  const { data: seasonsData, isLoading } = useQuery<SeasonsResponse>({
+    queryKey: ["/api/admin/seasons"],
+  });
+
+  const seasons = seasonsData?.seasons || [];
+  const currentSeason = seasonsData?.activeSeason;
+
+  const endSeasonMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/seasons/end");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/seasons"] });
+      toast({ 
+        title: "Сезон завершён", 
+        description: `Сохранено ${data.resultsCount || 0} результатов. Рейтинги сброшены на 70%.` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Ошибка", 
+        description: error.message || "Не удалось завершить сезон", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const startSeasonMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/seasons/start");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/seasons"] });
+      toast({ 
+        title: "Новый сезон начат", 
+        description: `Сезон ${data.season?.seasonNumber || ''} активен!` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Ошибка", 
+        description: error.message || "Не удалось начать новый сезон", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const getMonthName = (month: number) => {
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    return months[month - 1] || '';
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Управление сезонами
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Завершение и начало сезонов. При завершении сезона все результаты сохраняются, рейтинги сбрасываются на 70%.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : (
+            <>
+              {/* Current Season Status */}
+              <div className="p-4 bg-muted rounded-lg">
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Текущий сезон
+                </h3>
+                {currentSeason ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default" className="bg-green-500">Активен</Badge>
+                      <span className="text-lg font-semibold">Сезон {currentSeason.seasonNumber}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getMonthName(currentSeason.month)} {currentSeason.year}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Начат: {new Date(currentSeason.startDate).toLocaleDateString('ru-RU')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">
+                    Нет активного сезона. Начните новый сезон.
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      disabled={!currentSeason || endSeasonMutation.isPending}
+                      data-testid="button-end-season"
+                    >
+                      {endSeasonMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <StopCircle className="w-4 h-4 mr-2" />
+                      )}
+                      Завершить сезон
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Завершить текущий сезон?</DialogTitle>
+                      <DialogDescription>
+                        Это действие:
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>Сохранит результаты всех игроков в архив</li>
+                          <li>Сбросит рейтинги всех игроков на 70%</li>
+                          <li>Пометит сезон как завершённый</li>
+                        </ul>
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                      <DialogClose asChild>
+                        <Button variant="outline">Отмена</Button>
+                      </DialogClose>
+                      <DialogClose asChild>
+                        <Button 
+                          variant="destructive" 
+                          onClick={() => endSeasonMutation.mutate()}
+                          data-testid="button-confirm-end-season"
+                        >
+                          Да, завершить сезон
+                        </Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="default"
+                      disabled={currentSeason?.isActive || startSeasonMutation.isPending}
+                      data-testid="button-start-season"
+                    >
+                      {startSeasonMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      Начать новый сезон
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Начать новый сезон?</DialogTitle>
+                      <DialogDescription>
+                        Будет создан новый сезон для текущего месяца.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                      <DialogClose asChild>
+                        <Button variant="outline">Отмена</Button>
+                      </DialogClose>
+                      <DialogClose asChild>
+                        <Button 
+                          onClick={() => startSeasonMutation.mutate()}
+                          data-testid="button-confirm-start-season"
+                        >
+                          Да, начать сезон
+                        </Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Season History */}
+              <div>
+                <h3 className="font-medium mb-3">История сезонов</h3>
+                {seasons && seasons.length > 0 ? (
+                  <div className="space-y-2">
+                    {seasons.map((season) => (
+                      <div 
+                        key={season.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                        data-testid={`card-season-${season.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-lg font-medium" data-testid={`text-season-number-${season.id}`}>
+                            Сезон {season.seasonNumber}
+                          </div>
+                          <Badge 
+                            variant={season.isActive ? "default" : "secondary"}
+                            data-testid={`badge-season-status-${season.id}`}
+                          >
+                            {season.isActive ? "Активен" : "Завершён"}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground" data-testid={`text-season-date-${season.id}`}>
+                          {getMonthName(season.month)} {season.year}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Нет сезонов</p>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
