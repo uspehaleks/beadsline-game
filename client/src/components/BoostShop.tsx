@@ -382,9 +382,19 @@ export function BoostShop({ onBack }: BoostShopProps) {
     queryKey: ['/api/boost-packages'],
   });
 
+  // Check for pending crypto payments to enable auto-refresh
+  const { data: pendingPayments = [] } = useQuery<Array<{ id: string; status: string }>>({
+    queryKey: ['/api/user/crypto-payments'],
+    enabled: !!user,
+    refetchInterval: 10000, // Check every 10 seconds
+  });
+
+  const hasPendingPayments = pendingPayments.some(p => p.status === 'pending');
+
   const { data: inventory = [] } = useQuery<InventoryItem[]>({
     queryKey: ['/api/user/boosts'],
     enabled: !!user,
+    refetchInterval: hasPendingPayments ? 5000 : false, // Auto-refresh every 5s if pending payments
   });
 
   const buyMutation = useMutation({
