@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, Sparkles, User } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Crown, Medal, Award, Loader2, Sparkles, User, AlertTriangle, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
@@ -45,6 +45,14 @@ interface MyPositionData {
   playerCount: number;
 }
 
+interface SeasonData {
+  id: number;
+  seasonNumber: number;
+  month: number;
+  year: number;
+  isActive: boolean;
+}
+
 export default function LeagueLeaderboard() {
   const params = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
@@ -70,6 +78,37 @@ export default function LeagueLeaderboard() {
     },
     enabled: !!slug && !!user?.telegramId,
   });
+
+  const { data: activeSeason } = useQuery<SeasonData | null>({
+    queryKey: ["/api/season/active"],
+  });
+
+  const getMonthName = (month: number) => {
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    return months[month - 1] || '';
+  };
+
+  // Check if player is at risk of relegation (within 10% of maxRank or near playerCount limit)
+  const getRelegationInfo = () => {
+    if (!myPosition?.inLeague || !myPosition.rank) return null;
+    
+    const league = data?.league;
+    if (!league?.maxRank) return null;
+    
+    // Player is at risk if they are within 10% of maxRank cutoff
+    const threshold = Math.floor(league.maxRank * 0.9);
+    const isAtRisk = myPosition.rank >= threshold;
+    
+    if (!isAtRisk) return null;
+    
+    return {
+      rank: myPosition.rank,
+      maxRank: league.maxRank,
+    };
+  };
+
+  const relegationInfo = getRelegationInfo();
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -148,12 +187,14 @@ export default function LeagueLeaderboard() {
               </div>
             </CardContent>
           </Card>
-          {myPosition?.inLeague && (
+          {myPosition?.inLeague && myPosition.rank && (
             <Card className="bg-white/20 border-0 text-white">
               <CardContent className="p-3 flex items-center gap-2">
                 <Trophy className="w-5 h-5" />
                 <div>
-                  <div className="text-lg font-bold" data-testid="text-my-rank">#{myPosition.rank}</div>
+                  <div className="text-lg font-bold" data-testid="text-my-rank">
+                    {myPosition.rank} из {myPosition.playerCount}
+                  </div>
                   <div className="text-xs opacity-80">Ваша позиция</div>
                 </div>
               </CardContent>
@@ -179,6 +220,31 @@ export default function LeagueLeaderboard() {
           Требования: {league.minBeads.toLocaleString()} Beads
           {league.maxRank && ` и топ-${league.maxRank}`}
         </div>
+
+        {/* Season info */}
+        {activeSeason && (
+          <div className="mt-3 flex items-center gap-2 text-sm opacity-90">
+            <Calendar className="w-4 h-4" />
+            <span data-testid="text-current-season">
+              Сезон {activeSeason.seasonNumber} — {getMonthName(activeSeason.month)} {activeSeason.year}
+            </span>
+          </div>
+        )}
+
+        {/* Relegation warning */}
+        {relegationInfo && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 p-2 bg-orange-500/30 rounded-lg flex items-center gap-2"
+            data-testid="warning-relegation"
+          >
+            <AlertTriangle className="w-4 h-4 text-orange-200" />
+            <span className="text-sm">
+              Внимание! Вы на {relegationInfo.rank} месте из {relegationInfo.maxRank}. Рискуете вылететь из лиги!
+            </span>
+          </motion.div>
+        )}
       </div>
 
       <div className="p-4">

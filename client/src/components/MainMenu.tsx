@@ -439,6 +439,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     staleTime: 60000,
   });
 
+  const { data: activeSeason } = useQuery<{ id: number; seasonNumber: number; month: number; year: number; isActive: boolean } | null>({
+    queryKey: ['/api/season/active'],
+    staleTime: 60000,
+  });
+
+  const getMonthName = (month: number) => {
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    return months[month - 1] || '';
+  };
+
   // Calculate progress to next league
   const getLeagueProgress = () => {
     if (!userLeague || allLeagues.length === 0) return null;
@@ -621,6 +632,14 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                 </h3>
                 <div className="flex items-center gap-2 flex-wrap">
                   <LeagueBadge size="sm" showRank={false} />
+                  {activeSeason && (
+                    <span 
+                      className="text-xs text-muted-foreground"
+                      data-testid="text-current-season"
+                    >
+                      Сезон {activeSeason.seasonNumber}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right">
