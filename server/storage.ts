@@ -257,13 +257,6 @@ export interface IStorage {
   grantUserSkin(userId: string, skinId: string): Promise<UserSkin>;
   setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }>;
   
-  // Crypto Payments (NOWPayments)
-  createCryptoPayment(payment: InsertCryptoPayment): Promise<CryptoPayment>;
-  getCryptoPayment(id: string): Promise<CryptoPayment | undefined>;
-  getCryptoPaymentByNowPaymentId(nowPaymentId: string): Promise<CryptoPayment | undefined>;
-  updateCryptoPaymentStatus(nowPaymentId: string, status: string, actuallyPaid?: string): Promise<CryptoPayment | undefined>;
-  processCryptoPaymentSuccess(nowPaymentId: string): Promise<{ success: boolean; error?: string }>;
-  
   // Team Members & Revenue
   getTeamMembers(activeOnly?: boolean): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;
@@ -3014,70 +3007,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userSkins.id, owned.id));
     
     return { success: true };
-  }
-
-  // Crypto Payments (NOWPayments)
-  async createCryptoPayment(payment: InsertCryptoPayment): Promise<CryptoPayment> {
-    const [created] = await db.insert(cryptoPayments).values(payment).returning();
-    return created;
-  }
-
-  async getCryptoPayment(id: string): Promise<CryptoPayment | undefined> {
-    const [payment] = await db.select().from(cryptoPayments).where(eq(cryptoPayments.id, id));
-    return payment || undefined;
-  }
-
-  async getCryptoPaymentByNowPaymentId(nowPaymentId: string): Promise<CryptoPayment | undefined> {
-    const [payment] = await db.select().from(cryptoPayments).where(eq(cryptoPayments.nowPaymentId, nowPaymentId));
-    return payment || undefined;
-  }
-
-  async updateCryptoPaymentStatus(nowPaymentId: string, status: string, actuallyPaid?: string): Promise<CryptoPayment | undefined> {
-    const updates: { status: string; actuallyPaid?: string; updatedAt: Date } = { 
-      status, 
-      updatedAt: new Date() 
-    };
-    if (actuallyPaid !== undefined) {
-      updates.actuallyPaid = actuallyPaid;
-    }
-    
-    const [updated] = await db
-      .update(cryptoPayments)
-      .set(updates)
-      .where(eq(cryptoPayments.nowPaymentId, nowPaymentId))
-      .returning();
-    return updated || undefined;
-  }
-
-  async processCryptoPaymentSuccess(nowPaymentId: string): Promise<{ success: boolean; error?: string }> {
-    const payment = await this.getCryptoPaymentByNowPaymentId(nowPaymentId);
-    if (!payment) {
-      return { success: false, error: 'Payment not found' };
-    }
-
-    if (payment.status === 'finished') {
-      return { success: false, error: 'Payment already processed' };
-    }
-
-    // Get package details
-    const pkg = await this.getBoostPackage(payment.packageId);
-    if (!pkg) {
-      return { success: false, error: 'Package not found' };
-    }
-
-    // Use the existing purchaseBoostPackage method to add boosts
-    const result = await this.purchaseBoostPackage(payment.userId, payment.packageId, `crypto_${nowPaymentId}`);
-    
-    if (result.success) {
-      // Update payment status to finished
-      await this.updateCryptoPaymentStatus(nowPaymentId, 'finished');
-      
-      // Record revenue for accounting
-      const priceUsd = Number(payment.priceAmount) || 0;
-      await this.recordRevenueFromPurchase(payment.id, 0, priceUsd, 'crypto');
-    }
-
-    return result;
   }
 
   // Team Members & Revenue

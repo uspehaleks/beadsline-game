@@ -7,29 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info, Star, Gift, Heart, Crown, Flame, Package, Bitcoin, Copy, Check, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info, Star, Gift, Heart, Crown, Flame, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { isTelegramWebApp, openTelegramInvoice, showTelegramAlert } from '@/lib/telegram';
-
-const CRYPTO_CURRENCIES = [
-  { id: 'usdttrc20', name: 'USDT (TRC-20)', symbol: 'USDT' },
-  { id: 'usdtbsc', name: 'USDT (BEP-20)', symbol: 'USDT' },
-  { id: 'usdterc20', name: 'USDT (ERC-20)', symbol: 'USDT' },
-  { id: 'ton', name: 'TON', symbol: 'TON' },
-];
-
-interface CryptoPaymentInfo {
-  paymentId: string;
-  nowPaymentId: string;
-  payAddress: string;
-  payAmount: number;
-  payCurrency: string;
-  priceAmount: number;
-}
 
 interface BoostShopProps {
   onBack: () => void;
@@ -374,13 +357,6 @@ export function BoostShop({ onBack }: BoostShopProps) {
   // Payment method selection
   const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
   const [selectedPackageForPayment, setSelectedPackageForPayment] = useState<BoostPackage | null>(null);
-  const [selectedCrypto, setSelectedCrypto] = useState('usdttrc20');
-  
-  // Crypto payment flow
-  const [cryptoPaymentDialogOpen, setCryptoPaymentDialogOpen] = useState(false);
-  const [cryptoPaymentInfo, setCryptoPaymentInfo] = useState<CryptoPaymentInfo | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const { data: boosts = [], isLoading: boostsLoading } = useQuery<Boost[]>({
     queryKey: ['/api/boosts'],
@@ -473,63 +449,6 @@ export function BoostShop({ onBack }: BoostShopProps) {
     },
   });
 
-  // Crypto payment mutation
-  const createCryptoPaymentMutation = useMutation({
-    mutationFn: async ({ packageId, payCurrency }: { packageId: string; payCurrency: string }) => {
-      const response = await apiRequest('POST', `/api/boost-packages/${packageId}/create-crypto-payment`, { payCurrency });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setCryptoPaymentInfo(data);
-      setPaymentMethodDialogOpen(false);
-      setCryptoPaymentDialogOpen(true);
-      setPurchasingPackageId(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось создать платёж",
-        variant: "destructive",
-      });
-      setPurchasingPackageId(null);
-    },
-  });
-
-  // Check crypto payment status
-  const checkPaymentStatus = async (paymentId: string) => {
-    setCheckingPayment(true);
-    try {
-      const response = await apiRequest('GET', `/api/crypto-payments/${paymentId}/status`);
-      const data = await response.json();
-      
-      if (data.status === 'finished' || data.status === 'confirmed') {
-        setCryptoPaymentDialogOpen(false);
-        setCryptoPaymentInfo(null);
-        queryClient.invalidateQueries({ queryKey: ['/api/user/boosts'] });
-        refreshUser();
-        toast({
-          title: "Оплата успешна!",
-          description: "Бусты добавлены в ваш инвентарь",
-        });
-      } else if (data.status === 'expired' || data.status === 'failed') {
-        toast({
-          title: "Платёж истёк",
-          description: "Попробуйте создать новый платёж",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Ожидание оплаты",
-          description: `Статус: ${data.status}. Пожалуйста, подождите подтверждения.`,
-        });
-      }
-    } catch (error) {
-      console.error("Error checking payment status:", error);
-    } finally {
-      setCheckingPayment(false);
-    }
-  };
-
   const handleBuy = (boostId: string) => {
     setPurchasingId(boostId);
     buyMutation.mutate(boostId);
@@ -560,28 +479,6 @@ export function BoostShop({ onBack }: BoostShopProps) {
     setPaymentMethodDialogOpen(false);
     setPurchasingPackageId(selectedPackageForPayment.id);
     createInvoiceMutation.mutate(selectedPackageForPayment.id);
-  };
-
-  // Pay with crypto
-  const handlePayWithCrypto = () => {
-    if (!selectedPackageForPayment) return;
-    
-    setPurchasingPackageId(selectedPackageForPayment.id);
-    createCryptoPaymentMutation.mutate({
-      packageId: selectedPackageForPayment.id,
-      payCurrency: selectedCrypto,
-    });
-  };
-
-  // Copy address to clipboard
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Скопировано!",
-      description: "Адрес скопирован в буфер обмена",
-    });
   };
 
   const getOwnedQuantity = (boostId: string): number => {
@@ -866,125 +763,7 @@ export function BoostShop({ onBack }: BoostShopProps) {
               </div>
             </Button>
 
-            {/* Crypto option - only show if priceUsd is set */}
-            {selectedPackageForPayment?.priceUsd && (
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full h-auto py-4 justify-start gap-3"
-                  onClick={handlePayWithCrypto}
-                  disabled={purchasingPackageId !== null || createCryptoPaymentMutation.isPending}
-                  data-testid="button-pay-crypto"
-                >
-                  {createCryptoPaymentMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                        <Bitcoin className="w-5 h-5 text-orange-400" />
-                      </div>
-                      <div className="text-left flex-1">
-                        <div className="font-semibold">Криптовалюта</div>
-                        <div className="text-xs text-muted-foreground">
-                          ${parseFloat(selectedPackageForPayment.priceUsd).toFixed(2)} USD
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </Button>
-                
-                <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
-                  <SelectTrigger className="w-full" data-testid="select-crypto">
-                    <SelectValue placeholder="Выберите криптовалюту" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CRYPTO_CURRENCIES.map((crypto) => (
-                      <SelectItem key={crypto.id} value={crypto.id}>
-                        {crypto.name} ({crypto.symbol})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Crypto Payment Dialog */}
-      <Dialog open={cryptoPaymentDialogOpen} onOpenChange={setCryptoPaymentDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bitcoin className="w-5 h-5 text-orange-400" />
-              Оплата криптовалютой
-            </DialogTitle>
-            <DialogDescription>
-              Отправьте точную сумму на указанный адрес
-            </DialogDescription>
-          </DialogHeader>
-
-          {cryptoPaymentInfo && (
-            <div className="space-y-4 mt-4">
-              {/* Amount */}
-              <div className="p-4 rounded-lg bg-muted/50 text-center">
-                <div className="text-2xl font-bold" style={{ color: '#00ff88' }}>
-                  {cryptoPaymentInfo.payAmount} {cryptoPaymentInfo.payCurrency.toUpperCase()}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  ≈ ${cryptoPaymentInfo.priceAmount} USD
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Адрес для оплаты:</label>
-                <div className="flex gap-2">
-                  <code className="flex-1 p-3 rounded-lg bg-muted text-xs break-all">
-                    {cryptoPaymentInfo.payAddress}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => copyToClipboard(cryptoPaymentInfo.payAddress)}
-                    data-testid="button-copy-address"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Warning */}
-              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
-                <p className="text-yellow-600 dark:text-yellow-400">
-                  Отправьте <strong>точную</strong> сумму. После отправки подождите подтверждения транзакции в блокчейне.
-                </p>
-              </div>
-
-              {/* Actions */}
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCryptoPaymentDialogOpen(false);
-                    setCryptoPaymentInfo(null);
-                  }}
-                >
-                  Закрыть
-                </Button>
-                <Button
-                  onClick={() => checkPaymentStatus(cryptoPaymentInfo.paymentId)}
-                  disabled={checkingPayment}
-                  data-testid="button-check-payment"
-                >
-                  {checkingPayment ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : null}
-                  Проверить оплату
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>
