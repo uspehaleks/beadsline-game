@@ -619,6 +619,10 @@ export default function Admin() {
                 <ArrowDownToLine className="w-4 h-4 mr-1.5" />
                 Выводы
               </TabsTrigger>
+              <TabsTrigger value="crypto-payments" data-testid="tab-crypto-payments" className="w-full justify-start">
+                <Wallet className="w-4 h-4 mr-1.5" />
+                Крипто-платежи
+              </TabsTrigger>
             </TabsList>
           </div>
           <div className="flex-1">
@@ -704,6 +708,10 @@ export default function Admin() {
           </TabsContent>
           <TabsContent value="withdrawals">
             <WithdrawalsTab />
+          </TabsContent>
+
+          <TabsContent value="crypto-payments">
+            <CryptoPaymentsTab />
           </TabsContent>
           </div>
         </Tabs>
@@ -8412,6 +8420,293 @@ function WithdrawalsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Crypto payment request from user for admin confirmation
+interface CryptoPaymentRequest {
+  id: string;
+  userId: string;
+  packageId: string;
+  network: string;
+  priceUsd: string;
+  status: string;
+  adminNote: string | null;
+  confirmedBy: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  package: {
+    id: string;
+    name: string;
+    nameRu: string;
+    boostsPerType: number;
+  };
+}
+
+const NETWORK_LABELS: Record<string, string> = {
+  usdt_trc20: 'USDT TRC-20 (Tron)',
+  usdt_bep20: 'USDT BEP-20 (BSC)',
+  usdt_erc20: 'USDT ERC-20 (Ethereum)',
+  usdt_ton: 'USDT TON',
+};
+
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-500/20 text-yellow-400',
+  confirmed: 'bg-green-500/20 text-green-400',
+  rejected: 'bg-red-500/20 text-red-400',
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Ожидает',
+  confirmed: 'Подтверждено',
+  rejected: 'Отклонено',
+};
+
+function CryptoPaymentsTab() {
+  const { toast } = useToast();
+  const [showWalletSettings, setShowWalletSettings] = useState(false);
+  const [walletAddresses, setWalletAddresses] = useState({
+    usdt_trc20: '',
+    usdt_bep20: '',
+    usdt_erc20: '',
+    usdt_ton: '',
+  });
+
+  // Fetch pending payments
+  const { data: pendingPayments = [], isLoading, refetch } = useQuery<CryptoPaymentRequest[]>({
+    queryKey: ['/api/admin/pending-crypto-payments'],
+  });
+
+  // Fetch wallet addresses
+  const { data: wallets } = useQuery<{
+    usdt_trc20: string;
+    usdt_bep20: string;
+    usdt_erc20: string;
+    usdt_ton: string;
+  }>({
+    queryKey: ['/api/crypto-wallets'],
+  });
+
+  useEffect(() => {
+    if (wallets) {
+      setWalletAddresses(wallets);
+    }
+  }, [wallets]);
+
+  // Confirm payment mutation
+  const confirmMutation = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      return apiRequest('POST', `/api/admin/crypto-payments/${id}/confirm`, { note });
+    },
+    onSuccess: () => {
+      toast({ title: 'Успешно', description: 'Платёж подтверждён, бусты добавлены пользователю' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-crypto-payments'] });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось подтвердить платёж', variant: 'destructive' });
+    },
+  });
+
+  // Reject payment mutation
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      return apiRequest('POST', `/api/admin/crypto-payments/${id}/reject`, { note });
+    },
+    onSuccess: () => {
+      toast({ title: 'Успешно', description: 'Платёж отклонён' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-crypto-payments'] });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось отклонить платёж', variant: 'destructive' });
+    },
+  });
+
+  // Save wallet addresses mutation
+  const saveWalletsMutation = useMutation({
+    mutationFn: async (addresses: typeof walletAddresses) => {
+      return apiRequest('POST', '/api/admin/crypto-wallets', addresses);
+    },
+    onSuccess: () => {
+      toast({ title: 'Успешно', description: 'Адреса кошельков сохранены' });
+      queryClient.invalidateQueries({ queryKey: ['/api/crypto-wallets'] });
+    },
+    onError: () => {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить адреса', variant: 'destructive' });
+    },
+  });
+
+  const handleConfirm = (payment: CryptoPaymentRequest) => {
+    if (confirm(`Подтвердить платёж от ${payment.user.username || payment.user.firstName}?`)) {
+      confirmMutation.mutate({ id: payment.id });
+    }
+  };
+
+  const handleReject = (payment: CryptoPaymentRequest) => {
+    const note = prompt('Причина отклонения (опционально):');
+    rejectMutation.mutate({ id: payment.id, note: note || undefined });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="w-5 h-5" />
+            Ожидающие подтверждения
+            {pendingPayments.length > 0 && (
+              <Badge className="bg-yellow-500/20 text-yellow-400 ml-2">{pendingPayments.length}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-payments">
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Обновить
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : pendingPayments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Нет ожидающих платежей
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingPayments.map((payment) => (
+                <Card key={payment.id} className="bg-muted/30" data-testid={`card-payment-${payment.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-lg">
+                            ${parseFloat(payment.priceUsd).toFixed(2)} USD
+                          </span>
+                          <Badge className={PAYMENT_STATUS_COLORS[payment.status]}>
+                            {PAYMENT_STATUS_LABELS[payment.status]}
+                          </Badge>
+                          <Badge variant="outline">{NETWORK_LABELS[payment.network] || payment.network}</Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div>Пользователь: <span className="font-medium text-foreground">{payment.user.username || payment.user.firstName || payment.userId}</span></div>
+                          <div>Пакет: <span className="font-medium text-foreground">{payment.package.nameRu}</span> ({payment.package.boostsPerType}x каждого буста)</div>
+                          <div>Дата: {new Date(payment.createdAt).toLocaleString('ru-RU')}</div>
+                        </div>
+                      </div>
+                      
+                      {payment.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleConfirm(payment)} 
+                            disabled={confirmMutation.isPending}
+                            data-testid={`button-confirm-payment-${payment.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Подтвердить
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => handleReject(payment)}
+                            disabled={rejectMutation.isPending}
+                            data-testid={`button-reject-payment-${payment.id}`}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Отклонить
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Адреса кошельков для приёма платежей
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setShowWalletSettings(!showWalletSettings)} data-testid="button-toggle-wallet-settings">
+              {showWalletSettings ? 'Скрыть' : 'Показать'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showWalletSettings && (
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>USDT TRC-20 (Tron)</Label>
+                <Input
+                  value={walletAddresses.usdt_trc20}
+                  onChange={(e) => setWalletAddresses({ ...walletAddresses, usdt_trc20: e.target.value })}
+                  placeholder="T..."
+                  data-testid="input-wallet-trc20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>USDT BEP-20 (BSC)</Label>
+                <Input
+                  value={walletAddresses.usdt_bep20}
+                  onChange={(e) => setWalletAddresses({ ...walletAddresses, usdt_bep20: e.target.value })}
+                  placeholder="0x..."
+                  data-testid="input-wallet-bep20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>USDT ERC-20 (Ethereum)</Label>
+                <Input
+                  value={walletAddresses.usdt_erc20}
+                  onChange={(e) => setWalletAddresses({ ...walletAddresses, usdt_erc20: e.target.value })}
+                  placeholder="0x..."
+                  data-testid="input-wallet-erc20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>USDT TON</Label>
+                <Input
+                  value={walletAddresses.usdt_ton}
+                  onChange={(e) => setWalletAddresses({ ...walletAddresses, usdt_ton: e.target.value })}
+                  placeholder="UQ..."
+                  data-testid="input-wallet-ton"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={() => saveWalletsMutation.mutate(walletAddresses)}
+              disabled={saveWalletsMutation.isPending}
+              data-testid="button-save-wallets"
+            >
+              {saveWalletsMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Сохранить адреса
+                </>
+              )}
+            </Button>
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }

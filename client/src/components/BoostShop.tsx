@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info, Star, Gift, Heart, Crown, Flame, Package } from 'lucide-react';
+import { ArrowLeft, Zap, Bomb, Timer, RotateCcw, Sparkles, ShoppingCart, Loader2, Shield, Magnet, Crosshair, Info, Star, Gift, Heart, Crown, Flame, Package, Copy, Check, Wallet, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -357,6 +357,22 @@ export function BoostShop({ onBack }: BoostShopProps) {
   // Payment method selection
   const [paymentMethodDialogOpen, setPaymentMethodDialogOpen] = useState(false);
   const [selectedPackageForPayment, setSelectedPackageForPayment] = useState<BoostPackage | null>(null);
+  
+  // Crypto payment states
+  const [cryptoDialogOpen, setCryptoDialogOpen] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState<string | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [cryptoPaymentSent, setCryptoPaymentSent] = useState(false);
+
+  // Fetch crypto wallet addresses
+  const { data: cryptoWallets } = useQuery<{
+    usdt_trc20: string;
+    usdt_bep20: string;
+    usdt_erc20: string;
+    usdt_ton: string;
+  }>({
+    queryKey: ['/api/crypto-wallets'],
+  });
 
   const { data: boosts = [], isLoading: boostsLoading } = useQuery<Boost[]>({
     queryKey: ['/api/boosts'],
@@ -479,6 +495,65 @@ export function BoostShop({ onBack }: BoostShopProps) {
     setPaymentMethodDialogOpen(false);
     setPurchasingPackageId(selectedPackageForPayment.id);
     createInvoiceMutation.mutate(selectedPackageForPayment.id);
+  };
+
+  // Open crypto payment dialog
+  const handlePayWithCrypto = () => {
+    setPaymentMethodDialogOpen(false);
+    setSelectedNetwork(null);
+    setCopiedAddress(false);
+    setCryptoPaymentSent(false);
+    setCryptoDialogOpen(true);
+  };
+
+  // Copy wallet address to clipboard
+  const handleCopyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
+    toast({
+      title: "Скопировано",
+      description: "Адрес кошелька скопирован в буфер обмена",
+    });
+  };
+
+  // Crypto payment mutation
+  const cryptoPaymentMutation = useMutation({
+    mutationFn: async ({ packageId, network }: { packageId: string; network: string }) => {
+      const response = await apiRequest('POST', `/api/boost-packages/${packageId}/crypto-payment`, { network });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setCryptoPaymentSent(true);
+      toast({
+        title: "Заявка отправлена",
+        description: data.message || "Ожидайте подтверждения администратора",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось отправить заявку",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send "I paid" request
+  const handleConfirmCryptoPayment = () => {
+    if (!selectedPackageForPayment || !selectedNetwork) return;
+    cryptoPaymentMutation.mutate({
+      packageId: selectedPackageForPayment.id,
+      network: selectedNetwork,
+    });
+  };
+
+  // Network info
+  const NETWORK_INFO: Record<string, { name: string; symbol: string; color: string }> = {
+    usdt_trc20: { name: 'USDT TRC-20', symbol: 'Tron', color: '#ff0013' },
+    usdt_bep20: { name: 'USDT BEP-20', symbol: 'BSC', color: '#f3ba2f' },
+    usdt_erc20: { name: 'USDT ERC-20', symbol: 'Ethereum', color: '#627eea' },
+    usdt_ton: { name: 'USDT TON', symbol: 'TON', color: '#0088cc' },
   };
 
   const getOwnedQuantity = (boostId: string): number => {
@@ -763,7 +838,157 @@ export function BoostShop({ onBack }: BoostShopProps) {
               </div>
             </Button>
 
+            {/* Crypto option */}
+            <Button
+              variant="outline"
+              className="w-full h-auto py-4 justify-start gap-3"
+              onClick={handlePayWithCrypto}
+              disabled={purchasingPackageId !== null}
+              data-testid="button-pay-crypto"
+            >
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-green-400" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold">Криптовалюта (USDT)</div>
+                <div className="text-xs text-muted-foreground">
+                  ~${selectedPackageForPayment?.priceUsd || Math.round((selectedPackageForPayment?.priceStars || 0) / 50)} USD
+                </div>
+              </div>
+            </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Crypto Payment Dialog */}
+      <Dialog open={cryptoDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCryptoDialogOpen(false);
+          setSelectedNetwork(null);
+          setCryptoPaymentSent(false);
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-green-400" />
+              Оплата криптовалютой
+            </DialogTitle>
+            <DialogDescription>
+              {selectedPackageForPayment && (
+                <span>
+                  {selectedPackageForPayment.nameRu} — ${selectedPackageForPayment.priceUsd || Math.round(selectedPackageForPayment.priceStars / 50)} USD
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {cryptoPaymentSent ? (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Заявка отправлена</h3>
+              <p className="text-sm text-muted-foreground">
+                Администратор проверит платёж и подтвердит покупку. Обычно это занимает до 24 часов.
+              </p>
+              <Button 
+                className="mt-4 w-full" 
+                onClick={() => {
+                  setCryptoDialogOpen(false);
+                  setCryptoPaymentSent(false);
+                }}
+              >
+                Закрыть
+              </Button>
+            </div>
+          ) : !selectedNetwork ? (
+            <div className="space-y-2 mt-2">
+              <p className="text-sm text-muted-foreground mb-3">Выберите сеть для оплаты:</p>
+              {Object.entries(NETWORK_INFO).map(([key, info]) => {
+                const address = cryptoWallets?.[key as keyof typeof cryptoWallets];
+                const isAvailable = address && address.length > 10;
+                return (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    className="w-full h-auto py-3 justify-start gap-3"
+                    onClick={() => setSelectedNetwork(key)}
+                    disabled={!isAvailable}
+                    data-testid={`button-network-${key}`}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: info.color }}
+                    >
+                      {info.symbol.substring(0, 1)}
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-medium">{info.name}</div>
+                      <div className="text-xs text-muted-foreground">{info.symbol}</div>
+                    </div>
+                    {!isAvailable && (
+                      <Badge variant="secondary" className="text-xs">Недоступно</Badge>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4 mt-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedNetwork(null)}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <span className="font-medium">{NETWORK_INFO[selectedNetwork]?.name}</span>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Переведите <span className="font-bold text-foreground">${selectedPackageForPayment?.priceUsd || Math.round((selectedPackageForPayment?.priceStars || 0) / 50)} USDT</span> на адрес:
+                </p>
+                
+                <div className="relative">
+                  <div className="p-3 rounded-lg bg-muted/50 border break-all font-mono text-xs">
+                    {cryptoWallets?.[selectedNetwork as keyof typeof cryptoWallets] || 'Адрес не настроен'}
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => handleCopyAddress(cryptoWallets?.[selectedNetwork as keyof typeof cryptoWallets] || '')}
+                    data-testid="button-copy-address"
+                  >
+                    {copiedAddress ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-xs text-amber-200">
+                  Внимание: отправляйте только USDT в сети {NETWORK_INFO[selectedNetwork]?.symbol}. Отправка других монет или в другой сети приведёт к потере средств.
+                </p>
+              </div>
+
+              <Button 
+                className="w-full" 
+                onClick={handleConfirmCryptoPayment}
+                disabled={cryptoPaymentMutation.isPending}
+                data-testid="button-confirm-crypto-payment"
+              >
+                {cryptoPaymentMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Check className="w-4 h-4 mr-2" />
+                )}
+                Я оплатил
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

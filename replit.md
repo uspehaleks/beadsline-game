@@ -24,7 +24,7 @@ Key features include:
 -   **Referral System**: A 2-level referral program rewarding referrers with Beads when their direct and indirect referrals play games.
 -   **Telegram Bot Integration**: Commands for game launch, leaderboard, and help, all in Russian.
 -   **Telegram Stars Payments**: In-app purchases for boost packages using Telegram Stars currency. Invoice creation via Bot API, pre-checkout validation, and async payment processing with userId verification from authenticated session payload.
--   **Cryptocurrency Payments**: NOWPayments integration for crypto payments (USDT TRC-20, USDT BEP-20, USDT ERC-20, TON). Payment method selection dialog in BoostShop with address display and status polling. Note: NOWPayments minimum payment is ~$20 USD.
+-   **Semi-Automatic Crypto Payments**: Manual crypto payment processing with admin confirmation. Supports USDT TRC-20, USDT BEP-20, USDT ERC-20, and USDT TON. Players see static wallet addresses in BoostShop, transfer funds, and click "I paid". Admin confirms payments in admin panel, which triggers boost delivery. Wallet addresses configurable in admin panel.
 -   **Community Invite System**: After first game, users are prompted to join the Telegram channel (@Beads_Lines) and chat (@Beads_Line_chat). Bot checks membership status via Telegram API.
 -   **Signup Bonus Promotion**: Configurable welcome bonus for new users (default 150 Beads). Admin can enable/disable, set amount and end date. Atomically awards bonus to prevent duplicates. Managed via admin panel.
 -   **Team Accounting System**: Mini-bookkeeping in admin panel with 5 team members and automatic revenue distribution:
