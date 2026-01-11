@@ -1438,6 +1438,30 @@ export async function registerRoutes(
         return res.status(400).json({ error: result.error });
       }
 
+      // Apply the reward to user's inventory
+      const reward = result.reward;
+      if (reward) {
+        switch (reward.type) {
+          case 'beads':
+            await storage.createBeadsTransaction(
+              userId,
+              reward.amount,
+              'beads_box_reward',
+              `BEADS BOX: +${reward.amount} бусин`
+            );
+            break;
+          case 'boost':
+            await storage.addBoostToInventory(userId, reward.boostType!, 1);
+            break;
+          case 'lives':
+            await storage.addBoostToInventory(userId, 'extra_life', reward.amount);
+            break;
+          case 'crypto_ticket':
+            await storage.createCryptoGameTicket(userId, sessionId);
+            break;
+        }
+      }
+
       // Return all boxes with their rewards now that one is selected
       const fullSession = await storage.getUserDailyBoxSession(userId, today);
 
