@@ -1,14 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Coins, Zap, Heart, Ticket, X, Sparkles, Lock } from "lucide-react";
+import { Gift, Coins, Zap, Heart, Ticket, X, Sparkles, Lock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
-import type { BeadsBoxReward } from "@shared/schema";
 
 interface BeadsBoxProps {
   onClose: () => void;
+}
+
+interface BeadsBoxReward {
+  type: 'beads' | 'boost' | 'lives' | 'crypto_ticket';
+  amount: number;
+  boostType?: string;
+  value?: number;
 }
 
 interface BoxSessionResponse {
@@ -42,18 +48,94 @@ const boxColors = [
 ];
 
 const rewardIcons: Record<string, JSX.Element> = {
-  beads: <Coins className="w-8 h-8 text-yellow-400" />,
-  boost: <Zap className="w-8 h-8 text-purple-400" />,
-  lives: <Heart className="w-8 h-8 text-red-400" />,
-  crypto_ticket: <Ticket className="w-8 h-8 text-green-400" />,
+  beads: <Coins className="w-12 h-12 text-yellow-400" />,
+  boost: <Zap className="w-12 h-12 text-purple-400" />,
+  lives: <Heart className="w-12 h-12 text-red-400" />,
+  crypto_ticket: <Ticket className="w-12 h-12 text-green-400" />,
+};
+
+const smallRewardIcons: Record<string, JSX.Element> = {
+  beads: <Coins className="w-6 h-6 text-yellow-400" />,
+  boost: <Zap className="w-6 h-6 text-purple-400" />,
+  lives: <Heart className="w-6 h-6 text-red-400" />,
+  crypto_ticket: <Ticket className="w-6 h-6 text-green-400" />,
 };
 
 const rewardNames: Record<string, string> = {
-  beads: "Beads",
+  beads: "Бусин",
   boost: "Буст",
-  lives: "Жизни",
+  lives: "Жизней",
   crypto_ticket: "Крипто-билет",
 };
+
+const boostNames: Record<string, string> = {
+  double_points: "2x Очки",
+  slow_time: "Замедление",
+  extra_life: "Жизнь",
+  magnet: "Магнит",
+};
+
+function Confetti() {
+  const confettiColors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+  
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[60]">
+      {[...Array(50)].map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{
+            x: Math.random() * window.innerWidth,
+            y: -20,
+            rotate: 0,
+            scale: Math.random() * 0.5 + 0.5,
+          }}
+          animate={{
+            y: window.innerHeight + 20,
+            rotate: Math.random() * 720 - 360,
+            x: Math.random() * window.innerWidth,
+          }}
+          transition={{
+            duration: Math.random() * 2 + 2,
+            delay: Math.random() * 0.5,
+            ease: "linear",
+          }}
+          className="absolute w-3 h-3 rounded-sm"
+          style={{
+            backgroundColor: confettiColors[i % confettiColors.length],
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StarBurst() {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {[...Array(12)].map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{ 
+            scale: [0, 1.5, 0],
+            opacity: [1, 0.8, 0],
+          }}
+          transition={{
+            duration: 1,
+            delay: i * 0.05,
+            ease: "easeOut",
+          }}
+          className="absolute left-1/2 top-1/2"
+          style={{
+            transform: `rotate(${i * 30}deg) translateY(-60px)`,
+          }}
+        >
+          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 export function BeadsBox({ onClose }: BeadsBoxProps) {
   const queryClient = useQueryClient();
@@ -61,10 +143,19 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
   const [revealedReward, setRevealedReward] = useState<BeadsBoxReward | null>(null);
   const [allRevealedBoxes, setAllRevealedBoxes] = useState<BeadsBoxReward[] | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
-  const { data: boxData, isLoading } = useQuery<BoxSessionResponse>({
+  const { data: boxData, isLoading, error } = useQuery<BoxSessionResponse>({
     queryKey: ["/api/beads-box/daily"],
   });
+
+  useEffect(() => {
+    if (revealedReward) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [revealedReward]);
 
   const chooseMutation = useMutation({
     mutationFn: async ({ sessionId, boxIndex }: { sessionId: string; boxIndex: number }) => {
@@ -76,11 +167,13 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
       setAllRevealedBoxes(data.allBoxes);
       setIsRevealing(false);
       queryClient.invalidateQueries({ queryKey: ["/api/beads-box/daily"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/boosts"] });
     },
-    onError: () => {
+    onError: (err) => {
+      console.error("Choose box error:", err);
       setIsRevealing(false);
+      setSelectedBox(null);
     },
   });
 
@@ -92,200 +185,273 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
     
     setTimeout(() => {
       chooseMutation.mutate({ sessionId: boxData.session!.id, boxIndex: index });
-    }, 500);
+    }, 800);
+  };
+
+  const getRewardDisplay = (reward: BeadsBoxReward) => {
+    switch (reward.type) {
+      case 'beads':
+        return `+${reward.amount} ${rewardNames.beads}`;
+      case 'boost':
+        return `${boostNames[reward.boostType || ''] || reward.boostType} x1`;
+      case 'lives':
+        return `+${reward.amount} ${rewardNames.lives}`;
+      case 'crypto_ticket':
+        return rewardNames.crypto_ticket;
+      default:
+        return 'Награда';
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          >
-            <Gift className="w-16 h-16 text-yellow-400" />
-          </motion.div>
-          <p className="mt-4 text-white font-semibold">Загрузка...</p>
-        </div>
-      </div>
+      <Dialog open onOpenChange={() => onClose()}>
+        <DialogContent className="bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700 max-w-md">
+          <DialogTitle className="sr-only">BEADS BOX</DialogTitle>
+          <div className="text-center py-12">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="inline-block"
+            >
+              <Gift className="w-16 h-16 text-yellow-400" />
+            </motion.div>
+            <p className="mt-4 text-white font-semibold">Загрузка...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
-  if (!boxData?.enabled) {
+  if (error || !boxData?.enabled) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <Card className="bg-slate-900 border-slate-700 p-6 max-w-sm text-center">
-          <Lock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-white font-semibold mb-2">BEADS BOX недоступен</p>
-          <p className="text-slate-400 text-sm mb-4">{boxData?.message || "Функция временно отключена"}</p>
-          <Button onClick={onClose} variant="outline">
-            Закрыть
-          </Button>
-        </Card>
-      </div>
+      <Dialog open onOpenChange={() => onClose()}>
+        <DialogContent className="bg-gradient-to-b from-slate-900 to-slate-950 border-slate-700 max-w-sm">
+          <DialogTitle className="sr-only">BEADS BOX</DialogTitle>
+          <div className="text-center py-8">
+            <Lock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-white font-semibold mb-2">BEADS BOX недоступен</p>
+            <p className="text-slate-400 text-sm mb-4">{boxData?.message || "Функция временно отключена"}</p>
+            <Button onClick={onClose} variant="outline">
+              Закрыть
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   const session = boxData.session;
-  const alreadyClaimed = session?.selectedBoxIndex !== null;
+  const alreadyClaimed = session?.selectedBoxIndex !== null && !revealedReward;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl border border-slate-700 p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl">
-              <Gift className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">BEADS BOX</h2>
-              <p className="text-xs text-slate-400">Ежедневная награда</p>
-            </div>
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            className="text-slate-400 hover:text-white"
-            data-testid="button-close-beadsbox"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
-        {boxData.cryptoTickets > 0 && (
-          <div className="mb-4 p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30">
-            <div className="flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-green-400" />
-              <span className="text-green-400 font-semibold">
-                Крипто-билетов: {boxData.cryptoTickets}
-              </span>
-            </div>
-            <p className="text-xs text-green-300/70 mt-1">
-              Используйте для игры с крипто-шариками
-            </p>
-          </div>
-        )}
-
-        {!alreadyClaimed && !revealedReward && (
-          <p className="text-center text-slate-300 mb-6">
-            Выберите один из 6 боксов для получения награды!
-          </p>
-        )}
-
-        <AnimatePresence mode="wait">
-          {revealedReward && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="mb-6 p-6 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 rounded-2xl border border-yellow-500/30 text-center"
-            >
-              <Sparkles className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-              <p className="text-yellow-400 font-bold text-lg mb-2">Поздравляем!</p>
-              <div className="flex items-center justify-center gap-3">
-                {rewardIcons[revealedReward.type]}
-                <div className="text-left">
-                  <p className="text-white font-bold text-xl">
-                    {revealedReward.type === "boost" 
-                      ? `${revealedReward.boostType} x${revealedReward.value}`
-                      : `${revealedReward.value} ${rewardNames[revealedReward.type]}`
-                    }
-                  </p>
-                  {revealedReward.type === "crypto_ticket" && (
-                    <p className="text-xs text-slate-400">Одна бесплатная игра с крипто-шариками!</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {(allRevealedBoxes || session?.boxes || []).map((box, index) => {
-            const isSelected = selectedBox === index || session?.selectedBoxIndex === index;
-            const isHidden = 'hidden' in box && box.hidden;
-            const reward = !isHidden ? box as BeadsBoxReward : null;
-
-            return (
-              <motion.button
-                key={index}
-                onClick={() => handleBoxClick(index)}
-                disabled={alreadyClaimed || isRevealing}
-                whileHover={!alreadyClaimed && !isRevealing ? { scale: 1.05 } : undefined}
-                whileTap={!alreadyClaimed && !isRevealing ? { scale: 0.95 } : undefined}
-                animate={isSelected && isRevealing ? { 
-                  rotateY: [0, 180],
-                  transition: { duration: 0.5 }
-                } : undefined}
-                className={`
-                  relative aspect-square rounded-2xl p-3
-                  flex flex-col items-center justify-center
-                  transition-all duration-300
-                  ${isHidden 
-                    ? `bg-gradient-to-br ${boxColors[index]} shadow-lg hover:shadow-xl cursor-pointer` 
-                    : 'bg-slate-800/80 border border-slate-600'
-                  }
-                  ${isSelected ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''}
-                  ${alreadyClaimed && !isSelected ? 'opacity-50' : ''}
-                  disabled:cursor-default
-                `}
-                data-testid={`button-box-${index}`}
-              >
-                {isHidden ? (
-                  <>
-                    <Gift className="w-10 h-10 text-white/90 mb-1" />
-                    <span className="text-white/80 text-xs font-bold">#{index + 1}</span>
-                  </>
-                ) : reward && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="flex flex-col items-center"
+    <>
+      {showCelebration && <Confetti />}
+      
+      <Dialog open onOpenChange={() => onClose()}>
+        <DialogContent className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-slate-700 max-w-md p-0 overflow-hidden">
+          <DialogTitle className="sr-only">BEADS BOX - Ежедневная награда</DialogTitle>
+          
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/10 to-transparent pointer-events-none" />
+            
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    animate={{ rotate: [0, -10, 10, -10, 0] }}
+                    transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+                    className="p-3 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-2xl shadow-lg shadow-yellow-500/30"
                   >
-                    {rewardIcons[reward.type]}
-                    <span className="text-white text-xs font-semibold mt-1">
-                      {reward.type === "boost" 
-                        ? reward.boostType 
-                        : `${reward.value}`
-                      }
+                    <Gift className="w-7 h-7 text-white" />
+                  </motion.div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">BEADS BOX</h2>
+                    <p className="text-sm text-slate-400">Ежедневная награда</p>
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={onClose}
+                  className="text-slate-400 hover:text-white"
+                  data-testid="button-close-beadsbox"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {boxData.cryptoTickets > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30"
+                >
+                  <div className="flex items-center gap-2">
+                    <Ticket className="w-5 h-5 text-green-400" />
+                    <span className="text-green-400 font-semibold">
+                      Крипто-билетов: {boxData.cryptoTickets}
                     </span>
+                  </div>
+                </motion.div>
+              )}
+
+              <AnimatePresence mode="wait">
+                {revealedReward ? (
+                  <motion.div
+                    key="reward"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.5, opacity: 0 }}
+                    className="relative mb-6 p-8 bg-gradient-to-br from-yellow-500/30 via-amber-500/20 to-orange-500/30 rounded-3xl border-2 border-yellow-500/50 text-center overflow-hidden"
+                  >
+                    <StarBurst />
+                    
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: [0, 1.2, 1] }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                      <Sparkles className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
+                    </motion.div>
+                    
+                    <motion.p 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-yellow-400 font-bold text-xl mb-4"
+                    >
+                      Поздравляем!
+                    </motion.p>
+                    
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm">
+                        {rewardIcons[revealedReward.type]}
+                      </div>
+                      <p className="text-white font-bold text-2xl">
+                        {getRewardDisplay(revealedReward)}
+                      </p>
+                      {revealedReward.type === "crypto_ticket" && (
+                        <p className="text-sm text-yellow-300/80">
+                          Бесплатная игра с крипто-шариками!
+                        </p>
+                      )}
+                    </motion.div>
+                  </motion.div>
+                ) : !alreadyClaimed ? (
+                  <motion.p 
+                    key="instruction"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center text-slate-300 mb-6"
+                  >
+                    Выберите один из 6 боксов!
+                  </motion.p>
+                ) : (
+                  <motion.div
+                    key="already-claimed"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mb-6 p-4 bg-slate-800/50 rounded-xl text-center"
+                  >
+                    <p className="text-slate-300">Вы уже получили награду сегодня</p>
+                    <p className="text-sm text-slate-500 mt-1">Приходите завтра!</p>
                   </motion.div>
                 )}
-              </motion.button>
-            );
-          })}
-        </div>
+              </AnimatePresence>
 
-        {!boxData.canGetCryptoTicket && (
-          <div className="mb-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Lock className="w-4 h-4" />
-              <span className="text-sm">
-                Пройдите все 10 уровней для шанса получить крипто-билет
-              </span>
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {(allRevealedBoxes || session?.boxes || []).map((box, index) => {
+                  const isSelected = selectedBox === index || session?.selectedBoxIndex === index;
+                  const boxAsAny = box as { hidden?: boolean };
+                  const isHidden = !allRevealedBoxes && (!('type' in box) || boxAsAny.hidden === true);
+                  const reward = !isHidden && 'type' in box ? box as BeadsBoxReward : null;
+
+                  return (
+                    <motion.button
+                      key={index}
+                      onClick={() => handleBoxClick(index)}
+                      disabled={alreadyClaimed || isRevealing || !!revealedReward}
+                      whileHover={!alreadyClaimed && !isRevealing && !revealedReward ? { scale: 1.08, y: -4 } : undefined}
+                      whileTap={!alreadyClaimed && !isRevealing && !revealedReward ? { scale: 0.95 } : undefined}
+                      animate={isSelected && isRevealing ? { 
+                        rotateY: [0, 360],
+                        scale: [1, 1.1, 1],
+                      } : undefined}
+                      transition={{ duration: 0.8 }}
+                      className={`
+                        relative aspect-square rounded-2xl p-2
+                        flex flex-col items-center justify-center
+                        transition-all duration-300
+                        ${isHidden 
+                          ? `bg-gradient-to-br ${boxColors[index]} shadow-lg cursor-pointer` 
+                          : 'bg-slate-800/80 border border-slate-600'
+                        }
+                        ${isSelected && !isRevealing ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''}
+                        ${(alreadyClaimed || revealedReward) && !isSelected ? 'opacity-40' : ''}
+                        disabled:cursor-default
+                      `}
+                      data-testid={`button-box-${index}`}
+                    >
+                      {isHidden ? (
+                        <motion.div
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, delay: index * 0.1 }}
+                          className="flex flex-col items-center"
+                        >
+                          <Gift className="w-10 h-10 text-white/90 drop-shadow-lg" />
+                          <span className="text-white/80 text-xs font-bold mt-1">#{index + 1}</span>
+                        </motion.div>
+                      ) : reward && (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", stiffness: 200 }}
+                          className="flex flex-col items-center"
+                        >
+                          {smallRewardIcons[reward.type]}
+                          <span className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
+                            {reward.type === "boost" 
+                              ? boostNames[reward.boostType || ''] || reward.boostType
+                              : reward.type === 'crypto_ticket'
+                                ? 'Билет'
+                                : `+${reward.amount}`
+                            }
+                          </span>
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {!boxData.canGetCryptoTicket && !revealedReward && !alreadyClaimed && (
+                <div className="mb-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Lock className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-xs">
+                      Пройдите все 10 уровней для шанса получить крипто-билет
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={onClose}
+                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold py-6 text-lg"
+                data-testid="button-continue-beadsbox"
+              >
+                {revealedReward ? "Забрать награду" : alreadyClaimed ? "Закрыть" : "Отмена"}
+              </Button>
             </div>
           </div>
-        )}
-
-        {alreadyClaimed && (
-          <p className="text-center text-slate-400 text-sm mb-4">
-            Приходите завтра за новой наградой!
-          </p>
-        )}
-
-        <Button
-          onClick={onClose}
-          className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold"
-          data-testid="button-continue-beadsbox"
-        >
-          {alreadyClaimed ? "Закрыть" : "Отмена"}
-        </Button>
-      </motion.div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
