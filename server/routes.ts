@@ -1397,14 +1397,31 @@ export async function registerRoutes(
       // Get user's crypto tickets
       const cryptoTickets = await storage.getUserCryptoTickets(userId);
 
+      // Normalize boxes format for frontend (use 'amount' instead of 'value')
+      const normalizedBoxes = session.selectedBoxIndex !== null 
+        ? (session.boxes || []).map((box: any) => ({
+            type: box.type,
+            amount: box.value || box.amount || 0,
+            boostType: box.boostType,
+          }))
+        : Array(6).fill({ hidden: true });
+
+      // Normalize claimed reward format
+      const rewardValue = session.rewardValue as any;
+      const normalizedClaimedReward = rewardValue ? {
+        type: rewardValue.type,
+        amount: rewardValue.value || rewardValue.amount || 0,
+        boostType: rewardValue.boostType,
+      } : null;
+
       res.json({
         enabled: true,
         session: {
           id: session.id,
-          boxes: session.selectedBoxIndex === null ? Array(6).fill({ hidden: true }) : session.boxes,
+          boxes: normalizedBoxes,
           selectedBoxIndex: session.selectedBoxIndex,
           rewardClaimed: session.rewardClaimed,
-          claimedReward: session.rewardValue,
+          claimedReward: normalizedClaimedReward,
         },
         cryptoTickets: cryptoTickets.length,
         canGetCryptoTicket: (user.completedLevels?.length || 0) >= config.cryptoTicketMinLevel,
@@ -1438,38 +1455,31 @@ export async function registerRoutes(
         return res.status(400).json({ error: result.error });
       }
 
-      // Apply the reward to user's inventory
-      const reward = result.reward;
-      if (reward) {
-        switch (reward.type) {
-          case 'beads':
-            await storage.createBeadsTransaction(
-              userId,
-              reward.amount,
-              'beads_box_reward',
-              `BEADS BOX: +${reward.amount} бусин`
-            );
-            break;
-          case 'boost':
-            await storage.addBoostToInventory(userId, reward.boostType!, 1);
-            break;
-          case 'lives':
-            await storage.addBoostToInventory(userId, 'extra_life', reward.amount);
-            break;
-          case 'crypto_ticket':
-            await storage.createCryptoGameTicket(userId, sessionId);
-            break;
-        }
-      }
+      // Reward is already applied in storage.selectBox - no need to duplicate here
 
       // Return all boxes with their rewards now that one is selected
       const fullSession = await storage.getUserDailyBoxSession(userId, today);
+      const reward = result.reward;
+
+      // Normalize reward format for frontend (use 'amount' instead of 'value')
+      const normalizedReward = reward ? {
+        type: reward.type,
+        amount: reward.value || reward.amount || 0,
+        boostType: reward.boostType,
+      } : null;
+
+      // Normalize all boxes format
+      const normalizedBoxes = (fullSession?.boxes || []).map((box: any) => ({
+        type: box.type,
+        amount: box.value || box.amount || 0,
+        boostType: box.boostType,
+      }));
 
       res.json({
         success: true,
         selectedIndex: boxIndex,
-        reward: result.reward,
-        allBoxes: fullSession?.boxes,
+        reward: normalizedReward,
+        allBoxes: normalizedBoxes,
       });
     } catch (error) {
       console.error("Choose box error:", error);
