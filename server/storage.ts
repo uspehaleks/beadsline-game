@@ -4050,7 +4050,10 @@ export class DatabaseStorage implements IStorage {
         await this.awardBeadsWithHouse(session.userId, reward.value, 'beads_box_reward', `BEADS BOX награда: ${reward.value} Beads`);
         break;
       case 'lives':
-        await this.awardBeadsWithHouse(session.userId, reward.value * 50, 'beads_box_reward', `BEADS BOX: ${reward.value} жизней (${reward.value * 50} Beads)`);
+        // Add bonus lives directly to user
+        await db.update(users).set({
+          bonusLives: sql`${users.bonusLives} + ${reward.value}`
+        }).where(eq(users.id, session.userId));
         break;
       case 'boost':
         if (reward.boostId) {
