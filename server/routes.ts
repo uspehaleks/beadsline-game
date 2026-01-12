@@ -1401,8 +1401,9 @@ export async function registerRoutes(
       const normalizedBoxes = session.selectedBoxIndex !== null 
         ? (session.boxes || []).map((box: any) => ({
             type: box.type,
-            amount: box.value || box.amount || 0,
+            amount: box.value ?? box.amount ?? 0,
             boostType: box.boostType,
+            boostId: box.boostId,
           }))
         : Array(6).fill({ hidden: true });
 
@@ -1410,8 +1411,9 @@ export async function registerRoutes(
       const rewardValue = session.rewardValue as any;
       const normalizedClaimedReward = rewardValue ? {
         type: rewardValue.type,
-        amount: rewardValue.value || rewardValue.amount || 0,
+        amount: rewardValue.value ?? rewardValue.amount ?? 0,
         boostType: rewardValue.boostType,
+        boostId: rewardValue.boostId,
       } : null;
 
       res.json({
@@ -1464,15 +1466,17 @@ export async function registerRoutes(
       // Normalize reward format for frontend (use 'amount' instead of 'value')
       const normalizedReward = reward ? {
         type: reward.type,
-        amount: reward.value || reward.amount || 0,
+        amount: reward.value ?? reward.amount ?? 0,
         boostType: reward.boostType,
+        boostId: reward.boostId,
       } : null;
 
       // Normalize all boxes format
       const normalizedBoxes = (fullSession?.boxes || []).map((box: any) => ({
         type: box.type,
-        amount: box.value || box.amount || 0,
+        amount: box.value ?? box.amount ?? 0,
         boostType: box.boostType,
+        boostId: box.boostId,
       }));
 
       res.json({

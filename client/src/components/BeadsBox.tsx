@@ -14,6 +14,7 @@ interface BeadsBoxReward {
   type: 'beads' | 'boost' | 'lives' | 'crypto_ticket';
   amount: number;
   boostType?: string;
+  boostId?: string;
   value?: number;
 }
 
@@ -144,18 +145,42 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
   const [allRevealedBoxes, setAllRevealedBoxes] = useState<BeadsBoxReward[] | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [hasShownAlreadyClaimedReward, setHasShownAlreadyClaimedReward] = useState(false);
+  const [isNewlyClaimed, setIsNewlyClaimed] = useState(false);
 
   const { data: boxData, isLoading, error } = useQuery<BoxSessionResponse>({
     queryKey: ["/api/beads-box/daily"],
   });
 
+  // Show celebration only for newly claimed rewards (not for already-claimed on page load)
   useEffect(() => {
-    if (revealedReward) {
+    if (revealedReward && isNewlyClaimed) {
       setShowCelebration(true);
-      const timer = setTimeout(() => setShowCelebration(false), 3000);
+      const timer = setTimeout(() => {
+        setShowCelebration(false);
+        // Reset the flag so celebration doesn't replay on query refresh
+        setIsNewlyClaimed(false);
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [revealedReward]);
+  }, [revealedReward, isNewlyClaimed]);
+
+  // Show already claimed reward on first load (no celebration)
+  useEffect(() => {
+    // Only run once when component mounts and data is loaded
+    if (boxData?.session?.claimedReward && !hasShownAlreadyClaimedReward) {
+      setHasShownAlreadyClaimedReward(true);
+      // Set reward without celebration flag
+      setRevealedReward(boxData.session.claimedReward);
+      
+      // Also set revealed boxes if available
+      const boxes = boxData.session.boxes;
+      if (boxes && boxes.length > 0 && !('hidden' in boxes[0])) {
+        setAllRevealedBoxes(boxes as BeadsBoxReward[]);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boxData?.session?.claimedReward]);
 
   const chooseMutation = useMutation({
     mutationFn: async ({ sessionId, boxIndex }: { sessionId: string; boxIndex: number }) => {
@@ -163,6 +188,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
       return response.json() as Promise<ChooseBoxResponse>;
     },
     onSuccess: (data) => {
+      setIsNewlyClaimed(true);
       setRevealedReward(data.reward);
       setAllRevealedBoxes(data.allBoxes);
       setIsRevealing(false);
@@ -242,7 +268,8 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
   }
 
   const session = boxData.session;
-  const alreadyClaimed = session?.selectedBoxIndex !== null && !revealedReward;
+  const alreadyClaimed = session?.selectedBoxIndex !== null;
+  const showingReward = !!revealedReward;
 
   return (
     <>
@@ -297,7 +324,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
               )}
 
               <AnimatePresence mode="wait">
-                {revealedReward ? (
+                {showingReward && revealedReward ? (
                   <motion.div
                     key="reward"
                     initial={{ scale: 0.5, opacity: 0 }}
@@ -321,7 +348,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                       transition={{ delay: 0.3 }}
                       className="text-yellow-400 font-bold text-xl mb-4"
                     >
-                      Поздравляем!
+                      {alreadyClaimed && hasShownAlreadyClaimedReward ? "Ваша награда сегодня" : "Поздравляем!"}
                     </motion.p>
                     
                     <motion.div
@@ -342,6 +369,17 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                         </p>
                       )}
                     </motion.div>
+                    
+                    {alreadyClaimed && hasShownAlreadyClaimedReward && (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className="text-sm text-slate-400 mt-4"
+                      >
+                        Приходите завтра за новой наградой!
+                      </motion.p>
+                    )}
                   </motion.div>
                 ) : !alreadyClaimed ? (
                   <motion.p 
@@ -352,17 +390,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                   >
                     Выберите один из 6 боксов!
                   </motion.p>
-                ) : (
-                  <motion.div
-                    key="already-claimed"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="mb-6 p-4 bg-slate-800/50 rounded-xl text-center"
-                  >
-                    <p className="text-slate-300">Вы уже получили награду сегодня</p>
-                    <p className="text-sm text-slate-500 mt-1">Приходите завтра!</p>
-                  </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
 
               <div className="grid grid-cols-3 gap-3 mb-6">
@@ -371,14 +399,15 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                   const boxAsAny = box as { hidden?: boolean };
                   const isHidden = !allRevealedBoxes && (!('type' in box) || boxAsAny.hidden === true);
                   const reward = !isHidden && 'type' in box ? box as BeadsBoxReward : null;
+                  const canInteract = !alreadyClaimed && !isRevealing && !showingReward;
 
                   return (
                     <motion.button
                       key={index}
                       onClick={() => handleBoxClick(index)}
-                      disabled={alreadyClaimed || isRevealing || !!revealedReward}
-                      whileHover={!alreadyClaimed && !isRevealing && !revealedReward ? { scale: 1.08, y: -4 } : undefined}
-                      whileTap={!alreadyClaimed && !isRevealing && !revealedReward ? { scale: 0.95 } : undefined}
+                      disabled={!canInteract}
+                      whileHover={canInteract ? { scale: 1.08, y: -4 } : undefined}
+                      whileTap={canInteract ? { scale: 0.95 } : undefined}
                       animate={isSelected && isRevealing ? { 
                         rotateY: [0, 360],
                         scale: [1, 1.1, 1],
@@ -389,18 +418,18 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                         flex flex-col items-center justify-center
                         transition-all duration-300
                         ${isHidden 
-                          ? `bg-gradient-to-br ${boxColors[index]} shadow-lg cursor-pointer` 
+                          ? `bg-gradient-to-br ${boxColors[index]} shadow-lg ${canInteract ? 'cursor-pointer' : 'cursor-default'}` 
                           : 'bg-slate-800/80 border border-slate-600'
                         }
                         ${isSelected && !isRevealing ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''}
-                        ${(alreadyClaimed || revealedReward) && !isSelected ? 'opacity-40' : ''}
+                        ${showingReward && !isSelected ? 'opacity-40' : ''}
                         disabled:cursor-default
                       `}
                       data-testid={`button-box-${index}`}
                     >
                       {isHidden ? (
                         <motion.div
-                          animate={{ y: [0, -3, 0] }}
+                          animate={canInteract ? { y: [0, -3, 0] } : undefined}
                           transition={{ duration: 1.5, repeat: Infinity, delay: index * 0.1 }}
                           className="flex flex-col items-center"
                         >
@@ -430,7 +459,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                 })}
               </div>
 
-              {!boxData.canGetCryptoTicket && !revealedReward && !alreadyClaimed && (
+              {!boxData.canGetCryptoTicket && !showingReward && !alreadyClaimed && (
                 <div className="mb-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700">
                   <div className="flex items-center gap-2 text-slate-400">
                     <Lock className="w-4 h-4 flex-shrink-0" />
@@ -446,7 +475,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                 className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold py-6 text-lg"
                 data-testid="button-continue-beadsbox"
               >
-                {revealedReward ? "Забрать награду" : alreadyClaimed ? "Закрыть" : "Отмена"}
+                {showingReward ? (alreadyClaimed && hasShownAlreadyClaimedReward ? "Закрыть" : "Забрать награду") : "Отмена"}
               </Button>
             </div>
           </div>
