@@ -451,38 +451,67 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     return months[month - 1] || '';
   };
 
-  // Calculate progress to next league
+  // Calculate progress to next league (both Beads and Rank conditions)
   const getLeagueProgress = () => {
     if (!userLeague || allLeagues.length === 0) return null;
     
     const currentIndex = allLeagues.findIndex(l => l.slug === userLeague.league.slug);
     const nextLeague = currentIndex < allLeagues.length - 1 ? allLeagues[currentIndex + 1] : null;
+    const userRank = userLeague.rank;
     
     if (!nextLeague) {
       return {
         isMax: true,
-        progress: 100,
+        beadsProgress: 100,
+        rankProgress: 100,
         nextLeagueName: 'MAX',
         nextLeagueIcon: '',
         pointsToNext: 0,
+        rankToNext: 0,
+        nextMaxRank: null,
         themeColor: userLeague.league.themeColor,
+        beadsMet: true,
+        rankMet: true,
       };
     }
     
     const currentMinBeads = userLeague.league.minBeads;
     const nextMinBeads = nextLeague.minBeads;
+    const nextMaxRank = nextLeague.maxRank;
     const userBeads = user?.totalPoints || 0;
     
-    const progress = Math.min(100, Math.max(0, ((userBeads - currentMinBeads) / (nextMinBeads - currentMinBeads)) * 100));
+    // Beads progress
+    const beadsProgress = Math.min(100, Math.max(0, ((userBeads - currentMinBeads) / (nextMinBeads - currentMinBeads)) * 100));
     const pointsToNext = Math.max(0, nextMinBeads - userBeads);
+    const beadsMet = userBeads >= nextMinBeads;
+    
+    // Rank progress (if nextMaxRank exists)
+    let rankProgress = 100;
+    let rankToNext = 0;
+    let rankMet = true;
+    if (nextMaxRank !== null) {
+      rankMet = userRank <= nextMaxRank;
+      if (!rankMet) {
+        rankToNext = userRank - nextMaxRank;
+        // Calculate rank progress (how close to top N)
+        const currentMaxRank = userLeague.league.maxRank || 10000;
+        rankProgress = Math.min(100, Math.max(0, ((currentMaxRank - userRank) / (currentMaxRank - nextMaxRank)) * 100));
+      }
+    }
     
     return {
       isMax: false,
-      progress,
+      beadsProgress,
+      rankProgress,
       nextLeagueName: nextLeague.nameRu,
       nextLeagueIcon: nextLeague.icon,
       pointsToNext,
+      rankToNext,
+      nextMaxRank,
       themeColor: nextLeague.themeColor,
+      beadsMet,
+      rankMet,
+      userRank,
     };
   };
 
@@ -656,27 +685,66 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
             </div>
             
             {leagueProgress && (
-              <div className="mt-3 space-y-1">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {leagueProgress.isMax 
-                      ? 'Максимальная лига' 
-                      : `До ${leagueProgress.nextLeagueIcon} ${leagueProgress.nextLeagueName}`
-                    }
-                  </span>
-                  <span>{Math.round(leagueProgress.progress)}%</span>
+              <div className="mt-3 space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {leagueProgress.isMax 
+                    ? 'Максимальная лига' 
+                    : `До ${leagueProgress.nextLeagueIcon} ${leagueProgress.nextLeagueName}`
+                  }
                 </div>
-                <Progress 
-                  value={leagueProgress.progress} 
-                  className="h-2"
-                  style={{ 
-                    background: 'hsl(230 30% 15%)',
-                  }}
-                />
-                {!leagueProgress.isMax && leagueProgress.pointsToNext > 0 && (
-                  <p className="text-xs text-muted-foreground text-right">
-                    Ещё {leagueProgress.pointsToNext.toLocaleString()} Beads
-                  </p>
+                
+                {!leagueProgress.isMax && (
+                  <>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className={leagueProgress.beadsMet ? 'text-green-500' : 'text-muted-foreground'}>
+                          {leagueProgress.beadsMet ? '✓' : ''} Beads
+                        </span>
+                        <span className={leagueProgress.beadsMet ? 'text-green-500' : 'text-muted-foreground'}>
+                          {leagueProgress.beadsMet 
+                            ? 'Выполнено' 
+                            : `${Math.round(leagueProgress.beadsProgress)}%`
+                          }
+                        </span>
+                      </div>
+                      <Progress 
+                        value={leagueProgress.beadsProgress} 
+                        className="h-1.5"
+                        style={{ background: 'hsl(230 30% 15%)' }}
+                      />
+                      {!leagueProgress.beadsMet && leagueProgress.pointsToNext > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Ещё {leagueProgress.pointsToNext.toLocaleString()} Beads
+                        </p>
+                      )}
+                    </div>
+                    
+                    {leagueProgress.nextMaxRank !== null && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className={leagueProgress.rankMet ? 'text-green-500' : 'text-muted-foreground'}>
+                            {leagueProgress.rankMet ? '✓' : ''} Рейтинг (Top {leagueProgress.nextMaxRank})
+                          </span>
+                          <span className={leagueProgress.rankMet ? 'text-green-500' : 'text-muted-foreground'}>
+                            {leagueProgress.rankMet 
+                              ? 'Выполнено' 
+                              : `#${leagueProgress.userRank}`
+                            }
+                          </span>
+                        </div>
+                        <Progress 
+                          value={leagueProgress.rankMet ? 100 : leagueProgress.rankProgress} 
+                          className="h-1.5"
+                          style={{ background: 'hsl(230 30% 15%)' }}
+                        />
+                        {!leagueProgress.rankMet && leagueProgress.rankToNext > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Нужно подняться на {leagueProgress.rankToNext} позиций
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
