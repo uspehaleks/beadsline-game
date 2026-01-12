@@ -828,6 +828,7 @@ export interface LeaderboardEntry {
   username: string;
   photoUrl: string | null;
   totalPoints: number;
+  ratingScore: number;
   gamesPlayed: number;
   bestScore: number;
   characterName: string | null;

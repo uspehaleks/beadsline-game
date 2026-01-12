@@ -558,7 +558,8 @@ export class DatabaseStorage implements IStorage {
         userId: row.id,
         username: row.username,
         photoUrl: row.photo_url,
-        totalPoints: Number(row.rating_score),
+        totalPoints: Number(row.total_points),
+        ratingScore: Number(row.rating_score),
         gamesPlayed: row.games_played,
         bestScore: row.best_score,
         characterName: row.character_name || null,
@@ -575,7 +576,9 @@ export class DatabaseStorage implements IStorage {
           u.id,
           u.username,
           u.photo_url,
-          COALESCE(SUM(bt.amount), 0)::integer as total_points,
+          u.total_points,
+          u.rating_score,
+          COALESCE(SUM(bt.amount), 0)::integer as period_beads,
           u.games_played,
           u.best_score,
           c.name as character_name,
@@ -587,9 +590,9 @@ export class DatabaseStorage implements IStorage {
           AND bt.deleted_at IS NULL
         LEFT JOIN characters c ON c.user_id = u.id
         WHERE u.deleted_at IS NULL
-        GROUP BY u.id, u.username, u.photo_url, u.games_played, u.best_score, c.name, c.gender
+        GROUP BY u.id, u.username, u.photo_url, u.total_points, u.rating_score, u.games_played, u.best_score, c.name, c.gender
         HAVING COALESCE(SUM(bt.amount), 0) > 0
-        ORDER BY total_points DESC
+        ORDER BY period_beads DESC
         LIMIT ${limit}
       `);
       
@@ -599,6 +602,7 @@ export class DatabaseStorage implements IStorage {
         username: row.username,
         photoUrl: row.photo_url,
         totalPoints: Number(row.total_points),
+        ratingScore: Number(row.rating_score),
         gamesPlayed: row.games_played,
         bestScore: row.best_score,
         characterName: row.character_name || null,
@@ -651,7 +655,8 @@ export class DatabaseStorage implements IStorage {
       userId: row.id,
       username: row.username,
       photoUrl: row.photo_url,
-      totalPoints: Number(row.rating_score),
+      totalPoints: Number(row.total_points),
+      ratingScore: Number(row.rating_score),
       gamesPlayed: row.games_played,
       bestScore: row.best_score,
       characterName: row.character_name || null,
