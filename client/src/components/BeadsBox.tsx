@@ -276,7 +276,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
       {showCelebration && <Confetti />}
       
       <Dialog open onOpenChange={() => onClose()}>
-        <DialogContent className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-slate-700 max-w-md p-0 overflow-hidden">
+        <DialogContent className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-slate-700 max-w-sm max-h-[85vh] p-0 overflow-y-auto">
           <DialogTitle className="sr-only">BEADS BOX - Ежедневная награда</DialogTitle>
           
           <div className="relative">
