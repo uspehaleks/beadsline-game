@@ -189,7 +189,15 @@ export interface IStorage {
   awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
   chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
   awardSignupBonus(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
-  recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean): Promise<{
+  recordGameAndCompleteLevel(
+    userId: string, 
+    score: number, 
+    levelId: number, 
+    isVictory: boolean, 
+    maxCombo?: number,
+    previousLeagueSlug?: string,
+    previousLeagueSortOrder?: number
+  ): Promise<{
     leaguePromotion?: { 
       previousLeague: string; 
       newLeague: string; 
@@ -2302,7 +2310,15 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async recordGameAndCompleteLevel(userId: string, score: number, levelId: number, isVictory: boolean, maxCombo: number = 0): Promise<{
+  async recordGameAndCompleteLevel(
+    userId: string, 
+    score: number, 
+    levelId: number, 
+    isVictory: boolean, 
+    maxCombo: number = 0,
+    previousLeagueSlug: string = 'bronze',
+    previousLeagueSortOrder: number = 0
+  ): Promise<{
     leaguePromotion?: { 
       previousLeague: string; 
       newLeague: string; 
@@ -2314,11 +2330,6 @@ export class DatabaseStorage implements IStorage {
     // First get current user stats for rating calculation
     const user = await this.getUser(userId);
     if (!user) return {};
-
-    // Get current league BEFORE updating stats
-    const previousLeagueInfo = await this.getUserLeague(userId);
-    const previousLeagueSlug = previousLeagueInfo?.league.slug || 'bronze';
-    const previousLeagueSortOrder = previousLeagueInfo?.league.sortOrder || 0;
 
     // Calculate new values
     const newTotalScore = (user.totalScore ?? 0) + score; // Cumulative total of all game scores

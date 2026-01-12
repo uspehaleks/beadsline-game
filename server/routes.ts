@@ -981,6 +981,11 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
       
+      // Get current league BEFORE any updates (for promotion detection)
+      const previousLeagueInfo = await storage.getUserLeague(userId);
+      const previousLeagueSlug = previousLeagueInfo?.league.slug || 'bronze';
+      const previousLeagueSortOrder = previousLeagueInfo?.league.sortOrder || 0;
+      
       const scoreData = {
         ...req.body,
         odUserId: userId,
@@ -1031,7 +1036,7 @@ export async function registerRoutes(
       }
       
       // Atomically update games_played, best_score, completed_levels, and rating_score
-      const gameResult = await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory, validatedData.maxCombo ?? 0);
+      const gameResult = await storage.recordGameAndCompleteLevel(userId, validatedData.score, levelId, isVictory, validatedData.maxCombo ?? 0, previousLeagueSlug, previousLeagueSortOrder);
       
       // Send league promotion congratulation to chat
       if (gameResult.leaguePromotion) {
