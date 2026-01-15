@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
-import { GameCharacter, useCharacterActivity, type ReplyTrigger } from '@/components/GameCharacter';
+import { GameCharacter, type ReplyTrigger } from '@/components/GameCharacter';
 import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
 import { useToast } from '@/hooks/use-toast';

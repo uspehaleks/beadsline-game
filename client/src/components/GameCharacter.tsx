@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { Zap, Heart, Frown, Smile, Meh, ThermometerSun } from "lucide-react";
+import { Zap, Heart, Frown, Smile, Meh, ThermometerSun, User, UserRound } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -206,8 +206,8 @@ export function GameCharacter({
         animate="animate"
       >
         <div className={`w-full h-full rounded-full bg-gradient-to-b ${getBodyColor()} shadow-lg flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-700`}>
-          <div className="text-4xl">
-            {status.gender === 'male' ? '👦' : '👧'}
+          <div className="w-12 h-12 text-white">
+            {status.gender === 'male' ? <User className="w-full h-full" /> : <UserRound className="w-full h-full" />}
           </div>
         </div>
         

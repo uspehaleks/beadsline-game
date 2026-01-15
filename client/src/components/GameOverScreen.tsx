@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GameState, User } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { Trophy, RefreshCw, Crown, Target, Zap, Clock, Wallet, Heart, Loader2, C
 import { SiBitcoin, SiEthereum, SiTether } from 'react-icons/si';
 import { motion } from 'framer-motion';
 import { getEconomyConfig } from '@/lib/gameEngine';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface GameOverScreenProps {
   gameState: GameState;
@@ -68,6 +69,25 @@ export function GameOverScreen({
     onContinue && 
     extraLivesBought < maxExtraLives && 
     (user?.totalPoints || 0) >= lifeCost;
+
+  const hasUpdatedCharacter = useRef(false);
+
+  // Update character energy and mood after game
+  useEffect(() => {
+    if (hasUpdatedCharacter.current) return;
+    hasUpdatedCharacter.current = true;
+    
+    const updateCharacter = async () => {
+      try {
+        await apiRequest('POST', '/api/character/activity', { won, score });
+        queryClient.invalidateQueries({ queryKey: ['/api/character/status'] });
+      } catch (error) {
+        console.error('Failed to update character activity:', error);
+      }
+    };
+    
+    updateCharacter();
+  }, [won, score]);
 
   useEffect(() => {
     if (!won && canContinue && !hasAutoShown) {

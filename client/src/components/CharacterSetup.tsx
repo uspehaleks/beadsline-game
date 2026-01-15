@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, UserRound } from "lucide-react";
 
 type CharacterGender = 'male' | 'female';
 
@@ -83,7 +83,9 @@ export function CharacterSetup({ onComplete }: CharacterSetupProps) {
                     className="flex flex-col items-center p-6 rounded-xl bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors border-2 border-transparent hover:border-blue-400"
                     data-testid="select-gender-male"
                   >
-                    <span className="text-6xl mb-2">👦</span>
+                    <div className="w-16 h-16 rounded-full bg-blue-400 flex items-center justify-center mb-2">
+                      <User className="w-10 h-10 text-white" />
+                    </div>
                     <span className="font-medium text-blue-700 dark:text-blue-300">Он</span>
                   </motion.button>
                   <motion.button
@@ -93,7 +95,9 @@ export function CharacterSetup({ onComplete }: CharacterSetupProps) {
                     className="flex flex-col items-center p-6 rounded-xl bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors border-2 border-transparent hover:border-pink-400"
                     data-testid="select-gender-female"
                   >
-                    <span className="text-6xl mb-2">👧</span>
+                    <div className="w-16 h-16 rounded-full bg-pink-400 flex items-center justify-center mb-2">
+                      <UserRound className="w-10 h-10 text-white" />
+                    </div>
                     <span className="font-medium text-pink-700 dark:text-pink-300">Она</span>
                   </motion.button>
                 </div>
@@ -112,7 +116,10 @@ export function CharacterSetup({ onComplete }: CharacterSetupProps) {
                       ? 'bg-gradient-to-b from-blue-400 to-blue-500' 
                       : 'bg-gradient-to-b from-pink-400 to-pink-500'
                   }`}>
-                    <span className="text-4xl">{gender === 'male' ? '👦' : '👧'}</span>
+                    {gender === 'male' 
+                      ? <User className="w-12 h-12 text-white" />
+                      : <UserRound className="w-12 h-12 text-white" />
+                    }
                   </div>
                 </div>
                 
