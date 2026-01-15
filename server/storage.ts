@@ -352,7 +352,7 @@ export interface IStorage {
   deleteBeadsBoxSession(userId: string, date: string): Promise<void>;
   selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }>;
   getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]>;
-  useCryptoTicket(ticketId: string, gameScoreId: string): Promise<{ success: boolean; error?: string }>;
+  useCryptoTicket(ticketId: string, gameScoreId?: string | null): Promise<{ success: boolean; error?: string }>;
   createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket>;
 }
 
@@ -4104,7 +4104,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(cryptoGameTickets.createdAt));
   }
 
-  async useCryptoTicket(ticketId: string, gameScoreId: string): Promise<{ success: boolean; error?: string }> {
+  async useCryptoTicket(ticketId: string, gameScoreId?: string | null): Promise<{ success: boolean; error?: string }> {
     const [ticket] = await db.select().from(cryptoGameTickets).where(eq(cryptoGameTickets.id, ticketId));
     if (!ticket) {
       return { success: false, error: 'Билет не найден' };
@@ -4113,13 +4113,19 @@ export class DatabaseStorage implements IStorage {
       return { success: false, error: 'Билет уже использован' };
     }
 
+    // Only set gameScoreId if it's a valid UUID (not 'pending' or null)
+    const updateData: any = {
+      status: 'used',
+      usedAt: new Date(),
+    };
+    
+    if (gameScoreId && gameScoreId !== 'pending') {
+      updateData.gameScoreId = gameScoreId;
+    }
+
     await db
       .update(cryptoGameTickets)
-      .set({
-        status: 'used',
-        usedAt: new Date(),
-        gameScoreId,
-      })
+      .set(updateData)
       .where(eq(cryptoGameTickets.id, ticketId));
 
     return { success: true };

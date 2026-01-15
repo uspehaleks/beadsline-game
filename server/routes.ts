@@ -1592,8 +1592,8 @@ export async function registerRoutes(
       // Use the oldest ticket
       const ticketToUse = tickets[tickets.length - 1]; // Oldest first (ordered by createdAt desc)
       
-      // Mark ticket as used (we'll update the gameScoreId later when game ends)
-      await storage.useCryptoTicket(ticketToUse.id, 'pending');
+      // Mark ticket as used (gameScoreId will remain null - we're just consuming the ticket)
+      await storage.useCryptoTicket(ticketToUse.id);
       
       res.json({ success: true, ticketId: ticketToUse.id });
     } catch (error) {
