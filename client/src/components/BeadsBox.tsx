@@ -204,11 +204,16 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
   });
 
   const handleBoxClick = (index: number) => {
-    if (!boxData?.session || boxData.session.selectedBoxIndex !== null || isRevealing) return;
+    console.log('BeadsBox handleBoxClick:', { index, session: boxData?.session, selectedBoxIndex: boxData?.session?.selectedBoxIndex, isRevealing });
+    if (!boxData?.session || boxData.session.selectedBoxIndex !== null || isRevealing) {
+      console.log('BeadsBox click ignored:', { hasSession: !!boxData?.session, selectedBoxIndex: boxData?.session?.selectedBoxIndex, isRevealing });
+      return;
+    }
     
     setSelectedBox(index);
     setIsRevealing(true);
     
+    console.log('BeadsBox choosing box:', { sessionId: boxData.session.id, boxIndex: index });
     setTimeout(() => {
       chooseMutation.mutate({ sessionId: boxData.session!.id, boxIndex: index });
     }, 800);
