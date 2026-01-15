@@ -873,6 +873,7 @@ export interface UserUpdate {
   characterEnergy?: number;
   characterHealthState?: string;
   characterMood?: string;
+  bonusLives?: number;
   lastActivityAt?: Date;
 }
 

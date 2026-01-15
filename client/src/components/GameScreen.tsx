@@ -213,6 +213,15 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     canvasHeight: dimensions.height,
     onGameEnd: handleGameEnd,
     level,
+    bonusLives: user?.bonusLives || 0,
+    onUseBonusLife: async () => {
+      try {
+        await apiRequest('POST', '/api/use-bonus-life', {});
+        await refreshUser();
+      } catch (error) {
+        console.error('Failed to use bonus life:', error);
+      }
+    },
   });
 
   const startGame = useCallback(() => {

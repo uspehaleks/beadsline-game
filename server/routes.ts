@@ -2982,6 +2982,34 @@ export async function registerRoutes(
     }
   });
 
+  // Use bonus life from BEADS BOX
+  app.post("/api/use-bonus-life", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if ((user.bonusLives || 0) <= 0) {
+        return res.status(400).json({ error: "No bonus lives available" });
+      }
+
+      // Списываем одну бонусную жизнь
+      await storage.updateUser(userId, {
+        bonusLives: (user.bonusLives || 0) - 1,
+      });
+
+      res.json({
+        success: true,
+        remainingBonusLives: (user.bonusLives || 0) - 1,
+      });
+    } catch (error) {
+      console.error("Use bonus life error:", error);
+      res.status(500).json({ error: "Failed to use bonus life" });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

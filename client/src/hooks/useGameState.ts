@@ -62,6 +62,8 @@ interface UseGameStateProps {
   canvasHeight: number;
   onGameEnd?: (state: GameState) => void;
   level: LevelConfig;
+  bonusLives?: number;
+  onUseBonusLife?: () => void;
 }
 
 interface Projectile {
@@ -111,12 +113,13 @@ function sendDebugLog(message: string) {
   }, 500);
 }
 
-export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: UseGameStateProps) {
+export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonusLives = 0, onUseBonusLife }: UseGameStateProps) {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState);
   const [path, setPath] = useState<PathPoint[]>([]);
   const [projectile, setProjectile] = useState<Projectile | null>(null);
   const [shooterAngle, setShooterAngle] = useState(-Math.PI / 2);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [usedBonusLives, setUsedBonusLives] = useState(0);
   
   const gameLoopRef = useRef<number | null>(null);
   const timeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -132,6 +135,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
   const gapContextRef = useRef<GapContext | null>(null);
   const maxTotalBallsRef = useRef<number>(100);
   const pendingChainReactionRef = useRef<PendingChainReaction | null>(null);
+  const bonusLivesRef = useRef(bonusLives);
+  const usedBonusLivesRef = useRef(0);
+  const onUseBonusLifeRef = useRef(onUseBonusLife);
+  
+  useEffect(() => {
+    bonusLivesRef.current = bonusLives;
+  }, [bonusLives]);
+  
+  useEffect(() => {
+    onUseBonusLifeRef.current = onUseBonusLife;
+  }, [onUseBonusLife]);
   const chainReactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   onGameEndRef.current = onGameEnd;
@@ -557,6 +571,55 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           const newLives = updatedState.lives - 1;
           
           if (newLives <= 0) {
+            // Проверяем есть ли бонусные жизни из BEADS BOX
+            const availableBonusLives = bonusLivesRef.current - usedBonusLivesRef.current;
+            
+            if (availableBonusLives > 0) {
+              // Используем бонусную жизнь
+              usedBonusLivesRef.current += 1;
+              setUsedBonusLives(prev => prev + 1);
+              
+              // Вызываем callback для списания бонусной жизни с сервера
+              setTimeout(() => {
+                onUseBonusLifeRef.current?.();
+              }, 0);
+              
+              // Сбрасываем шарики в начало (как при обычной потере жизни)
+              const spacing = GAME_CONFIG.balls.spacing;
+              const targetHeadPosition = 0.5;
+              
+              let respawnedBalls = [...newBalls];
+              respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
+              
+              const n = respawnedBalls.length;
+              if (n > 0) {
+                const chainLength = (n - 1) * spacing;
+                let headPos = targetHeadPosition;
+                
+                if (headPos - chainLength < 0) {
+                  headPos = chainLength;
+                }
+                if (headPos > 0.85) {
+                  headPos = 0.85;
+                }
+                
+                for (let i = 0; i < n; i++) {
+                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                }
+              }
+              
+              respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+              respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
+              
+              gapContextRef.current = null;
+              
+              hapticFeedback('warning');
+              playLifeLostSound();
+              // Восстанавливаем жизни до 1 (базовая) после использования бонусной
+              return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
+            }
+            
+            // Нет бонусных жизней - конец игры
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -1078,6 +1141,51 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level }: Us
           const newLives = prev.lives - 1;
           
           if (newLives <= 0) {
+            // Проверяем есть ли бонусные жизни из BEADS BOX
+            const availableBonusLives = bonusLivesRef.current - usedBonusLivesRef.current;
+            
+            if (availableBonusLives > 0) {
+              // Используем бонусную жизнь
+              usedBonusLivesRef.current += 1;
+              setUsedBonusLives(prev => prev + 1);
+              
+              // Вызываем callback для списания бонусной жизни с сервера
+              setTimeout(() => {
+                onUseBonusLifeRef.current?.();
+              }, 0);
+              
+              // Сбрасываем шарики в начало
+              const spacing = GAME_CONFIG.balls.spacing;
+              const targetHeadPosition = 0.5;
+              
+              let respawnedBalls = [...newBalls];
+              respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
+              
+              const n = respawnedBalls.length;
+              if (n > 0) {
+                const chainLength = (n - 1) * spacing;
+                let headPos = targetHeadPosition;
+                
+                if (headPos - chainLength < 0) {
+                  headPos = chainLength;
+                }
+                if (headPos > 0.85) {
+                  headPos = 0.85;
+                }
+                
+                for (let i = 0; i < n; i++) {
+                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                }
+              }
+              
+              respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+              respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
+              
+              hapticFeedback('warning');
+              playLifeLostSound();
+              return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
+            }
+            
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
