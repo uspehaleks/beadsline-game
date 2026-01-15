@@ -37,6 +37,13 @@ export const users = pgTable("users", {
   currentWinStreak: integer("current_win_streak").default(0).notNull(),
   bestWinStreak: integer("best_win_streak").default(0).notNull(),
   totalCombo5Plus: integer("total_combo_5_plus").default(0).notNull(),
+  // Character system
+  characterGender: varchar("character_gender", { length: 10 }), // 'male' or 'female'
+  characterName: varchar("character_name", { length: 50 }),
+  characterEnergy: integer("character_energy").default(100).notNull(), // 0-100
+  characterHealthState: varchar("character_health_state", { length: 20 }).default("normal").notNull(), // 'normal', 'tired', 'sick'
+  characterMood: varchar("character_mood", { length: 20 }).default("neutral").notNull(), // 'happy', 'neutral', 'sad'
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -855,6 +862,12 @@ export interface UserUpdate {
   referredBy?: string | null;
   directReferralsCount?: number;
   completedLevels?: number[];
+  characterGender?: string;
+  characterName?: string;
+  characterEnergy?: number;
+  characterHealthState?: string;
+  characterMood?: string;
+  lastActivityAt?: Date;
 }
 
 export interface UsdtFundStats {

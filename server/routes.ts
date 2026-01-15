@@ -4457,5 +4457,136 @@ export async function registerRoutes(
     }
   });
 
+  // ========== CHARACTER SYSTEM ==========
+
+  // Get character status with calculated energy decay
+  app.get("/api/character/status", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Calculate energy decay based on inactivity
+      const now = new Date();
+      const lastActivity = user.lastActivityAt ? new Date(user.lastActivityAt) : now;
+      const hoursSinceActivity = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60));
+      
+      // Energy decays -5 per 6 hours of inactivity
+      const energyDecay = Math.floor(hoursSinceActivity / 6) * 5;
+      let currentEnergy = Math.max(0, (user.characterEnergy ?? 100) - energyDecay);
+      
+      // Determine health state based on energy and inactivity
+      let healthState = 'normal';
+      if (currentEnergy < 20 && hoursSinceActivity >= 48) {
+        healthState = 'sick';
+      } else if (currentEnergy < 40) {
+        healthState = 'tired';
+      }
+
+      // Determine mood based on recent game performance (stored in user)
+      let mood = user.characterMood || 'neutral';
+      
+      res.json({
+        isSetup: !!(user.characterGender && user.characterName),
+        gender: user.characterGender,
+        name: user.characterName,
+        energy: currentEnergy,
+        maxEnergy: 100,
+        healthState,
+        mood,
+        lastActivityAt: user.lastActivityAt,
+        hoursSinceActivity,
+      });
+    } catch (error) {
+      console.error("Get character status error:", error);
+      res.status(500).json({ error: "Failed to get character status" });
+    }
+  });
+
+  // Setup character (first time)
+  app.post("/api/character/setup", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { gender, name } = req.body;
+
+      if (!gender || !['male', 'female'].includes(gender)) {
+        return res.status(400).json({ error: "Invalid gender" });
+      }
+
+      if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 50) {
+        return res.status(400).json({ error: "Invalid name" });
+      }
+
+      await storage.updateUser(userId, {
+        characterGender: gender,
+        characterName: name.trim(),
+        characterEnergy: 100,
+        characterHealthState: 'normal',
+        characterMood: 'happy',
+        lastActivityAt: new Date(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Setup character error:", error);
+      res.status(500).json({ error: "Failed to setup character" });
+    }
+  });
+
+  // Update character activity (called after game)
+  app.post("/api/character/activity", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { energyGain, mood } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Calculate current energy with decay
+      const now = new Date();
+      const lastActivity = user.lastActivityAt ? new Date(user.lastActivityAt) : now;
+      const hoursSinceActivity = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60));
+      const energyDecay = Math.floor(hoursSinceActivity / 6) * 5;
+      let currentEnergy = Math.max(0, (user.characterEnergy ?? 100) - energyDecay);
+      
+      // Add energy from game (+15 default)
+      const gainAmount = typeof energyGain === 'number' ? energyGain : 15;
+      const newEnergy = Math.min(100, currentEnergy + gainAmount);
+      
+      // Update health state
+      let healthState = 'normal';
+      if (newEnergy < 40) {
+        healthState = 'tired';
+      }
+
+      const updates: any = {
+        characterEnergy: newEnergy,
+        characterHealthState: healthState,
+        lastActivityAt: now,
+      };
+
+      // Update mood if provided
+      if (mood && ['happy', 'neutral', 'sad'].includes(mood)) {
+        updates.characterMood = mood;
+      }
+
+      await storage.updateUser(userId, updates);
+
+      res.json({
+        energy: newEnergy,
+        healthState,
+        mood: updates.characterMood || user.characterMood,
+      });
+    } catch (error) {
+      console.error("Update character activity error:", error);
+      res.status(500).json({ error: "Failed to update character activity" });
+    }
+  });
+
   return httpServer;
 }

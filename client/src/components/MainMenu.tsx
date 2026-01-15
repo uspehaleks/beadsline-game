@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
+import { GameCharacter, useCharacterActivity, type ReplyTrigger } from '@/components/GameCharacter';
+import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
@@ -382,6 +384,8 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
   });
   const [pendingNotifications, setPendingNotifications] = useState<ReferralRewardWithUser[]>([]);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [showCharacterSetup, setShowCharacterSetup] = useState(false);
+  const [characterTrigger, setCharacterTrigger] = useState<ReplyTrigger | null>('normal');
   const { toast } = useToast();
   
   const toggleSound = () => {
@@ -618,6 +622,22 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
       >
         <BeadsLogo />
       </motion.div>
+
+      {user && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.05 }}
+          className="mb-4"
+        >
+          <GameCharacter
+            size="lg"
+            showStats={true}
+            trigger={characterTrigger}
+            onSetupRequired={() => setShowCharacterSetup(true)}
+          />
+        </motion.div>
+      )}
 
       {user && rankInfo && (
         <motion.div
@@ -1409,6 +1429,10 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showCharacterSetup && (
+        <CharacterSetup onComplete={() => setShowCharacterSetup(false)} />
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-border safe-area-inset-bottom">
         <div className="flex justify-around py-2 px-4 max-w-sm mx-auto">
