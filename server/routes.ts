@@ -1530,6 +1530,31 @@ export async function registerRoutes(
     }
   });
 
+  // Reset BEADS BOX session for a user (admin)
+  app.post("/api/admin/beads-box/reset", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { targetUserId } = req.body;
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Target user ID required" });
+      }
+
+      // Delete today's session for the target user
+      const today = new Date().toISOString().split('T')[0];
+      await storage.deleteBeadsBoxSession(targetUserId, today);
+
+      res.json({ success: true, message: "BEADS BOX сессия сброшена" });
+    } catch (error) {
+      console.error("Reset beads box error:", error);
+      res.status(500).json({ error: "Failed to reset beads box" });
+    }
+  });
+
   // Get user crypto tickets
   app.get("/api/user/crypto-tickets", requireAuth, async (req, res) => {
     try {

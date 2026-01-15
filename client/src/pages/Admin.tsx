@@ -1127,6 +1127,18 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
     },
   });
 
+  const resetBeadsBoxMutation = useMutation({
+    mutationFn: async (targetUserId: string) => {
+      return apiRequest("POST", "/api/admin/beads-box/reset", { targetUserId });
+    },
+    onSuccess: async () => {
+      toast({ title: "Готово", description: "BEADS BOX сессия сброшена" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка", description: "Не удалось сбросить BEADS BOX", variant: "destructive" });
+    },
+  });
+
   const { data: allBoosts } = useQuery<Boost[]>({
     queryKey: ["/api/admin/boosts"],
   });
@@ -1248,6 +1260,20 @@ function UsersTab({ users, total }: { users: User[]; total: number }) {
                     title="Сбросить уровни"
                   >
                     <RotateCcw className="w-4 h-4 text-orange-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (confirm(`Сбросить BEADS BOX для ${user.username}?`)) {
+                        resetBeadsBoxMutation.mutate(user.id);
+                      }
+                    }}
+                    disabled={resetBeadsBoxMutation.isPending}
+                    data-testid={`reset-beadsbox-${user.id}`}
+                    title="Сбросить BEADS BOX"
+                  >
+                    <Gift className="w-4 h-4 text-green-500" />
                   </Button>
                   <Button
                     variant="ghost"

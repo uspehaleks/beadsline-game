@@ -349,6 +349,7 @@ export interface IStorage {
   updateBeadsBoxConfig(config: Partial<BeadsBoxConfig>): Promise<BeadsBoxConfig>;
   getUserDailyBoxSession(userId: string, date: string): Promise<BeadsBoxSession | undefined>;
   createDailyBoxSession(userId: string, date: string, boxes: BeadsBoxReward[]): Promise<BeadsBoxSession>;
+  deleteBeadsBoxSession(userId: string, date: string): Promise<void>;
   selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }>;
   getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]>;
   useCryptoTicket(ticketId: string, gameScoreId: string): Promise<{ success: boolean; error?: string }>;
@@ -4009,6 +4010,15 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return session;
+  }
+
+  async deleteBeadsBoxSession(userId: string, date: string): Promise<void> {
+    await db
+      .delete(beadsBoxSessions)
+      .where(and(
+        eq(beadsBoxSessions.userId, userId),
+        eq(beadsBoxSessions.sessionDate, date)
+      ));
   }
 
   async selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }> {
