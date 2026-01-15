@@ -7,7 +7,7 @@ import { CharacterAvatar } from "@/components/CharacterAvatar";
 import type { CharacterWithAccessories } from "@shared/schema";
 
 export type CharacterGender = 'male' | 'female';
-export type HealthState = 'normal' | 'tired' | 'sick';
+export type HealthState = 'normal' | 'tired' | 'sick' | 'hungry';
 export type CharacterMood = 'happy' | 'neutral' | 'sad';
 
 interface CharacterStatus {
@@ -16,10 +16,18 @@ interface CharacterStatus {
   name: string | null;
   energy: number;
   maxEnergy: number;
+  hunger: number;
+  maxHunger: number;
+  thirst: number;
+  maxThirst: number;
+  fatigue: number;
+  maxFatigue: number;
   healthState: HealthState;
   mood: CharacterMood;
   lastActivityAt: string;
+  lastCareAt: string | null;
   hoursSinceActivity: number;
+  careCooldowns: Record<string, string>;
 }
 
 const maleReplies = {
@@ -29,6 +37,12 @@ const maleReplies = {
   low_energy: ["Я устал...", "Нужно немного отдыха..."],
   sick: ["Мне плохо...", "Кажется, я заболел..."],
   item_used: ["Стало лучше!", "Спасибо!"],
+  feed: ["Ммм, вкусно!", "Спасибо за еду!", "Теперь я сытый!"],
+  drink: ["Освежает!", "Спасибо за воду!", "Больше не хочу пить!"],
+  rest: ["Отдохнул отлично!", "Силы восстановились!", "Спасибо за отдых!"],
+  heal: ["Мне уже лучше!", "Спасибо за заботу!", "Чувствую себя здоровым!"],
+  hungry: ["Я голодный...", "Хочу кушать...", "Покорми меня, пожалуйста!"],
+  thirsty: ["Хочу пить...", "Дай водички...", "Очень хочется пить!"],
 };
 
 const femaleReplies = {
@@ -38,6 +52,12 @@ const femaleReplies = {
   low_energy: ["Я устала...", "Нужно немного отдыха..."],
   sick: ["Мне плохо...", "Кажется, я заболела..."],
   item_used: ["Стало лучше!", "Спасибо!"],
+  feed: ["Ммм, вкусно!", "Спасибо за еду!", "Теперь я сытая!"],
+  drink: ["Освежает!", "Спасибо за воду!", "Больше не хочу пить!"],
+  rest: ["Отдохнула отлично!", "Силы восстановились!", "Спасибо за отдых!"],
+  heal: ["Мне уже лучше!", "Спасибо за заботу!", "Чувствую себя здоровой!"],
+  hungry: ["Я голодная...", "Хочу кушать...", "Покорми меня, пожалуйста!"],
+  thirsty: ["Хочу пить...", "Дай водички...", "Очень хочется пить!"],
 };
 
 export type ReplyTrigger = keyof typeof maleReplies;

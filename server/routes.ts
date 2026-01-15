@@ -4459,7 +4459,7 @@ export async function registerRoutes(
 
   // ========== CHARACTER SYSTEM ==========
 
-  // Get character status with calculated energy decay
+  // Get character status with calculated decay for hunger/thirst/fatigue
   app.get("/api/character/status", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
@@ -4469,25 +4469,61 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Calculate energy decay based on inactivity
+      // Get character data from characters table
+      const character = await storage.getCharacter(userId);
+
       const now = new Date();
       const lastActivity = user.lastActivityAt ? new Date(user.lastActivityAt) : now;
       const hoursSinceActivity = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60));
       
-      // Energy decays -5 per 6 hours of inactivity
-      const energyDecay = Math.floor(hoursSinceActivity / 6) * 5;
-      let currentEnergy = Math.max(0, (user.characterEnergy ?? 100) - energyDecay);
+      // Calculate decay based on time since last care (not last activity)
+      const lastCare = character?.lastCareAt ? new Date(character.lastCareAt) : now;
+      const hoursSinceCare = Math.floor((now.getTime() - lastCare.getTime()) / (1000 * 60 * 60));
+      const decayPeriods = Math.floor(hoursSinceCare / 6);
       
-      // Determine health state based on energy and inactivity
+      // Get base values from character table (already saved after care actions)
+      let hunger = character?.hunger ?? 100;
+      let thirst = character?.thirst ?? 100;
+      let fatigue = character?.fatigue ?? 0;
+      
+      // Apply decay based on time since last care: hunger -10, thirst -15, fatigue +10 per 6 hours
+      hunger = Math.max(5, hunger - (decayPeriods * 10));
+      thirst = Math.max(5, thirst - (decayPeriods * 15));
+      fatigue = Math.min(95, fatigue + (decayPeriods * 10));
+      
+      // Calculate energy based on hunger/thirst/fatigue
+      let baseEnergy = user.characterEnergy ?? 100;
+      const energyDecay = Math.floor(hoursSinceActivity / 6) * 5;
+      let currentEnergy = Math.max(5, baseEnergy - energyDecay);
+      
+      // Energy recovery penalty if hungry
+      if (hunger < 20) {
+        currentEnergy = Math.max(5, currentEnergy - 10);
+      }
+      
+      // Determine health state
       let healthState = 'normal';
       if (currentEnergy < 20 && hoursSinceActivity >= 48) {
         healthState = 'sick';
-      } else if (currentEnergy < 40) {
+      } else if (fatigue > 70) {
         healthState = 'tired';
+      } else if (hunger < 30) {
+        healthState = 'hungry';
       }
 
-      // Determine mood based on recent game performance (stored in user)
+      // Determine mood based on thirst and recent game performance
       let mood = user.characterMood || 'neutral';
+      if (thirst < 20) {
+        mood = 'sad';
+      }
+      
+      // Parse care cooldowns
+      let careCooldowns: Record<string, string> = {};
+      try {
+        careCooldowns = character?.careCooldowns ? JSON.parse(character.careCooldowns) : {};
+      } catch (e) {
+        careCooldowns = {};
+      }
       
       res.json({
         isSetup: !!(user.characterGender && user.characterName),
@@ -4495,14 +4531,120 @@ export async function registerRoutes(
         name: user.characterName,
         energy: currentEnergy,
         maxEnergy: 100,
+        hunger,
+        maxHunger: 100,
+        thirst,
+        maxThirst: 100,
+        fatigue,
+        maxFatigue: 100,
         healthState,
         mood,
         lastActivityAt: user.lastActivityAt,
+        lastCareAt: character?.lastCareAt,
         hoursSinceActivity,
+        careCooldowns,
       });
     } catch (error) {
       console.error("Get character status error:", error);
       res.status(500).json({ error: "Failed to get character status" });
+    }
+  });
+
+  // Perform care action on character
+  app.post("/api/character/care", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { action } = req.body;
+      
+      const validActions = ['feed', 'drink', 'rest', 'heal'];
+      if (!action || !validActions.includes(action)) {
+        return res.status(400).json({ error: "Invalid care action" });
+      }
+
+      const character = await storage.getCharacter(userId);
+      if (!character) {
+        return res.status(404).json({ error: "Character not found" });
+      }
+
+      // Parse cooldowns
+      let careCooldowns: Record<string, string> = {};
+      try {
+        careCooldowns = character.careCooldowns ? JSON.parse(character.careCooldowns) : {};
+      } catch (e) {
+        careCooldowns = {};
+      }
+
+      const now = new Date();
+      const cooldownHours: Record<string, number> = {
+        feed: 4,
+        drink: 4,
+        rest: 6,
+        heal: 8
+      };
+
+      // Check cooldown
+      const lastAction = careCooldowns[action];
+      if (lastAction) {
+        const lastTime = new Date(lastAction);
+        const hoursSince = (now.getTime() - lastTime.getTime()) / (1000 * 60 * 60);
+        if (hoursSince < cooldownHours[action]) {
+          const remainingMinutes = Math.ceil((cooldownHours[action] - hoursSince) * 60);
+          return res.status(429).json({ 
+            error: "Action on cooldown",
+            remainingMinutes,
+            availableAt: new Date(lastTime.getTime() + cooldownHours[action] * 60 * 60 * 1000)
+          });
+        }
+      }
+
+      // Apply action effects
+      let updates: Partial<typeof character> = {
+        lastCareAt: now,
+      };
+
+      const user = await storage.getUser(userId);
+      let userUpdates: Record<string, any> = {};
+
+      switch (action) {
+        case 'feed':
+          updates.hunger = Math.min(100, (character.hunger ?? 100) + 30);
+          break;
+        case 'drink':
+          updates.thirst = Math.min(100, (character.thirst ?? 100) + 40);
+          break;
+        case 'rest':
+          updates.fatigue = Math.max(0, (character.fatigue ?? 0) - 30);
+          break;
+        case 'heal':
+          // Reset to healthy state
+          updates.hunger = Math.min(100, (character.hunger ?? 100) + 20);
+          updates.thirst = Math.min(100, (character.thirst ?? 100) + 20);
+          updates.fatigue = Math.max(0, (character.fatigue ?? 0) - 20);
+          userUpdates.characterEnergy = Math.min(100, (user?.characterEnergy ?? 100) + 30);
+          userUpdates.characterHealthState = 'normal';
+          break;
+      }
+
+      // Update cooldown
+      careCooldowns[action] = now.toISOString();
+      updates.careCooldowns = JSON.stringify(careCooldowns);
+
+      // Update character in DB
+      await storage.updateCharacter(userId, updates);
+      
+      // Update user if needed
+      if (Object.keys(userUpdates).length > 0) {
+        await storage.updateUser(userId, userUpdates);
+      }
+
+      res.json({ 
+        success: true, 
+        action,
+        cooldownEndsAt: new Date(now.getTime() + cooldownHours[action] * 60 * 60 * 1000)
+      });
+    } catch (error) {
+      console.error("Character care error:", error);
+      res.status(500).json({ error: "Failed to perform care action" });
     }
   });
 

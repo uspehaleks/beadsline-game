@@ -372,6 +372,11 @@ export const characters = pgTable("characters", {
   userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id).unique(),
   name: text("name").notNull(),
   gender: varchar("gender", { length: 10 }).notNull(),
+  hunger: integer("hunger").default(100).notNull(),
+  thirst: integer("thirst").default(100).notNull(),
+  fatigue: integer("fatigue").default(0).notNull(),
+  lastCareAt: timestamp("last_care_at").defaultNow(),
+  careCooldowns: text("care_cooldowns").default('{}'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

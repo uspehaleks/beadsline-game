@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap, ArrowDownToLine, Smile, Meh, Frown, ThermometerSun, Heart } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap, ArrowDownToLine, Smile, Meh, Frown, ThermometerSun, Heart, Utensils, Droplets, Moon, Pill } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
 import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
@@ -17,7 +18,7 @@ import QRCode from 'qrcode';
 import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
 
 type CharacterMood = 'happy' | 'neutral' | 'sad';
-type HealthState = 'normal' | 'tired' | 'sick';
+type HealthState = 'normal' | 'tired' | 'sick' | 'hungry';
 
 interface CharacterStatus {
   isSetup: boolean;
@@ -25,10 +26,18 @@ interface CharacterStatus {
   name: string | null;
   energy: number;
   maxEnergy: number;
+  hunger: number;
+  maxHunger: number;
+  thirst: number;
+  maxThirst: number;
+  fatigue: number;
+  maxFatigue: number;
   healthState: HealthState;
   mood: CharacterMood;
   lastActivityAt: string;
+  lastCareAt: string | null;
   hoursSinceActivity: number;
+  careCooldowns: Record<string, string>;
 }
 
 interface MainMenuProps {
@@ -451,6 +460,24 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     enabled: !!user,
   });
 
+  const careMutation = useMutation({
+    mutationFn: async (action: string) => {
+      return apiRequest('POST', '/api/character/care', { action });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/character/status'] });
+    },
+  });
+
+  const getCooldownRemaining = (action: string): number | null => {
+    if (!characterStatus?.careCooldowns?.[action]) return null;
+    const cooldownHours: Record<string, number> = { feed: 4, drink: 4, rest: 6, heal: 8 };
+    const lastTime = new Date(characterStatus.careCooldowns[action]);
+    const elapsed = (Date.now() - lastTime.getTime()) / (1000 * 60 * 60);
+    const remaining = cooldownHours[action] - elapsed;
+    return remaining > 0 ? Math.ceil(remaining * 60) : null;
+  };
+
   const { data: userLeague } = useQuery<UserLeagueResponse>({
     queryKey: ['/api/user/league'],
     enabled: !!user && !user.username?.startsWith('guest_'),
@@ -745,14 +772,123 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                       }
                     </div>
                     {characterStatus.healthState !== 'normal' && (
-                      <div className="w-7 h-7 rounded-full bg-gray-700/50 flex items-center justify-center" title={characterStatus.healthState === 'sick' ? 'Болеет' : 'Устал'}>
+                      <div className="w-7 h-7 rounded-full bg-gray-700/50 flex items-center justify-center" title={characterStatus.healthState === 'sick' ? 'Болеет' : characterStatus.healthState === 'hungry' ? 'Голоден' : 'Устал'}>
                         {characterStatus.healthState === 'sick' 
                           ? <ThermometerSun className="w-4 h-4 text-red-400" />
-                          : <Heart className="w-4 h-4 text-orange-400" />
+                          : characterStatus.healthState === 'hungry'
+                            ? <Utensils className="w-4 h-4 text-orange-400" />
+                            : <Heart className="w-4 h-4 text-orange-400" />
                         }
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Utensils className="w-3 h-3" />
+                      <span>Сытость</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ 
+                          background: characterStatus.hunger > 50 
+                            ? 'linear-gradient(90deg, #f97316, #fb923c)' 
+                            : 'linear-gradient(90deg, #ef4444, #f97316)' 
+                        }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${characterStatus.hunger}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Droplets className="w-3 h-3" />
+                      <span>Жажда</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ 
+                          background: characterStatus.thirst > 50 
+                            ? 'linear-gradient(90deg, #06b6d4, #22d3ee)' 
+                            : 'linear-gradient(90deg, #0891b2, #06b6d4)' 
+                        }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${characterStatus.thirst}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Moon className="w-3 h-3" />
+                      <span>Усталость</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ 
+                          background: characterStatus.fatigue < 50 
+                            ? 'linear-gradient(90deg, #a855f7, #c084fc)' 
+                            : 'linear-gradient(90deg, #7c3aed, #a855f7)' 
+                        }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${characterStatus.fatigue}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-4 gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex flex-col items-center gap-0.5 h-auto py-2 text-xs"
+                    disabled={careMutation.isPending || getCooldownRemaining('feed') !== null}
+                    onClick={() => careMutation.mutate('feed')}
+                    data-testid="button-care-feed"
+                  >
+                    <Utensils className="w-4 h-4 text-orange-400" />
+                    <span>{getCooldownRemaining('feed') ? `${getCooldownRemaining('feed')}м` : 'Еда'}</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex flex-col items-center gap-0.5 h-auto py-2 text-xs"
+                    disabled={careMutation.isPending || getCooldownRemaining('drink') !== null}
+                    onClick={() => careMutation.mutate('drink')}
+                    data-testid="button-care-drink"
+                  >
+                    <Droplets className="w-4 h-4 text-cyan-400" />
+                    <span>{getCooldownRemaining('drink') ? `${getCooldownRemaining('drink')}м` : 'Вода'}</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex flex-col items-center gap-0.5 h-auto py-2 text-xs"
+                    disabled={careMutation.isPending || getCooldownRemaining('rest') !== null}
+                    onClick={() => careMutation.mutate('rest')}
+                    data-testid="button-care-rest"
+                  >
+                    <Moon className="w-4 h-4 text-purple-400" />
+                    <span>{getCooldownRemaining('rest') ? `${getCooldownRemaining('rest')}м` : 'Отдых'}</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex flex-col items-center gap-0.5 h-auto py-2 text-xs"
+                    disabled={careMutation.isPending || getCooldownRemaining('heal') !== null || characterStatus.healthState === 'normal'}
+                    onClick={() => careMutation.mutate('heal')}
+                    data-testid="button-care-heal"
+                  >
+                    <Pill className="w-4 h-4 text-pink-400" />
+                    <span>{getCooldownRemaining('heal') ? `${getCooldownRemaining('heal')}м` : 'Лечить'}</span>
+                  </Button>
                 </div>
               </div>
             )}
