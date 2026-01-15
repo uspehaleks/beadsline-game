@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { playWinSound } from "@/lib/sounds";
+import { useUser } from "@/contexts/UserContext";
 
 interface BeadsBoxProps {
   onClose: () => void;
@@ -141,6 +142,7 @@ function StarBurst() {
 
 export function BeadsBox({ onClose }: BeadsBoxProps) {
   const queryClient = useQueryClient();
+  const { refreshUser } = useUser();
   const [selectedBox, setSelectedBox] = useState<number | null>(null);
   const [revealedReward, setRevealedReward] = useState<BeadsBoxReward | null>(null);
   const [allRevealedBoxes, setAllRevealedBoxes] = useState<BeadsBoxReward[] | null>(null);
@@ -198,6 +200,8 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/beads-box/daily"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/boosts"] });
+      // Refresh user to update bonusLives and beads balance in UI
+      refreshUser();
     },
     onError: (err) => {
       console.error("Choose box error:", err);
