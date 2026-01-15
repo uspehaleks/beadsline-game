@@ -406,11 +406,22 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                   const reward = !isHidden && 'type' in box ? box as BeadsBoxReward : null;
                   const canInteract = !alreadyClaimed && !isRevealing && !showingReward;
 
+                  const handleClick = () => {
+                    if (canInteract) {
+                      handleBoxClick(index);
+                    }
+                  };
+
                   return (
-                    <motion.button
+                    <motion.div
                       key={index}
-                      onClick={() => handleBoxClick(index)}
-                      disabled={!canInteract}
+                      onClick={handleClick}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        handleClick();
+                      }}
+                      role="button"
+                      tabIndex={canInteract ? 0 : -1}
                       whileHover={canInteract ? { scale: 1.08, y: -4 } : undefined}
                       whileTap={canInteract ? { scale: 0.95 } : undefined}
                       animate={isSelected && isRevealing ? { 
@@ -421,14 +432,13 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                       className={`
                         relative aspect-square rounded-2xl p-2
                         flex flex-col items-center justify-center
-                        transition-all duration-300
+                        transition-all duration-300 select-none
                         ${isHidden 
-                          ? `bg-gradient-to-br ${boxColors[index]} shadow-lg ${canInteract ? 'cursor-pointer' : 'cursor-default'}` 
+                          ? `bg-gradient-to-br ${boxColors[index]} shadow-lg ${canInteract ? 'cursor-pointer active:scale-95' : 'cursor-default'}` 
                           : 'bg-slate-800/80 border border-slate-600'
                         }
                         ${isSelected && !isRevealing ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900' : ''}
                         ${showingReward && !isSelected ? 'opacity-40' : ''}
-                        disabled:cursor-default
                       `}
                       data-testid={`button-box-${index}`}
                     >
@@ -436,7 +446,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                         <motion.div
                           animate={canInteract ? { y: [0, -3, 0] } : undefined}
                           transition={{ duration: 1.5, repeat: Infinity, delay: index * 0.1 }}
-                          className="flex flex-col items-center"
+                          className="flex flex-col items-center pointer-events-none"
                         >
                           <Gift className="w-10 h-10 text-white/90 drop-shadow-lg" />
                           <span className="text-white/80 text-xs font-bold mt-1">#{index + 1}</span>
@@ -446,7 +456,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                           initial={{ scale: 0, rotate: -180 }}
                           animate={{ scale: 1, rotate: 0 }}
                           transition={{ type: "spring", stiffness: 200 }}
-                          className="flex flex-col items-center"
+                          className="flex flex-col items-center pointer-events-none"
                         >
                           {smallRewardIcons[reward.type]}
                           <span className="text-white text-[10px] font-semibold mt-1 text-center leading-tight">
@@ -459,7 +469,7 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                           </span>
                         </motion.div>
                       )}
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </div>
