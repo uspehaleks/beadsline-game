@@ -460,12 +460,17 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     enabled: !!user,
   });
 
+  const [careReaction, setCareReaction] = useState<string | null>(null);
+  
   const careMutation = useMutation({
     mutationFn: async (action: string) => {
       return apiRequest('POST', '/api/character/care', { action });
     },
-    onSuccess: () => {
+    onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: ['/api/character/status'] });
+      // Show micro-animation based on action
+      setCareReaction(action);
+      setTimeout(() => setCareReaction(null), 2000);
     },
   });
 
@@ -799,8 +804,14 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                             : 'linear-gradient(90deg, #ef4444, #f97316)' 
                         }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${characterStatus.hunger}%` }}
-                        transition={{ duration: 0.5 }}
+                        animate={{ 
+                          width: `${characterStatus.hunger}%`,
+                          opacity: characterStatus.hunger < 20 ? [0.5, 1, 0.5] : 1
+                        }}
+                        transition={{ 
+                          width: { duration: 0.5 },
+                          opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                        }}
                       />
                     </div>
                   </div>
@@ -818,8 +829,14 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                             : 'linear-gradient(90deg, #0891b2, #06b6d4)' 
                         }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${characterStatus.thirst}%` }}
-                        transition={{ duration: 0.5 }}
+                        animate={{ 
+                          width: `${characterStatus.thirst}%`,
+                          opacity: characterStatus.thirst < 20 ? [0.5, 1, 0.5] : 1
+                        }}
+                        transition={{ 
+                          width: { duration: 0.5 },
+                          opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                        }}
                       />
                     </div>
                   </div>
@@ -837,12 +854,32 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                             : 'linear-gradient(90deg, #7c3aed, #a855f7)' 
                         }}
                         initial={{ width: 0 }}
-                        animate={{ width: `${characterStatus.fatigue}%` }}
-                        transition={{ duration: 0.5 }}
+                        animate={{ 
+                          width: `${characterStatus.fatigue}%`,
+                          opacity: characterStatus.fatigue > 80 ? [0.5, 1, 0.5] : 1
+                        }}
+                        transition={{ 
+                          width: { duration: 0.5 },
+                          opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                        }}
                       />
                     </div>
                   </div>
                 </div>
+
+                {careReaction && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-2 text-center text-sm font-medium"
+                  >
+                    {careReaction === 'feed' && <span className="text-orange-400">Ням-ням! 😋</span>}
+                    {careReaction === 'drink' && <span className="text-cyan-400">Освежился! 💧</span>}
+                    {careReaction === 'rest' && <span className="text-purple-400">*зевает* 😴</span>}
+                    {careReaction === 'heal' && <span className="text-pink-400">Мне лучше! 💊</span>}
+                  </motion.div>
+                )}
 
                 <div className="mt-3 grid grid-cols-4 gap-1.5">
                   <Button
@@ -853,7 +890,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     onClick={() => careMutation.mutate('feed')}
                     data-testid="button-care-feed"
                   >
-                    <Utensils className="w-4 h-4 text-orange-400" />
+                    <motion.div animate={careReaction === 'feed' ? { scale: [1, 1.3, 1], rotate: [0, 10, -10, 0] } : {}}>
+                      <Utensils className="w-4 h-4 text-orange-400" />
+                    </motion.div>
                     <span>{getCooldownRemaining('feed') ? `${getCooldownRemaining('feed')}м` : 'Еда'}</span>
                   </Button>
                   <Button
@@ -864,7 +903,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     onClick={() => careMutation.mutate('drink')}
                     data-testid="button-care-drink"
                   >
-                    <Droplets className="w-4 h-4 text-cyan-400" />
+                    <motion.div animate={careReaction === 'drink' ? { scale: [1, 1.3, 1], y: [0, -3, 0] } : {}}>
+                      <Droplets className="w-4 h-4 text-cyan-400" />
+                    </motion.div>
                     <span>{getCooldownRemaining('drink') ? `${getCooldownRemaining('drink')}м` : 'Вода'}</span>
                   </Button>
                   <Button
@@ -875,7 +916,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     onClick={() => careMutation.mutate('rest')}
                     data-testid="button-care-rest"
                   >
-                    <Moon className="w-4 h-4 text-purple-400" />
+                    <motion.div animate={careReaction === 'rest' ? { rotate: [0, -15, 15, 0], scale: [1, 1.1, 1] } : {}}>
+                      <Moon className="w-4 h-4 text-purple-400" />
+                    </motion.div>
                     <span>{getCooldownRemaining('rest') ? `${getCooldownRemaining('rest')}м` : 'Отдых'}</span>
                   </Button>
                   <Button
@@ -886,7 +929,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     onClick={() => careMutation.mutate('heal')}
                     data-testid="button-care-heal"
                   >
-                    <Pill className="w-4 h-4 text-pink-400" />
+                    <motion.div animate={careReaction === 'heal' ? { scale: [1, 1.2, 1], opacity: [1, 0.5, 1] } : {}}>
+                      <Pill className="w-4 h-4 text-pink-400" />
+                    </motion.div>
                     <span>{getCooldownRemaining('heal') ? `${getCooldownRemaining('heal')}м` : 'Лечить'}</span>
                   </Button>
                 </div>
