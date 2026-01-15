@@ -9,7 +9,7 @@ import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, APP_VERSION } from '@/lib/queryClient';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
 import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
@@ -1731,6 +1731,9 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
             <ArrowDownToLine className="w-5 h-5" style={{ color: '#00ff88' }} />
             <span className="text-xs">Вывод</span>
           </button>
+        </div>
+        <div className="text-center py-1 text-[10px] text-muted-foreground/50">
+          v{APP_VERSION}
         </div>
       </div>
     </div>
