@@ -4526,9 +4526,9 @@ export async function registerRoutes(
       }
       
       res.json({
-        isSetup: !!(user.characterGender && user.characterName),
-        gender: user.characterGender,
-        name: user.characterName,
+        isSetup: !!(character?.gender && character?.name),
+        gender: character?.gender || user.characterGender,
+        name: character?.name || user.characterName,
         energy: currentEnergy,
         maxEnergy: 100,
         hunger,
