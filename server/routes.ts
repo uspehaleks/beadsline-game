@@ -1566,6 +1566,41 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to get crypto tickets" });
     }
   });
+  
+  // Get count of available crypto tickets
+  app.get("/api/user/crypto-tickets/count", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const tickets = await storage.getUserCryptoTickets(userId);
+      res.json({ count: tickets.length });
+    } catch (error) {
+      console.error("Get crypto tickets count error:", error);
+      res.status(500).json({ error: "Failed to get crypto tickets count" });
+    }
+  });
+  
+  // Use a crypto ticket (called when starting game with ticket)
+  app.post("/api/user/crypto-tickets/use", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const tickets = await storage.getUserCryptoTickets(userId);
+      
+      if (tickets.length === 0) {
+        return res.status(400).json({ error: "Нет доступных крипто-билетов" });
+      }
+      
+      // Use the oldest ticket
+      const ticketToUse = tickets[tickets.length - 1]; // Oldest first (ordered by createdAt desc)
+      
+      // Mark ticket as used (we'll update the gameScoreId later when game ends)
+      await storage.useCryptoTicket(ticketToUse.id, 'pending');
+      
+      res.json({ success: true, ticketId: ticketToUse.id });
+    } catch (error) {
+      console.error("Use crypto ticket error:", error);
+      res.status(500).json({ error: "Failed to use crypto ticket" });
+    }
+  });
 
   app.get("/api/config/:key", async (req, res) => {
     try {

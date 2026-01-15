@@ -15,6 +15,7 @@ import { useUser } from '@/contexts/UserContext';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
+import { useToast } from '@/hooks/use-toast';
 
 type Screen = 'menu' | 'levelSelect' | 'game' | 'leaderboard' | 'shop' | 'accessoryShop' | 'customize';
 type LeaderboardFilter = 'all' | 'week' | 'today' | 'friends';
@@ -25,7 +26,15 @@ export default function Home() {
   const [showCommunityInvite, setShowCommunityInvite] = useState(false);
   const [showBeadsBox, setShowBeadsBox] = useState(false);
   const [leaderboardFilter, setLeaderboardFilter] = useState<LeaderboardFilter>('all');
+  const [useCryptoTicket, setUseCryptoTicket] = useState(false);
   const { user, isLoading: isUserLoading, refreshUser } = useUser();
+  const { toast } = useToast();
+  
+  // Fetch crypto tickets
+  const { data: cryptoTicketsData } = useQuery<{ count: number }>({
+    queryKey: ['/api/user/crypto-tickets/count'],
+    enabled: !!user,
+  });
 
   const { data: characterExists, isLoading: isCharacterLoading, refetch: refetchCharacter } = useQuery<{ exists: boolean }>({
     queryKey: ['/api/character/exists'],
@@ -86,10 +95,48 @@ export default function Home() {
     setCurrentScreen('levelSelect');
   }, []);
 
-  const handleSelectLevel = useCallback((level: LevelConfig) => {
-    setSelectedLevel(level);
-    setCurrentScreen('game');
-  }, []);
+  const handleSelectLevel = useCallback(async (level: LevelConfig, withCryptoTicket?: boolean) => {
+    if (withCryptoTicket) {
+      // Consume crypto ticket before starting game
+      try {
+        const response = await apiRequest('POST', '/api/user/crypto-tickets/use', { levelId: level.id });
+        if (!response.ok) {
+          const data = await response.json();
+          console.error('Failed to use crypto ticket:', data.error);
+          toast({
+            title: "Крипто-билет недоступен",
+            description: "Игра начнётся без крипто-режима",
+            variant: "destructive",
+          });
+          // Don't use ticket if consumption failed
+          setSelectedLevel(level);
+          setUseCryptoTicket(false);
+          setCurrentScreen('game');
+          return;
+        }
+        // Ticket consumed successfully
+        queryClient.invalidateQueries({ queryKey: ['/api/user/crypto-tickets/count'] });
+        setSelectedLevel(level);
+        setUseCryptoTicket(true);
+        setCurrentScreen('game');
+      } catch (error) {
+        console.error('Error using crypto ticket:', error);
+        toast({
+          title: "Ошибка активации билета",
+          description: "Игра начнётся без крипто-режима",
+          variant: "destructive",
+        });
+        // Proceed without ticket on error
+        setSelectedLevel(level);
+        setUseCryptoTicket(false);
+        setCurrentScreen('game');
+      }
+    } else {
+      setSelectedLevel(level);
+      setUseCryptoTicket(false);
+      setCurrentScreen('game');
+    }
+  }, [toast]);
 
   const handleViewLeaderboard = useCallback(() => {
     setCurrentScreen('leaderboard');
@@ -135,6 +182,7 @@ export default function Home() {
             completedLevels={user?.completedLevels ?? []}
             onSelectLevel={handleSelectLevel}
             onBack={handleMainMenu}
+            cryptoTickets={cryptoTicketsData?.count ?? 0}
           />
         );
       
@@ -146,6 +194,7 @@ export default function Home() {
             onGameEnd={handleGameEnd}
             onViewLeaderboard={handleViewLeaderboard}
             onMainMenu={handleMainMenu}
+            useCryptoTicket={useCryptoTicket}
           />
         );
       

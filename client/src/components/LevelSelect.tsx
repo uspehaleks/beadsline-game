@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Lock, ArrowLeft, Star, Zap, Target, Coins } from 'lucide-react';
+import { Lock, ArrowLeft, Star, Zap, Target, Coins, Ticket } from 'lucide-react';
 import { SiBitcoin } from 'react-icons/si';
 import { 
   LEVELS, 
@@ -15,8 +16,9 @@ import {
 
 interface LevelSelectProps {
   completedLevels: number[];
-  onSelectLevel: (level: LevelConfig) => void;
+  onSelectLevel: (level: LevelConfig, useCryptoTicket?: boolean) => void;
   onBack: () => void;
+  cryptoTickets?: number;
 }
 
 function PathPreview({ pathType, size = 60 }: { pathType: string; size?: number }) {
@@ -247,7 +249,13 @@ function LevelCard({
   );
 }
 
-export function LevelSelect({ completedLevels, onSelectLevel, onBack }: LevelSelectProps) {
+export function LevelSelect({ completedLevels, onSelectLevel, onBack, cryptoTickets = 0 }: LevelSelectProps) {
+  const [useCryptoTicket, setUseCryptoTicket] = useState(false);
+  
+  const handleSelectLevel = (level: LevelConfig) => {
+    onSelectLevel(level, useCryptoTicket && cryptoTickets > 0);
+  };
+  
   return (
     <div 
       className="min-h-screen flex flex-col p-4 pb-24"
@@ -298,6 +306,47 @@ export function LevelSelect({ completedLevels, onSelectLevel, onBack }: LevelSel
           Криптошарики появляются только на новых уровнях! Проходи дальше для крипто-наград.
         </p>
       </motion.div>
+      
+      {/* Crypto ticket toggle */}
+      {cryptoTickets > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className={`mb-4 p-3 rounded-xl border cursor-pointer transition-all ${
+            useCryptoTicket 
+              ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 border-green-500/50 shadow-lg shadow-green-500/20' 
+              : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20'
+          }`}
+          onClick={() => setUseCryptoTicket(!useCryptoTicket)}
+          data-testid="toggle-crypto-ticket"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Ticket className={`w-5 h-5 ${useCryptoTicket ? 'text-green-300' : 'text-green-400'}`} />
+              <div>
+                <span className={`font-semibold ${useCryptoTicket ? 'text-green-300' : 'text-green-400'}`}>
+                  Крипто-билет ({cryptoTickets})
+                </span>
+                <p className="text-xs text-green-300/70">
+                  {useCryptoTicket 
+                    ? 'Криптошарики на любом уровне!' 
+                    : 'Нажми чтобы активировать'}
+                </p>
+              </div>
+            </div>
+            <div className={`w-12 h-6 rounded-full p-1 transition-colors ${
+              useCryptoTicket ? 'bg-green-500' : 'bg-slate-600'
+            }`}>
+              <motion.div 
+                className="w-4 h-4 rounded-full bg-white"
+                animate={{ x: useCryptoTicket ? 24 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -330,7 +379,7 @@ export function LevelSelect({ completedLevels, onSelectLevel, onBack }: LevelSel
               level={level}
               isUnlocked={isLevelUnlocked(level.id, completedLevels)}
               isCompleted={completedLevels.includes(level.id)}
-              onSelect={() => onSelectLevel(level)}
+              onSelect={() => handleSelectLevel(level)}
             />
           ))}
         </div>

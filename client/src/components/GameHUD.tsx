@@ -1,5 +1,5 @@
 import type { GameState } from '@shared/schema';
-import { Clock, Zap, Circle, Heart, Plus, Loader2, Timer, Bomb, Sparkles, RotateCcw, Shield, Magnet, Crosshair } from 'lucide-react';
+import { Clock, Zap, Circle, Heart, Plus, Loader2, Timer, Bomb, Sparkles, RotateCcw, Shield, Magnet, Crosshair, Ticket } from 'lucide-react';
 import { getEconomyConfig, getBoostState } from '@/lib/gameEngine';
 import { Button } from '@/components/ui/button';
 import type { BoostType } from '@/lib/gameEngine';
@@ -24,6 +24,7 @@ interface GameHUDProps {
   onUseBoost?: (boostType: BoostType) => void;
   isUsingBoost?: boolean;
   bonusLives?: number;
+  useCryptoTicket?: boolean;
 }
 
 export function GameHUD({ 
@@ -41,6 +42,7 @@ export function GameHUD({
   onUseBoost,
   isUsingBoost = false,
   bonusLives = 0,
+  useCryptoTicket = false,
 }: GameHUDProps) {
   const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
   const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
@@ -72,6 +74,13 @@ export function GameHUD({
                   {formatTime(elapsedTime)}
                 </span>
               </div>
+              {/* Crypto ticket indicator */}
+              {useCryptoTicket && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/40">
+                  <Ticket className="w-3 h-3 text-green-400" />
+                  <span className="text-xs font-medium text-green-400">КРИПТО</span>
+                </div>
+              )}
               <div className="flex items-center gap-1" data-testid="lives-display">
                 {/* Стандартные 3 жизни */}
                 {[...Array(3)].map((_, i) => (

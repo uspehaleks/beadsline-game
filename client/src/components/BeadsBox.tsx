@@ -331,6 +331,25 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                       Крипто-билетов: {boxData.cryptoTickets}
                     </span>
                   </div>
+                  <p className="text-xs text-green-300/70 mt-1">
+                    Используй в меню выбора уровня для игры с криптошариками!
+                  </p>
+                </motion.div>
+              )}
+              
+              {/* Show hint about crypto ticket requirements */}
+              {!boxData.canGetCryptoTicket && boxData.cryptoTickets === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span className="text-amber-400 text-sm">
+                      Крипто-билет доступен после 10 уровня
+                    </span>
+                  </div>
                 </motion.div>
               )}
 

@@ -39,12 +39,26 @@ interface GameScreenProps {
   onGameEnd: (state: GameState) => void;
   onViewLeaderboard: () => void;
   onMainMenu: () => void;
+  useCryptoTicket?: boolean;
 }
 
-export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboard, onMainMenu }: GameScreenProps) {
-  setLevelCompleted(isLevelCompleted);
-  
+export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboard, onMainMenu, useCryptoTicket = false }: GameScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Track if crypto ticket was used for the FIRST game only
+  const [cryptoTicketActive, setCryptoTicketActive] = useState(useCryptoTicket);
+  const isFirstGameRef = useRef(true);
+  
+  // Set level completion state for crypto ball spawning (only on mount/changes)
+  useEffect(() => {
+    // When using crypto ticket, treat level as not completed so crypto balls spawn
+    const effectiveCompleted = cryptoTicketActive ? false : isLevelCompleted;
+    setLevelCompleted(effectiveCompleted);
+    
+    // Cleanup: restore original state when unmounting
+    return () => {
+      setLevelCompleted(isLevelCompleted);
+    };
+  }, [cryptoTicketActive, isLevelCompleted]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const sessionIdRef = useRef<string | null>(null);
   const [isBuyingLife, setIsBuyingLife] = useState(false);
@@ -225,6 +239,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
   });
 
   const startGame = useCallback(() => {
+    // Crypto ticket is already consumed in Home.tsx before entering this screen
     startSession();
     originalStartGame();
   }, [startSession, originalStartGame]);
@@ -241,8 +256,15 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
   }, [dimensions.width, dimensions.height]);
 
   const handlePlayAgain = useCallback(() => {
+    // Crypto ticket only applies to the first game
+    if (isFirstGameRef.current) {
+      isFirstGameRef.current = false;
+    }
+    // Disable crypto ticket for replay
+    setCryptoTicketActive(false);
+    setLevelCompleted(isLevelCompleted);
     startGame();
-  }, [startGame]);
+  }, [startGame, isLevelCompleted]);
 
   const handleBuyLife = useCallback(async () => {
     if (!livesConfig || isBuyingLife) return;
@@ -352,6 +374,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           onUseBoost={handleUseBoost}
           isUsingBoost={useBoostMutation.isPending}
           bonusLives={user?.bonusLives || 0}
+          useCryptoTicket={cryptoTicketActive}
         />
       )}
 
