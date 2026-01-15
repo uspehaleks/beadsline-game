@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Lock, ArrowLeft, Star, Zap, Target } from 'lucide-react';
+import { Lock, ArrowLeft, Star, Zap, Target, Coins } from 'lucide-react';
+import { SiBitcoin } from 'react-icons/si';
 import { 
   LEVELS, 
   type LevelConfig, 
@@ -185,6 +186,18 @@ function LevelCard({
           </div>
         )}
         
+        {/* Crypto indicator for uncompleted levels */}
+        {isUnlocked && !isCompleted && (
+          <div 
+            className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full z-20"
+            style={{ backgroundColor: 'rgba(247, 147, 26, 0.2)', border: '1px solid rgba(247, 147, 26, 0.4)' }}
+            title="Криптошарики доступны"
+          >
+            <SiBitcoin className="w-3 h-3" style={{ color: '#f7931a' }} />
+            <span className="text-[10px] font-medium" style={{ color: '#f7931a' }}>КРИПТО</span>
+          </div>
+        )}
+        
         <div className="flex items-start gap-3">
           <div 
             className="flex-shrink-0 rounded-lg p-1"
@@ -270,6 +283,20 @@ export function LevelSelect({ completedLevels, onSelectLevel, onBack }: LevelSel
             Пройдено: {completedLevels.length} / {LEVELS.length}
           </p>
         </div>
+      </motion.div>
+      
+      {/* Crypto hint */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg"
+        style={{ backgroundColor: 'rgba(247, 147, 26, 0.1)', border: '1px solid rgba(247, 147, 26, 0.2)' }}
+      >
+        <SiBitcoin className="w-4 h-4 flex-shrink-0" style={{ color: '#f7931a' }} />
+        <p className="text-xs" style={{ color: '#f7931a' }}>
+          Криптошарики появляются только на новых уровнях! Проходи дальше для крипто-наград.
+        </p>
       </motion.div>
 
       <motion.div
