@@ -214,9 +214,8 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
     setIsRevealing(true);
     
     console.log('BeadsBox choosing box:', { sessionId: boxData.session.id, boxIndex: index });
-    setTimeout(() => {
-      chooseMutation.mutate({ sessionId: boxData.session!.id, boxIndex: index });
-    }, 800);
+    // Call mutation immediately - no delay for better mobile responsiveness
+    chooseMutation.mutate({ sessionId: boxData.session.id, boxIndex: index });
   };
 
   const getRewardDisplay = (reward: BeadsBoxReward) => {
@@ -443,7 +442,16 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                           transition={{ duration: 1.5, repeat: Infinity, delay: index * 0.1 }}
                           className="flex flex-col items-center pointer-events-none"
                         >
-                          <Gift className="w-10 h-10 text-white/90 drop-shadow-lg" />
+                          {isSelected && isRevealing ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            >
+                              <Gift className="w-10 h-10 text-yellow-400 drop-shadow-lg" />
+                            </motion.div>
+                          ) : (
+                            <Gift className="w-10 h-10 text-white/90 drop-shadow-lg" />
+                          )}
                           <span className="text-white/80 text-xs font-bold mt-1">#{index + 1}</span>
                         </motion.div>
                       ) : reward && (
