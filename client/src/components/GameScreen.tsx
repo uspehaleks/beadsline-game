@@ -342,6 +342,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           boostInventory={boostInventory}
           onUseBoost={handleUseBoost}
           isUsingBoost={useBoostMutation.isPending}
+          bonusLives={user?.bonusLives || 0}
         />
       )}
 

@@ -23,6 +23,7 @@ interface GameHUDProps {
   boostInventory?: BoostInventoryItem[];
   onUseBoost?: (boostType: BoostType) => void;
   isUsingBoost?: boolean;
+  bonusLives?: number;
 }
 
 export function GameHUD({ 
@@ -39,6 +40,7 @@ export function GameHUD({
   boostInventory = [],
   onUseBoost,
   isUsingBoost = false,
+  bonusLives = 0,
 }: GameHUDProps) {
   const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
   const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
@@ -77,6 +79,12 @@ export function GameHUD({
                     className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
                   />
                 ))}
+                {bonusLives > 0 && (
+                  <div className="flex items-center gap-0.5 ml-1 px-1.5 py-0.5 bg-emerald-500/20 rounded">
+                    <Heart className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                    <span className="text-xs text-emerald-400 font-bold">{bonusLives}</span>
+                  </div>
+                )}
                 {extraLivesBought > 0 && (
                   <span className="text-xs text-green-500 font-bold">+{extraLivesBought}</span>
                 )}

@@ -1,7 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 // App version for cache busting
-export const APP_VERSION = "1.1.5";
+export const APP_VERSION = "1.1.6";
 
 // Check and clear cache if version changed
 const STORAGE_VERSION_KEY = "beadsline_app_version";

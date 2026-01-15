@@ -43,6 +43,7 @@ export const users = pgTable("users", {
   characterEnergy: integer("character_energy").default(100).notNull(), // 0-100
   characterHealthState: varchar("character_health_state", { length: 20 }).default("normal").notNull(), // 'normal', 'tired', 'sick'
   characterMood: varchar("character_mood", { length: 20 }).default("neutral").notNull(), // 'happy', 'neutral', 'sad'
+  bonusLives: integer("bonus_lives").default(0).notNull(), // бонусные жизни из BEADS BOX
   lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
