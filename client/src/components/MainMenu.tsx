@@ -719,13 +719,16 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                     </div>
                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <motion.div
-                        className={`h-full rounded-full ${
-                          characterStatus.energy / characterStatus.maxEnergy > 0.6 
-                            ? 'bg-green-500' 
-                            : characterStatus.energy / characterStatus.maxEnergy > 0.3 
-                              ? 'bg-yellow-500' 
-                              : 'bg-red-500'
-                        }`}
+                        className="h-full rounded-full"
+                        style={{
+                          background: characterStatus.energy / characterStatus.maxEnergy > 0.6 
+                            ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
+                            : characterStatus.energy / characterStatus.maxEnergy > 0.4 
+                              ? 'linear-gradient(90deg, #eab308, #facc15)' 
+                              : characterStatus.energy / characterStatus.maxEnergy > 0.2 
+                                ? 'linear-gradient(90deg, #f97316, #fb923c)' 
+                                : 'linear-gradient(90deg, #a855f7, #ef4444)'
+                        }}
                         initial={{ width: 0 }}
                         animate={{ width: `${(characterStatus.energy / characterStatus.maxEnergy) * 100}%` }}
                         transition={{ duration: 0.5 }}
