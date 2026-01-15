@@ -4,18 +4,32 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap, ArrowDownToLine } from 'lucide-react';
+import { Play, Trophy, Settings, Users, Gift, Copy, Check, X, Bitcoin, Award, ChevronRight, Medal, Target, Gamepad2, QrCode, Download, UserPlus, Volume2, VolumeX, Zap, ArrowDownToLine, Smile, Meh, Frown, ThermometerSun, Heart } from 'lucide-react';
 import { SiEthereum, SiTether } from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
-import { GameCharacter, type ReplyTrigger } from '@/components/GameCharacter';
 import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
+
+type CharacterMood = 'happy' | 'neutral' | 'sad';
+type HealthState = 'normal' | 'tired' | 'sick';
+
+interface CharacterStatus {
+  isSetup: boolean;
+  gender: 'male' | 'female' | null;
+  name: string | null;
+  energy: number;
+  maxEnergy: number;
+  healthState: HealthState;
+  mood: CharacterMood;
+  lastActivityAt: string;
+  hoursSinceActivity: number;
+}
 
 interface MainMenuProps {
   user: User | null;
@@ -385,7 +399,6 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
   const [pendingNotifications, setPendingNotifications] = useState<ReferralRewardWithUser[]>([]);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [showCharacterSetup, setShowCharacterSetup] = useState(false);
-  const [characterTrigger, setCharacterTrigger] = useState<ReplyTrigger | null>('normal');
   const { toast } = useToast();
   
   const toggleSound = () => {
@@ -431,6 +444,11 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
     enabled: !!user,
     retry: 3,
     staleTime: 30000,
+  });
+
+  const { data: characterStatus } = useQuery<CharacterStatus>({
+    queryKey: ['/api/character/status'],
+    enabled: !!user,
   });
 
   const { data: userLeague } = useQuery<UserLeagueResponse>({
@@ -623,22 +641,6 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
         <BeadsLogo />
       </motion.div>
 
-      {user && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.05 }}
-          className="mb-4"
-        >
-          <GameCharacter
-            size="lg"
-            showStats={true}
-            trigger={characterTrigger}
-            onSetupRequired={() => setShowCharacterSetup(true)}
-          />
-        </motion.div>
-      )}
-
       {user && rankInfo && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -703,6 +705,54 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                 </div>
               </div>
             </div>
+            
+            {characterStatus?.isSetup && (
+              <div className="mt-3 pt-3 border-t border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground mb-1">
+                      <span className="flex items-center gap-1">
+                        <Zap className="w-3 h-3" />
+                        Энергия
+                      </span>
+                      <span>{Math.round((characterStatus.energy / characterStatus.maxEnergy) * 100)}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${
+                          characterStatus.energy / characterStatus.maxEnergy > 0.6 
+                            ? 'bg-green-500' 
+                            : characterStatus.energy / characterStatus.maxEnergy > 0.3 
+                              ? 'bg-yellow-500' 
+                              : 'bg-red-500'
+                        }`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(characterStatus.energy / characterStatus.maxEnergy) * 100}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-gray-700/50 flex items-center justify-center" title={`Настроение: ${characterStatus.mood === 'happy' ? 'счастливый' : characterStatus.mood === 'sad' ? 'грустный' : 'нейтральный'}`}>
+                      {characterStatus.mood === 'happy' 
+                        ? <Smile className="w-4 h-4 text-green-400" />
+                        : characterStatus.mood === 'sad' 
+                          ? <Frown className="w-4 h-4 text-red-400" />
+                          : <Meh className="w-4 h-4 text-yellow-400" />
+                      }
+                    </div>
+                    {characterStatus.healthState !== 'normal' && (
+                      <div className="w-7 h-7 rounded-full bg-gray-700/50 flex items-center justify-center" title={characterStatus.healthState === 'sick' ? 'Болеет' : 'Устал'}>
+                        {characterStatus.healthState === 'sick' 
+                          ? <ThermometerSun className="w-4 h-4 text-red-400" />
+                          : <Heart className="w-4 h-4 text-orange-400" />
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             
             {leagueProgress && (
               <div className="mt-3 space-y-2">
