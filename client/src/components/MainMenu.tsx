@@ -780,11 +780,15 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                           }
                         </span>
                       </div>
-                      <Progress 
-                        value={leagueProgress.beadsProgress} 
-                        className="h-1.5"
-                        style={{ background: 'hsl(230 30% 15%)' }}
-                      />
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'hsl(230 30% 15%)' }}>
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ background: 'linear-gradient(90deg, #06b6d4, #22d3ee)' }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${leagueProgress.beadsProgress}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
                       {!leagueProgress.beadsMet && leagueProgress.pointsToNext > 0 && (
                         <p className="text-xs text-muted-foreground">
                           Ещё {leagueProgress.pointsToNext.toLocaleString()} Beads
@@ -805,11 +809,15 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
                             }
                           </span>
                         </div>
-                        <Progress 
-                          value={leagueProgress.rankMet ? 100 : leagueProgress.rankProgress} 
-                          className="h-1.5"
-                          style={{ background: 'hsl(230 30% 15%)' }}
-                        />
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'hsl(230 30% 15%)' }}>
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: 'linear-gradient(90deg, #8b5cf6, #a855f7)' }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${leagueProgress.rankMet ? 100 : leagueProgress.rankProgress}%` }}
+                            transition={{ duration: 0.5 }}
+                          />
+                        </div>
                         {!leagueProgress.rankMet && leagueProgress.rankToNext > 0 && (
                           <p className="text-xs text-muted-foreground">
                             Нужно подняться на {leagueProgress.rankToNext} позиций
