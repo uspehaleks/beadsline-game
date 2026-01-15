@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Zap, Heart, Frown, Smile, Meh, ThermometerSun, User, UserRound } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CharacterAvatar } from "@/components/CharacterAvatar";
+import type { CharacterWithAccessories } from "@shared/schema";
 
 export type CharacterGender = 'male' | 'female';
 export type HealthState = 'normal' | 'tired' | 'sick';
@@ -77,6 +79,11 @@ export function GameCharacter({
 
   const { data: status, isLoading } = useQuery<CharacterStatus>({
     queryKey: ['/api/character/status'],
+  });
+
+  const { data: characterData } = useQuery<CharacterWithAccessories>({
+    queryKey: ['/api/character'],
+    enabled: !!status?.isSetup,
   });
 
   const showReplyBubble = useCallback((newReply: string) => {
@@ -206,9 +213,17 @@ export function GameCharacter({
         animate="animate"
       >
         <div className={`w-full h-full rounded-full bg-gradient-to-b ${getBodyColor()} shadow-lg flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-700`}>
-          <div className="w-12 h-12 text-white">
-            {status.gender === 'male' ? <User className="w-full h-full" /> : <UserRound className="w-full h-full" />}
-          </div>
+          {characterData?.baseBody ? (
+            <CharacterAvatar 
+              characterData={characterData} 
+              size={size === 'lg' ? 120 : size === 'md' ? 88 : 56}
+              showPlaceholder={false}
+            />
+          ) : (
+            <div className="w-12 h-12 text-white">
+              {status.gender === 'male' ? <User className="w-full h-full" /> : <UserRound className="w-full h-full" />}
+            </div>
+          )}
         </div>
         
         <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md border-2 border-gray-200 dark:border-gray-600">
