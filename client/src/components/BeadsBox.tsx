@@ -63,7 +63,7 @@ const smallRewardIcons: Record<string, JSX.Element> = {
 };
 
 const rewardNames: Record<string, string> = {
-  beads: "Бусин",
+  beads: "Beads",
   boost: "Буст",
   lives: "Жизней",
   crypto_ticket: "Крипто-билет",
