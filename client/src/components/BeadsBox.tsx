@@ -406,19 +406,14 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
                   const reward = !isHidden && 'type' in box ? box as BeadsBoxReward : null;
                   const canInteract = !alreadyClaimed && !isRevealing && !showingReward;
 
-                  const handleClick = () => {
-                    if (canInteract) {
-                      handleBoxClick(index);
-                    }
-                  };
-
                   return (
                     <motion.div
                       key={index}
-                      onClick={handleClick}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        handleClick();
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        if (canInteract) {
+                          handleBoxClick(index);
+                        }
                       }}
                       role="button"
                       tabIndex={canInteract ? 0 : -1}
