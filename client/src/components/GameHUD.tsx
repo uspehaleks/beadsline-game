@@ -73,18 +73,20 @@ export function GameHUD({
                 </span>
               </div>
               <div className="flex items-center gap-1" data-testid="lives-display">
+                {/* Стандартные 3 жизни */}
                 {[...Array(3)].map((_, i) => (
                   <Heart
-                    key={i}
+                    key={`base-${i}`}
                     className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
                   />
                 ))}
-                {bonusLives > 0 && (
-                  <div className="flex items-center gap-0.5 ml-1 px-1.5 py-0.5 bg-emerald-500/20 rounded">
-                    <Heart className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
-                    <span className="text-xs text-emerald-400 font-bold">{bonusLives}</span>
-                  </div>
-                )}
+                {/* Бонусные жизни из BEADS BOX - изумрудные сердца */}
+                {bonusLives > 0 && [...Array(bonusLives)].map((_, i) => (
+                  <Heart
+                    key={`bonus-${i}`}
+                    className="w-4 h-4 text-emerald-400 fill-emerald-400"
+                  />
+                ))}
                 {extraLivesBought > 0 && (
                   <span className="text-xs text-green-500 font-bold">+{extraLivesBought}</span>
                 )}
