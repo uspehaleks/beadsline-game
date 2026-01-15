@@ -5,6 +5,7 @@ import { Gift, Coins, Zap, Heart, Ticket, X, Sparkles, Lock, Star } from "lucide
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
+import { playWinSound } from "@/lib/sounds";
 
 interface BeadsBoxProps {
   onClose: () => void;
@@ -192,6 +193,8 @@ export function BeadsBox({ onClose }: BeadsBoxProps) {
       setRevealedReward(data.reward);
       setAllRevealedBoxes(data.allBoxes);
       setIsRevealing(false);
+      // Play fanfare sound on reward
+      playWinSound();
       queryClient.invalidateQueries({ queryKey: ["/api/beads-box/daily"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/boosts"] });

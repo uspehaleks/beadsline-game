@@ -4067,7 +4067,11 @@ export class DatabaseStorage implements IStorage {
         break;
       case 'boost':
         if (reward.boostId) {
-          await this.setUserBoostQuantity(session.userId, reward.boostId, (await this.getUserBoostInventory(session.userId)).find(b => b.boostId === reward.boostId)?.quantity || 0 + reward.value);
+          const userBoosts = await this.getUserBoostInventory(session.userId);
+          const currentBoost = userBoosts.find(b => b.boostId === reward.boostId);
+          const currentQuantity = currentBoost?.quantity || 0;
+          const rewardAmount = reward.value || 1;
+          await this.setUserBoostQuantity(session.userId, reward.boostId, currentQuantity + rewardAmount);
         }
         break;
       case 'crypto_ticket':
