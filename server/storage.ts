@@ -4067,11 +4067,22 @@ export class DatabaseStorage implements IStorage {
         break;
       case 'boost':
         if (reward.boostId) {
-          const userBoosts = await this.getUserBoostInventory(session.userId);
-          const currentBoost = userBoosts.find(b => b.boostId === reward.boostId);
-          const currentQuantity = currentBoost?.quantity || 0;
-          const rewardAmount = reward.value || 1;
-          await this.setUserBoostQuantity(session.userId, reward.boostId, currentQuantity + rewardAmount);
+          // boostId in reward is actually boost type string (e.g., 'slowdown', 'bomb')
+          // Need to find actual boost UUID from database by type
+          const boostType = reward.boostId; // This is actually the type string like 'slowdown'
+          const [boostFromDb] = await db.select().from(boosts).where(eq(boosts.type, boostType));
+          
+          if (boostFromDb) {
+            const actualBoostId = boostFromDb.id;
+            const userBoosts = await this.getUserBoostInventory(session.userId);
+            const currentBoost = userBoosts.find(b => b.boostId === actualBoostId);
+            const currentQuantity = currentBoost?.quantity || 0;
+            const rewardAmount = reward.value || 1;
+            console.log(`[BEADS BOX] Awarding boost: type=${boostType}, dbId=${actualBoostId}, userId=${session.userId}, qty=${currentQuantity}+${rewardAmount}`);
+            await this.setUserBoostQuantity(session.userId, actualBoostId, currentQuantity + rewardAmount);
+          } else {
+            console.error(`[BEADS BOX] Boost type not found in database: ${boostType}`);
+          }
         }
         break;
       case 'crypto_ticket':
