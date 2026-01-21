@@ -394,10 +394,12 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
         )}
       </div>
 
-      <div className="h-24 bg-gradient-to-t from-background to-transparent px-4 py-3 flex items-center justify-between">
+      <div className="h-24 bg-gradient-to-t from-background to-transparent px-4 py-3 flex items-center justify-between relative">
         <div className="w-16" />
         
-        <NextBallPreview ball={gameState.nextBall} />
+        <div className="absolute left-1/2 -translate-x-1/2 -top-8">
+          <NextBallPreview ball={gameState.nextBall} />
+        </div>
         
         <div className="w-16 flex justify-end">
           {!gameState.isPlaying && !gameState.isGameOver && (

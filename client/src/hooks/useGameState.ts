@@ -138,6 +138,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   const bonusLivesRef = useRef(bonusLives);
   const usedBonusLivesRef = useRef(0);
   const onUseBonusLifeRef = useRef(onUseBonusLife);
+  const shooterBallRef = useRef(gameState.shooterBall);
+  
+  useEffect(() => {
+    shooterBallRef.current = gameState.shooterBall;
+  }, [gameState.shooterBall]);
   
   useEffect(() => {
     bonusLivesRef.current = bonusLives;
@@ -758,8 +763,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
               },
               usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
-              currentBall: prev.nextBall,
-              nextBall: createRandomBall(),
+              shooterBall: prev.nextBall,
+              nextBall: createRandomBall('next-' + Date.now(), 0, prev.balls, true),
             };
           }
         }
@@ -802,15 +807,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               score: prev.score + points,
               combo: 2,
               maxCombo: Math.max(prev.maxCombo, 2),
-              totalPointsThisGame: prev.totalPointsThisGame + points,
               cryptoCollected: {
                 btc: prev.cryptoCollected.btc + cryptoCollected.btc,
                 eth: prev.cryptoCollected.eth + cryptoCollected.eth,
                 usdt: prev.cryptoCollected.usdt + cryptoCollected.usdt,
               },
               usdtFundCollected: prev.usdtFundCollected + usdtFundCollected,
-              currentBall: prev.nextBall,
-              nextBall: createRandomBall(),
+              shooterBall: prev.nextBall,
+              nextBall: createRandomBall('next-' + Date.now(), 0, newBalls, true),
             };
           }
         }
@@ -980,7 +984,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   }, [projectile, stopAllTimers]);
 
   const shoot = useCallback((targetX: number, targetY: number) => {
-    if (!gameState.isPlaying || projectile || !gameState.shooterBall) return;
+    // Use ref to get current shooterBall to avoid stale closure issues
+    const currentShooterBall = shooterBallRef.current;
+    if (!gameState.isPlaying || projectile || !currentShooterBall) return;
     
     const dx = targetX - shooterPosition.x;
     const dy = targetY - shooterPosition.y;
@@ -992,7 +998,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     const vy = (dy / distance) * SHOOTER_BALL_SPEED;
     
     // Apply rainbow boost to the shooting ball if active
-    let ballToShoot = gameState.shooterBall;
+    let ballToShoot = currentShooterBall;
     if (consumeRainbow()) {
       ballToShoot = { ...ballToShoot, isRainbow: true };
     }
@@ -1016,7 +1022,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     
     hapticFeedback('light');
     playShootSound();
-  }, [gameState.isPlaying, gameState.shooterBall, projectile, shooterPosition]);
+  }, [gameState.isPlaying, projectile, shooterPosition]);
 
   const updateAim = useCallback((targetX: number, targetY: number) => {
     if (!gameState.isPlaying) return;
