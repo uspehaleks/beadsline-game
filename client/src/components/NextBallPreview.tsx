@@ -8,7 +8,10 @@ interface NextBallPreviewProps {
 export function NextBallPreview({ ball }: NextBallPreviewProps) {
   if (!ball) return null;
 
-  const baseColor = BALL_COLOR_MAP[ball.color];
+  // For crypto balls, use crypto color as background; for regular balls use normal color
+  const baseColor = ball.crypto 
+    ? CRYPTO_COLOR_MAP[ball.crypto] 
+    : (ball.isUsdtFund ? '#FFD700' : BALL_COLOR_MAP[ball.color]);
 
   const isSpecial = ball.isUsdtFund || ball.crypto;
   const glowColor = ball.isUsdtFund ? '#FFD700' : (ball.crypto ? CRYPTO_COLOR_MAP[ball.crypto] : undefined);
