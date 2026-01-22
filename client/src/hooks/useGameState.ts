@@ -650,21 +650,24 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           const n = respawnedBalls.length;
           if (n > 0) {
             const chainLength = (n - 1) * spacing;
-            // Максимальная позиция головы после респауна - 50% пути
             const maxHeadPos = 0.5;
             
-            // Если цепочка длинная, уменьшаем spacing чтобы она поместилась
             let actualSpacing = spacing;
             if (chainLength > maxHeadPos) {
-              // Сжимаем цепочку чтобы она поместилась от 0 до maxHeadPos
               actualSpacing = maxHeadPos / (n - 1);
             }
             
-            const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+            const headPos = maxHeadPos; // Всегда 50%
+            
+            sendDebugLog(`[RESPAWN DEBUG] n=${n}, chainLength=${chainLength.toFixed(3)}, actualSpacing=${actualSpacing.toFixed(4)}, headPos=${headPos}`);
             
             for (let i = 0; i < n; i++) {
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+              const newProgress = Math.max(0, headPos - i * actualSpacing);
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: newProgress };
             }
+            
+            const afterLoopMax = Math.max(...respawnedBalls.map(b => b.pathProgress));
+            sendDebugLog(`[RESPAWN DEBUG] После цикла: макс позиция = ${(afterLoopMax * 100).toFixed(0)}%`);
           }
           
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
