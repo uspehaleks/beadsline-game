@@ -541,19 +541,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
-            const originalSpacing = GAME_CONFIG.balls.spacing;
+            const spacing = GAME_CONFIG.balls.spacing;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
+            // Откат 50% = оставляем только половину шаров
+            const keepCount = Math.ceil(respawnedBalls.length / 2);
+            respawnedBalls = respawnedBalls.slice(0, keepCount);
+            
             const n = respawnedBalls.length;
             if (n > 0) {
-              const headPos = 0.5; // Всегда откатываемся на 50%
-              const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-              const spacing = Math.min(originalSpacing, maxSpacing);
+              const headPos = 0.5; // Голова на 50%
               
               for (let i = 0; i < n; i++) {
-                const newProgress = headPos - i * spacing;
+                const newProgress = Math.max(0, headPos - i * spacing);
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
@@ -591,19 +593,22 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               }, 0);
               
               // Сбрасываем шарики в начало (как при обычной потере жизни)
-              const originalSpacing = GAME_CONFIG.balls.spacing;
+              const spacing = GAME_CONFIG.balls.spacing;
+              const beforeCount = newBalls.length;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
+              // Откат 50% = оставляем только половину шаров
+              const keepCount = Math.ceil(respawnedBalls.length / 2);
+              respawnedBalls = respawnedBalls.slice(0, keepCount);
+              
               const n = respawnedBalls.length;
               if (n > 0) {
-                const headPos = 0.5; // Всегда откатываемся на 50%
-                const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-                const spacing = Math.min(originalSpacing, maxSpacing);
+                const headPos = 0.5; // Голова на 50%
                 
                 for (let i = 0; i < n; i++) {
-                  const newProgress = headPos - i * spacing;
+                  const newProgress = Math.max(0, headPos - i * spacing);
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
@@ -618,7 +623,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               gapContextRef.current = null;
               spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length} шаров`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -637,24 +642,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return finalState;
           }
           
-          const originalSpacing = GAME_CONFIG.balls.spacing;
+          const spacing = GAME_CONFIG.balls.spacing;
           
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
+          // Откат 50% = оставляем только половину шаров
+          const keepCount = Math.ceil(respawnedBalls.length / 2);
+          respawnedBalls = respawnedBalls.slice(0, keepCount);
+          
           const n = respawnedBalls.length;
           if (n > 0) {
-            const headPos = 0.5; // Всегда откатываемся на 50%
-            
-            // Рассчитываем сжатый spacing чтобы все шары поместились от 0 до headPos
-            // Максимально допустимый spacing = headPos / (n - 1)
-            const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-            const spacing = Math.min(originalSpacing, maxSpacing);
-            
-            sendDebugLog(`[РЕСПАУН] ${n} шаров, spacing: ${spacing.toFixed(4)} (оригинал: ${originalSpacing})`);
+            const headPos = 0.5; // Голова на 50%
             
             for (let i = 0; i < n; i++) {
-              const newProgress = headPos - i * spacing;
+              const newProgress = Math.max(0, headPos - i * spacing);
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
@@ -669,9 +671,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           gapContextRef.current = null;
           spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
           
-          const maxProgressAfter = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
-          const rollbackPercent = maxProgressBefore > 0 ? ((maxProgressBefore - maxProgressAfter) / maxProgressBefore * 100).toFixed(0) : 0;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров, голова на ${(maxProgressAfter * 100).toFixed(0)}% (откат ${rollbackPercent}%)`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - totalSpawnedRef.current + (beforeLossCount - keepCount)}`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
@@ -1183,19 +1183,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
-            const originalSpacing = GAME_CONFIG.balls.spacing;
+            const spacing = GAME_CONFIG.balls.spacing;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
+            // Откат 50% = оставляем только половину шаров
+            const keepCount = Math.ceil(respawnedBalls.length / 2);
+            respawnedBalls = respawnedBalls.slice(0, keepCount);
+            
             const n = respawnedBalls.length;
             if (n > 0) {
-              const headPos = 0.5; // Всегда откатываемся на 50%
-              const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-              const spacing = Math.min(originalSpacing, maxSpacing);
+              const headPos = 0.5; // Голова на 50%
               
               for (let i = 0; i < n; i++) {
-                const newProgress = headPos - i * spacing;
+                const newProgress = Math.max(0, headPos - i * spacing);
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
@@ -1233,19 +1235,22 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               }, 0);
               
               // Сбрасываем шарики в начало
-              const originalSpacing = GAME_CONFIG.balls.spacing;
+              const spacing = GAME_CONFIG.balls.spacing;
+              const beforeCount = newBalls.length;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
+              // Откат 50% = оставляем только половину шаров
+              const keepCount = Math.ceil(respawnedBalls.length / 2);
+              respawnedBalls = respawnedBalls.slice(0, keepCount);
+              
               const n = respawnedBalls.length;
               if (n > 0) {
-                const headPos = 0.5; // Всегда откатываемся на 50%
-                const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-                const spacing = Math.min(originalSpacing, maxSpacing);
+                const headPos = 0.5; // Голова на 50%
                 
                 for (let i = 0; i < n; i++) {
-                  const newProgress = headPos - i * spacing;
+                  const newProgress = Math.max(0, headPos - i * spacing);
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
@@ -1260,9 +1265,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               gapContextRef.current = null;
               spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
               
-              const maxProgressAfterBonus = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
-              const rollbackPercentBonus = maxProgressBefore2 > 0 ? ((maxProgressBefore2 - maxProgressAfterBonus) / maxProgressBefore2 * 100).toFixed(0) : 0;
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров, голова на ${(maxProgressAfterBonus * 100).toFixed(0)}% (откат ${rollbackPercentBonus}%)`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length} шаров`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -1280,21 +1283,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return finalState;
           }
           
-          const originalSpacing = GAME_CONFIG.balls.spacing;
+          const spacing = GAME_CONFIG.balls.spacing;
           
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
+          // Откат 50% = оставляем только половину шаров
+          const keepCount = Math.ceil(respawnedBalls.length / 2);
+          respawnedBalls = respawnedBalls.slice(0, keepCount);
+          
           const n = respawnedBalls.length;
           if (n > 0) {
-            const headPos = 0.5; // Всегда откатываемся на 50%
-            const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
-            const spacing = Math.min(originalSpacing, maxSpacing);
-            
-            sendDebugLog(`[РЕСПАУН] ${n} шаров, spacing: ${spacing.toFixed(4)} (оригинал: ${originalSpacing})`);
+            const headPos = 0.5; // Голова на 50%
             
             for (let i = 0; i < n; i++) {
-              const newProgress = headPos - i * spacing;
+              const newProgress = Math.max(0, headPos - i * spacing);
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
@@ -1309,9 +1312,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           gapContextRef.current = null;
           spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
           
-          const maxProgressAfter2 = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
-          const rollbackPercent2 = maxProgressBefore2 > 0 ? ((maxProgressBefore2 - maxProgressAfter2) / maxProgressBefore2 * 100).toFixed(0) : 0;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров, голова на ${(maxProgressAfter2 * 100).toFixed(0)}% (откат ${rollbackPercent2}%)`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут новые`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives, combo: 0 };
