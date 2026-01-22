@@ -134,6 +134,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   const spawnFinishedRef = useRef<boolean>(false);
   const gapContextRef = useRef<GapContext | null>(null);
   const maxTotalBallsRef = useRef<number>(100);
+  const currentLifeMaxRef = useRef<number>(100); // Лимит шаров на текущую жизнь
   const pendingChainReactionRef = useRef<PendingChainReaction | null>(null);
   const bonusLivesRef = useRef(bonusLives);
   const usedBonusLivesRef = useRef(0);
@@ -229,6 +230,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         }
         setGameplayConfig(gameplayData);
         maxTotalBallsRef.current = gameplayData.balls?.maxTotalBalls || 100;
+        currentLifeMaxRef.current = maxTotalBallsRef.current; // Изначально = максимум
       }
     } catch (error) {
       console.error('Failed to fetch game config:', error);
@@ -486,13 +488,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         const gameplayConfig = getGameplayConfig();
         const { period } = gameplayConfig.spawn;
         const buffer = GAME_CONFIG.spawn.buffer;
-        const { targetCount, maxTotalBalls } = gameplayConfig.balls;
+        const { targetCount } = gameplayConfig.balls;
         
         spawnAccumRef.current += deltaTime;
         
+        // Используем currentLifeMaxRef - лимит на текущую жизнь
         const canSpawn = !spawnFinishedRef.current && 
                          newBalls.length < targetCount && 
-                         totalSpawnedRef.current < maxTotalBalls;
+                         totalSpawnedRef.current < currentLifeMaxRef.current;
         
         if (spawnAccumRef.current >= period && canSpawn) {
           const spacing = getBallSpacing();
@@ -519,7 +522,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           newBalls = [newBall, ...newBalls];
           totalSpawnedRef.current++;
           
-          if (totalSpawnedRef.current >= maxTotalBalls) {
+          if (totalSpawnedRef.current >= currentLifeMaxRef.current) {
             spawnFinishedRef.current = true;
           }
         }
@@ -542,12 +545,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
             const spacing = GAME_CONFIG.balls.spacing;
+            const beforeCount = newBalls.length;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
-            // Откат 50% = оставляем только половину шаров
-            const keepCount = Math.ceil(respawnedBalls.length / 2);
+            // keepCount = половина от изначального максимума, но не больше чем было
+            let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+            keepCount = Math.min(keepCount, beforeCount);
             respawnedBalls = respawnedBalls.slice(0, keepCount);
             
             const n = respawnedBalls.length;
@@ -568,8 +573,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
             
             gapContextRef.current = null;
-            spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-            totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+            spawnFinishedRef.current = false;
+            currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+            totalSpawnedRef.current = respawnedBalls.length;
             hapticFeedback('medium');
             return { ...updatedState, balls: respawnedBalls, combo: 0 };
           }
@@ -600,8 +606,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
-              // Откат 50% = оставляем только половину шаров
-              const keepCount = Math.ceil(respawnedBalls.length / 2);
+              // keepCount = половина от изначального максимума, но не больше чем было
+              let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+              keepCount = Math.min(keepCount, beforeCount);
               respawnedBalls = respawnedBalls.slice(0, keepCount);
               
               const n = respawnedBalls.length;
@@ -622,10 +629,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
               
               gapContextRef.current = null;
-              spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-              totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+              spawnFinishedRef.current = false;
+              currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+              totalSpawnedRef.current = respawnedBalls.length;
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -649,8 +657,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
-          // Откат 50% = оставляем только половину шаров
-          const keepCount = Math.ceil(respawnedBalls.length / 2);
+          // keepCount = половина от изначального максимума, но не больше чем было
+          let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+          keepCount = Math.min(keepCount, beforeLossCount);
           respawnedBalls = respawnedBalls.slice(0, keepCount);
           
           const n = respawnedBalls.length;
@@ -671,10 +680,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           gapContextRef.current = null;
-          spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-          totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+          spawnFinishedRef.current = false;
+          currentLifeMaxRef.current = beforeLossCount; // Лимит = сколько было
+          totalSpawnedRef.current = respawnedBalls.length;
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
@@ -1052,7 +1062,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       if (prev.balls.length === 0) {
         spawnFinishedRef.current = false;
         totalSpawnedRef.current = 0;
-        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров, ещё выедут ${maxTotalBallsRef.current}`);
+        // currentLifeMaxRef остаётся прежним
+        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров, ещё выедут ${currentLifeMaxRef.current}`);
         return {
           ...prev,
           lives: prev.lives + 1,
@@ -1064,8 +1075,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       let sortedBalls = [...prev.balls];
       sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
       
-      // Откат 50% = оставляем только половину шаров
-      const keepCount = Math.ceil(sortedBalls.length / 2);
+      // keepCount = половина от изначального максимума, но не больше чем было
+      let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+      keepCount = Math.min(keepCount, beforeCount);
       let respawnedBalls = sortedBalls.slice(0, keepCount);
       
       const n = respawnedBalls.length;
@@ -1087,9 +1099,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       
       gapContextRef.current = null;
       spawnFinishedRef.current = false;
+      currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
       totalSpawnedRef.current = respawnedBalls.length;
       
-      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
       
       return {
         ...prev,
@@ -1110,9 +1123,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     const spacing = GAME_CONFIG.balls.spacing;
     
     setGameState(prev => {
+      const beforeCount = prev.balls.length;
+      
       if (prev.balls.length === 0) {
         spawnFinishedRef.current = false;
         totalSpawnedRef.current = 0;
+        // currentLifeMaxRef остаётся прежним
         return {
           ...prev,
           lives: 1,
@@ -1127,8 +1143,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       let sortedBalls = [...prev.balls];
       sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
       
-      // Откат 50% = оставляем только половину шаров
-      const keepCount = Math.ceil(sortedBalls.length / 2);
+      // keepCount = половина от изначального максимума, но не больше чем было
+      let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+      keepCount = Math.min(keepCount, beforeCount);
       let respawnedBalls = sortedBalls.slice(0, keepCount);
       
       const n = respawnedBalls.length;
@@ -1150,10 +1167,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       
       gapContextRef.current = null;
       spawnFinishedRef.current = false;
+      currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
       totalSpawnedRef.current = respawnedBalls.length;
       
-      const beforeCount = prev.balls.length;
-      sendDebugLog(`[ПРОДОЛЖИТЬ ИГРУ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+      sendDebugLog(`[ПРОДОЛЖИТЬ ИГРУ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
       
       return {
         ...prev,
@@ -1202,12 +1219,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
             const spacing = GAME_CONFIG.balls.spacing;
+            const beforeCount = newBalls.length;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
-            // Откат 50% = оставляем только половину шаров
-            const keepCount = Math.ceil(respawnedBalls.length / 2);
+            // keepCount = половина от изначального максимума, но не больше чем было
+            let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+            keepCount = Math.min(keepCount, beforeCount);
             respawnedBalls = respawnedBalls.slice(0, keepCount);
             
             const n = respawnedBalls.length;
@@ -1228,8 +1247,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
             
             gapContextRef.current = null;
-            spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-            totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+            spawnFinishedRef.current = false;
+            currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+            totalSpawnedRef.current = respawnedBalls.length;
             hapticFeedback('medium');
             return { ...prev, balls: respawnedBalls, combo: 0 };
           }
@@ -1260,8 +1280,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
-              // Откат 50% = оставляем только половину шаров
-              const keepCount = Math.ceil(respawnedBalls.length / 2);
+              // keepCount = половина от изначального максимума, но не больше чем было
+              let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+              keepCount = Math.min(keepCount, beforeCount);
               respawnedBalls = respawnedBalls.slice(0, keepCount);
               
               const n = respawnedBalls.length;
@@ -1282,10 +1303,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
               
               gapContextRef.current = null;
-              spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-              totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+              spawnFinishedRef.current = false;
+              currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+              totalSpawnedRef.current = respawnedBalls.length;
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -1308,8 +1330,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
-          // Откат 50% = оставляем только половину шаров
-          const keepCount = Math.ceil(respawnedBalls.length / 2);
+          // keepCount = половина от изначального максимума, но не больше чем было
+          let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+          keepCount = Math.min(keepCount, beforeLossCount2);
           respawnedBalls = respawnedBalls.slice(0, keepCount);
           
           const n = respawnedBalls.length;
@@ -1330,10 +1353,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
           gapContextRef.current = null;
-          spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
-          totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
+          spawnFinishedRef.current = false;
+          currentLifeMaxRef.current = beforeLossCount2; // Лимит = сколько было
+          totalSpawnedRef.current = respawnedBalls.length;
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives, combo: 0 };
