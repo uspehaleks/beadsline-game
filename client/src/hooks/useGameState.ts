@@ -550,7 +550,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              const headPos = Math.max(0.5, chainLength);
+              const headPos = 0.5; // Всегда откатываемся на 50%
               const now = Date.now();
               
               for (let i = 0; i < n; i++) {
@@ -601,7 +601,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                const headPos = Math.max(0.5, chainLength);
+                const headPos = 0.5; // Всегда откатываемся на 50%
                 const now = Date.now();
                 
                 for (let i = 0; i < n; i++) {
@@ -648,7 +648,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           if (n > 0) {
             const chainLength = (n - 1) * spacing;
             // Голова на 50% или на длину цепочки если она короткая
-            const headPos = Math.max(0.5, chainLength);
+            const headPos = 0.5; // Всегда откатываемся на 50%
             const now = Date.now();
             
             for (let i = 0; i < n; i++) {
@@ -1190,7 +1190,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              const headPos = Math.max(0.5, chainLength);
+              const headPos = 0.5; // Всегда откатываемся на 50%
               const now = Date.now();
               
               for (let i = 0; i < n; i++) {
@@ -1239,7 +1239,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                const headPos = Math.max(0.5, chainLength);
+                const headPos = 0.5; // Всегда откатываемся на 50%
                 const now = Date.now();
                 
                 for (let i = 0; i < n; i++) {
@@ -1286,7 +1286,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const chainLength = (n - 1) * spacing;
             let headPos = targetHeadPosition;
             
-            headPos = Math.max(0.5, chainLength);
+            headPos = 0.5; // Всегда откатываемся на 50%
             const now = Date.now();
             
             for (let i = 0; i < n; i++) {
