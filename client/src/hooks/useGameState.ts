@@ -550,17 +550,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              const maxHeadPos = 0.5;
-              
-              let actualSpacing = spacing;
-              if (chainLength > maxHeadPos) {
-                actualSpacing = maxHeadPos / (n - 1);
-              }
-              
-              const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+              const headPos = Math.max(0.5, chainLength);
+              const now = Date.now();
               
               for (let i = 0; i < n; i++) {
-                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+                const newProgress = Math.max(0, headPos - i * spacing);
+                respawnedBalls[i] = { 
+                  ...respawnedBalls[i], 
+                  pathProgress: newProgress,
+                  spawnAnimStart: now
+                };
               }
             }
             
@@ -602,17 +601,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                const maxHeadPos = 0.5;
-                
-                let actualSpacing = spacing;
-                if (chainLength > maxHeadPos) {
-                  actualSpacing = maxHeadPos / (n - 1);
-                }
-                
-                const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+                const headPos = Math.max(0.5, chainLength);
+                const now = Date.now();
                 
                 for (let i = 0; i < n; i++) {
-                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+                  const newProgress = Math.max(0, headPos - i * spacing);
+                  respawnedBalls[i] = { 
+                    ...respawnedBalls[i], 
+                    pathProgress: newProgress,
+                    spawnAnimStart: now
+                  };
                 }
               }
               
@@ -624,7 +622,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров`);
               hapticFeedback('warning');
               playLifeLostSound();
-              // Восстанавливаем жизни до 1 (базовая) после использования бонусной
               return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
             }
             
@@ -650,24 +647,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           const n = respawnedBalls.length;
           if (n > 0) {
             const chainLength = (n - 1) * spacing;
-            const maxHeadPos = 0.5;
-            
-            let actualSpacing = spacing;
-            if (chainLength > maxHeadPos) {
-              actualSpacing = maxHeadPos / (n - 1);
-            }
-            
-            const headPos = maxHeadPos; // Всегда 50%
-            
-            sendDebugLog(`[RESPAWN DEBUG] n=${n}, chainLength=${chainLength.toFixed(3)}, actualSpacing=${actualSpacing.toFixed(4)}, headPos=${headPos}`);
+            // Голова на 50% или на длину цепочки если она короткая
+            const headPos = Math.max(0.5, chainLength);
+            const now = Date.now();
             
             for (let i = 0; i < n; i++) {
-              const newProgress = Math.max(0, headPos - i * actualSpacing);
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: newProgress };
+              const newProgress = Math.max(0, headPos - i * spacing);
+              // Добавляем анимацию выезда из портала
+              respawnedBalls[i] = { 
+                ...respawnedBalls[i], 
+                pathProgress: newProgress,
+                spawnAnimStart: now // Анимация выезда из портала
+              };
             }
-            
-            const afterLoopMax = Math.max(...respawnedBalls.map(b => b.pathProgress));
-            sendDebugLog(`[RESPAWN DEBUG] После цикла: макс позиция = ${(afterLoopMax * 100).toFixed(0)}%`);
           }
           
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
@@ -1198,17 +1190,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              const maxHeadPos = 0.5;
-              
-              let actualSpacing = spacing;
-              if (chainLength > maxHeadPos) {
-                actualSpacing = maxHeadPos / (n - 1);
-              }
-              
-              const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+              const headPos = Math.max(0.5, chainLength);
+              const now = Date.now();
               
               for (let i = 0; i < n; i++) {
-                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+                const newProgress = Math.max(0, headPos - i * spacing);
+                respawnedBalls[i] = { 
+                  ...respawnedBalls[i], 
+                  pathProgress: newProgress,
+                  spawnAnimStart: now
+                };
               }
             }
             
@@ -1248,17 +1239,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                const maxHeadPos = 0.5;
-                
-                let actualSpacing = spacing;
-                if (chainLength > maxHeadPos) {
-                  actualSpacing = maxHeadPos / (n - 1);
-                }
-                
-                const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+                const headPos = Math.max(0.5, chainLength);
+                const now = Date.now();
                 
                 for (let i = 0; i < n; i++) {
-                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+                  const newProgress = Math.max(0, headPos - i * spacing);
+                  respawnedBalls[i] = { 
+                    ...respawnedBalls[i], 
+                    pathProgress: newProgress,
+                    spawnAnimStart: now
+                  };
                 }
               }
               
@@ -1296,17 +1286,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const chainLength = (n - 1) * spacing;
             let headPos = targetHeadPosition;
             
-            const maxHeadPos = 0.5;
-            
-            let actualSpacing = spacing;
-            if (chainLength > maxHeadPos) {
-              actualSpacing = maxHeadPos / (n - 1);
-            }
-            
-            headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
+            headPos = Math.max(0.5, chainLength);
+            const now = Date.now();
             
             for (let i = 0; i < n; i++) {
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
+              const newProgress = Math.max(0, headPos - i * spacing);
+              respawnedBalls[i] = { 
+                ...respawnedBalls[i], 
+                pathProgress: newProgress,
+                spawnAnimStart: now
+              };
             }
           }
           
