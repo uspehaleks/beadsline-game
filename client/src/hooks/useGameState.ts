@@ -1326,7 +1326,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
   const ballsOnScreen = gameState.balls.length;
   const totalBalls = maxTotalBallsRef.current;
-  const ballsRemaining = totalBalls - totalSpawnedRef.current + ballsOnScreen;
+  const totalSpawned = totalSpawnedRef.current;
+  const ballsRemaining = totalBalls - totalSpawned + ballsOnScreen;
 
   const applyRewind = useCallback(() => {
     setGameState(prev => {
@@ -1347,6 +1348,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     ballsOnScreen,
     ballsRemaining,
     totalBalls,
+    totalSpawned,
     startGame,
     shoot,
     updateAim,

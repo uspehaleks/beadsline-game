@@ -833,6 +833,7 @@ export interface GameState {
   shotsHit: number;
   lives: number;
   extraLivesBought: number;
+  totalBallsSpawned: number;
 }
 
 export interface LeaderboardEntry {

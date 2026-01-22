@@ -15,6 +15,7 @@ interface GameHUDProps {
   ballsOnScreen: number;
   ballsRemaining: number;
   totalBalls: number;
+  totalSpawned: number;
   userBeads: number;
   lifeCost: number;
   maxExtraLives: number;
@@ -33,6 +34,7 @@ export function GameHUD({
   ballsOnScreen, 
   ballsRemaining, 
   totalBalls,
+  totalSpawned,
   userBeads,
   lifeCost,
   maxExtraLives,
@@ -164,6 +166,15 @@ export function GameHUD({
                 {ballsOnScreen}
               </span>
             </div>
+          </div>
+        </div>
+        
+        {/* Отладочная панель */}
+        <div className="mt-2 backdrop-blur-md bg-yellow-500/20 rounded-lg px-3 py-2 border border-yellow-500/30">
+          <div className="text-xs font-mono text-yellow-300 space-y-0.5">
+            <div>Заспавнено: <span className="font-bold text-white">{totalSpawned}</span></div>
+            <div>В цепочке: <span className="font-bold text-white">{ballsOnScreen}</span></div>
+            <div>Всего макс: <span className="font-bold text-white">{totalBalls}</span></div>
           </div>
         </div>
       </div>

@@ -992,6 +992,7 @@ export function createInitialGameState(): GameState {
     shotsHit: 0,
     lives: 3,
     extraLivesBought: 0,
+    totalBallsSpawned: currentGameplay.balls.initialCount,
   };
 }
 

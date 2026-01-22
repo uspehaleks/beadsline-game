@@ -216,6 +216,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     ballsOnScreen,
     ballsRemaining,
     totalBalls,
+    totalSpawned,
     startGame: originalStartGame,
     shoot,
     updateAim,
@@ -365,6 +366,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           ballsOnScreen={ballsOnScreen}
           ballsRemaining={ballsRemaining}
           totalBalls={totalBalls}
+          totalSpawned={totalSpawned}
           userBeads={user?.totalPoints || 0}
           lifeCost={livesConfig?.extraLifeCost || 50}
           maxExtraLives={livesConfig?.maxExtraLives || 5}
