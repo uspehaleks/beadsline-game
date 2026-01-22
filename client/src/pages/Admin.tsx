@@ -6838,6 +6838,7 @@ function DebugLogsTab() {
   const [logs, setLogs] = useState<string[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filterSpawn, setFilterSpawn] = useState(true);
+  const [filterLives, setFilterLives] = useState(false);
   
   const EXCLUDED_PATTERNS = [
     '[CRYPTO]',
@@ -6883,6 +6884,11 @@ function DebugLogsTab() {
   };
   
   const filteredLogs = logs.filter(log => {
+    // Если включён фильтр "Только жизни" - показываем только логи жизней
+    if (filterLives) {
+      return log.includes('[ПОТЕРЯ ЖИЗНИ]') || log.includes('[ПОКУПКА ЖИЗНИ]');
+    }
+    
     for (const pattern of EXCLUDED_PATTERNS) {
       if (log.includes(pattern)) return false;
     }
@@ -6923,6 +6929,14 @@ function DebugLogsTab() {
                   data-testid="switch-filter-spawn"
                 />
                 <Label>Только SPAWN/GAP</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={filterLives} 
+                  onCheckedChange={setFilterLives}
+                  data-testid="switch-filter-lives"
+                />
+                <Label>Только жизни</Label>
               </div>
             </div>
             <div className="flex gap-2">

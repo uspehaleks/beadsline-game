@@ -573,7 +573,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return { ...updatedState, balls: respawnedBalls, combo: 0 };
           }
           
+          const beforeLossCount = newBalls.length;
           const newLives = updatedState.lives - 1;
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount} шаров, осталось жизней: ${newLives}`);
           
           if (newLives <= 0) {
             // Проверяем есть ли бонусные жизни из BEADS BOX
@@ -618,6 +620,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров`);
               hapticFeedback('warning');
               playLifeLostSound();
               // Восстанавливаем жизни до 1 (базовая) после использования бонусной
@@ -1206,7 +1209,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return { ...prev, balls: respawnedBalls, combo: 0 };
           }
           
+          const beforeLossCount2 = newBalls.length;
           const newLives = prev.lives - 1;
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount2} шаров, осталось жизней: ${newLives}`);
           
           if (newLives <= 0) {
             // Проверяем есть ли бонусные жизни из BEADS BOX
@@ -1249,6 +1254,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
               respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
               
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
