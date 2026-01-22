@@ -668,6 +668,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
@@ -1298,6 +1299,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives };
