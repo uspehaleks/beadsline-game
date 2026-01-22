@@ -1071,6 +1071,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           ...prev,
           lives: prev.lives + 1,
           extraLivesBought: prev.extraLivesBought + 1,
+          isPlaying: true,
+          isGameOver: false,
         };
       }
       
@@ -1112,6 +1114,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         balls: respawnedBalls,
         lives: prev.lives + 1,
         extraLivesBought: prev.extraLivesBought + 1,
+        isPlaying: true,
+        isGameOver: false,
       };
     });
     hapticFeedback('success');
