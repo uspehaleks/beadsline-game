@@ -1036,9 +1036,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
-      console.log('[ADD_LIFE] Before: balls.length =', prev.balls.length);
+      const beforeCount = prev.balls.length;
+      sendDebugLog(`[LIFE] До покупки: ${beforeCount} шаров`);
       
       if (prev.balls.length === 0) {
+        sendDebugLog(`[LIFE] Нет шаров, просто добавляем жизнь`);
         return {
           ...prev,
           lives: prev.lives + 1,
@@ -1054,7 +1056,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       // Calculate chain length
       const chainLength = maxProgress - minProgress;
       
-      console.log('[ADD_LIFE] minProgress =', minProgress, 'maxProgress =', maxProgress, 'chainLength =', chainLength);
+      sendDebugLog(`[LIFE] min=${minProgress.toFixed(3)} max=${maxProgress.toFixed(3)} chain=${chainLength.toFixed(3)}`);
       
       // Target: move the leading ball to 50% of its current position
       // But keep the chain intact by shifting all balls by the same amount
@@ -1070,7 +1072,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         ? minProgress - minStartPosition 
         : shiftAmount;
       
-      console.log('[ADD_LIFE] shiftAmount =', shiftAmount, 'actualShift =', actualShift);
+      sendDebugLog(`[LIFE] shift=${shiftAmount.toFixed(3)} actual=${actualShift.toFixed(3)}`);
       
       // Move all balls back by the same shift amount, preserving their spacing
       let rewindedBalls = prev.balls.map(ball => ({
@@ -1079,7 +1081,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       }));
       rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
       
-      console.log('[ADD_LIFE] After: rewindedBalls.length =', rewindedBalls.length);
+      sendDebugLog(`[LIFE] После: ${rewindedBalls.length} шаров (было ${beforeCount})`);
       
       return {
         ...prev,
