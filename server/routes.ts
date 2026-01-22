@@ -4664,12 +4664,11 @@ export async function registerRoutes(
 
       const now = new Date();
       const cooldownHours: Record<string, number> = {
-        feed: 4,
-        drink: 4,
+        feed: 2,
+        drink: 2,
         rest: 6,
         heal: 8
       };
-
       // Check cooldown
       const lastAction = careCooldowns[action];
       if (lastAction) {
