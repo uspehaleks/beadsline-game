@@ -569,6 +569,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+            totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
             hapticFeedback('medium');
             return { ...updatedState, balls: respawnedBalls, combo: 0 };
           }
@@ -622,8 +623,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+              totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length} шаров`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -670,8 +672,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+          totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - totalSpawnedRef.current + (beforeLossCount - keepCount)}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
@@ -1211,6 +1214,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+            totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
             hapticFeedback('medium');
             return { ...prev, balls: respawnedBalls, combo: 0 };
           }
@@ -1264,8 +1268,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+              totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length} шаров`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -1311,8 +1316,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false; // Разрешаем спавн после потери жизни
+          totalSpawnedRef.current = respawnedBalls.length; // Сбрасываем счётчик для новой жизни
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут новые`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives, combo: 0 };
