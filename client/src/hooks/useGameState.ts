@@ -1036,16 +1036,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
-      const spacing = GAME_CONFIG.balls.spacing;
-      const sortedBalls = [...prev.balls].sort((a, b) => a.pathProgress - b.pathProgress);
-      let resetBalls = sortedBalls.map((ball, index) => ({
+      if (prev.balls.length === 0) {
+        return {
+          ...prev,
+          lives: prev.lives + 1,
+          extraLivesBought: prev.extraLivesBought + 1,
+        };
+      }
+      
+      // Find the maximum pathProgress (leading ball position)
+      const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
+      // Calculate 50% rewind distance
+      const rewindAmount = maxProgress * 0.5;
+      
+      // Move all balls back by 50% of the leading ball's position
+      let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
-        pathProgress: index * spacing,
+        pathProgress: Math.max(0, ball.pathProgress - rewindAmount),
       }));
-      resetBalls = updateBallPositions(resetBalls, pathRef.current);
+      rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
+      
       return {
         ...prev,
-        balls: resetBalls,
+        balls: rewindedBalls,
         lives: prev.lives + 1,
         extraLivesBought: prev.extraLivesBought + 1,
       };
@@ -1060,17 +1073,32 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     spawnAccumRef.current = 0;
     
     setGameState(prev => {
-      const spacing = GAME_CONFIG.balls.spacing;
-      const sortedBalls = [...prev.balls].sort((a, b) => a.pathProgress - b.pathProgress);
-      let resetBalls = sortedBalls.map((ball, index) => ({
+      if (prev.balls.length === 0) {
+        return {
+          ...prev,
+          lives: 1,
+          isPlaying: true,
+          isGameOver: false,
+          won: false,
+          extraLivesBought: prev.extraLivesBought + 1,
+        };
+      }
+      
+      // Find the maximum pathProgress (leading ball position)
+      const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
+      // Calculate 50% rewind distance
+      const rewindAmount = maxProgress * 0.5;
+      
+      // Move all balls back by 50% of the leading ball's position
+      let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
-        pathProgress: index * spacing,
+        pathProgress: Math.max(0, ball.pathProgress - rewindAmount),
       }));
-      resetBalls = updateBallPositions(resetBalls, pathRef.current);
+      rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
       
       return {
         ...prev,
-        balls: resetBalls,
+        balls: rewindedBalls,
         lives: 1,
         isPlaying: true,
         isGameOver: false,
