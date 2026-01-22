@@ -787,6 +787,33 @@ function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string
     return colorsInChain[0];
   }
   
+  // Для спавна в цепочку: когда мало шаров (<=15), спавним только цвета из цепочки
+  const colorsInChain = activeColors.filter(c => (colorCounts.get(c) || 0) > 0);
+  
+  if (totalBalls <= 15 && colorsInChain.length > 0) {
+    // Используем ту же квадратичную формулу что и для shooter
+    const maxCount = Math.max(...colorsInChain.map(c => colorCounts.get(c) || 1));
+    const weights: { color: string; weight: number }[] = [];
+    for (const color of colorsInChain) {
+      const count = colorCounts.get(color) || 1;
+      const baseWeight = Math.max(1, maxCount + 1 - count);
+      const weight = baseWeight * baseWeight;
+      weights.push({ color, weight });
+    }
+    
+    const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+    let random = Math.random() * totalWeight;
+    
+    for (const { color, weight } of weights) {
+      random -= weight;
+      if (random <= 0) {
+        return color;
+      }
+    }
+    return colorsInChain[0];
+  }
+  
+  // Обычный спавн когда много шаров - балансированное распределение
   const weights: { color: string; weight: number }[] = [];
   
   for (const color of activeColors) {
