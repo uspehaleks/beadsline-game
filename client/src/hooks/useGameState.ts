@@ -1037,10 +1037,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
       const beforeCount = prev.balls.length;
-      sendDebugLog(`[LIFE] До покупки: ${beforeCount} шаров`);
       
       if (prev.balls.length === 0) {
-        sendDebugLog(`[LIFE] Нет шаров, просто добавляем жизнь`);
+        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров`);
         return {
           ...prev,
           lives: prev.lives + 1,
@@ -1052,11 +1051,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       const minProgress = Math.min(...prev.balls.map(b => b.pathProgress));
       // Find the maximum pathProgress (leading ball position)
       const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
-      
-      // Calculate chain length
-      const chainLength = maxProgress - minProgress;
-      
-      sendDebugLog(`[LIFE] min=${minProgress.toFixed(3)} max=${maxProgress.toFixed(3)} chain=${chainLength.toFixed(3)}`);
       
       // Target: move the leading ball to 50% of its current position
       // But keep the chain intact by shifting all balls by the same amount
@@ -1072,8 +1066,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         ? minProgress - minStartPosition 
         : shiftAmount;
       
-      sendDebugLog(`[LIFE] shift=${shiftAmount.toFixed(3)} actual=${actualShift.toFixed(3)}`);
-      
       // Move all balls back by the same shift amount, preserving their spacing
       let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
@@ -1081,7 +1073,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       }));
       rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
       
-      sendDebugLog(`[LIFE] После: ${rewindedBalls.length} шаров (было ${beforeCount})`);
+      const afterCount = rewindedBalls.length;
+      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: ${beforeCount} → ${afterCount} шаров`);
       
       return {
         ...prev,
