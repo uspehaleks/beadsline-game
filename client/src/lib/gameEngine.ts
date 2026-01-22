@@ -764,10 +764,14 @@ function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string
       return activeColors[Math.floor(Math.random() * activeColors.length)];
     }
     
+    // Инвертируем веса: цвета с меньшим количеством появляются чаще
+    const maxCount = Math.max(...colorsInChain.map(c => colorCounts.get(c) || 1));
     const weights: { color: string; weight: number }[] = [];
     for (const color of colorsInChain) {
       const count = colorCounts.get(color) || 1;
-      weights.push({ color, weight: count });
+      // Вес = (maxCount + 1 - count), минимум 1
+      const weight = Math.max(1, maxCount + 1 - count);
+      weights.push({ color, weight });
     }
     
     const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);

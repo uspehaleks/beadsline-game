@@ -529,7 +529,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        if (spawnFinishedRef.current && checkWin(newBalls)) {
+        // Победа: все шары уничтожены (спавн не может продолжаться без шаров)
+        if (checkWin(newBalls)) {
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -939,8 +940,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           setProjectile(null);
           
-          // Only win if ALL balls have spawned AND all are cleared
-          if (spawnFinishedRef.current && checkWin(newBalls)) {
+          // Победа: все шары уничтожены
+          if (checkWin(newBalls)) {
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -1203,7 +1204,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        if (spawnFinishedRef.current && checkWin(newBalls)) {
+        // Победа: все шары уничтожены
+        if (checkWin(newBalls)) {
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
