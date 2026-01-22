@@ -558,7 +558,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
-                  spawnAnimStart: now
+                  spawnAnimStart: undefined // Без анимации - сразу на позицию
                 };
               }
             }
@@ -609,7 +609,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
-                    spawnAnimStart: now
+                    spawnAnimStart: undefined // Без анимации - сразу на позицию
                   };
                 }
               }
@@ -658,7 +658,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
-                spawnAnimStart: now // Анимация выезда из портала
+                spawnAnimStart: undefined // Без анимации - сразу на позицию
               };
             }
           }
@@ -1200,7 +1200,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
-                  spawnAnimStart: now
+                  spawnAnimStart: undefined // Без анимации - сразу на позицию
                 };
               }
             }
@@ -1251,7 +1251,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
-                    spawnAnimStart: now
+                    spawnAnimStart: undefined // Без анимации - сразу на позицию
                   };
                 }
               }
@@ -1301,7 +1301,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
-                spawnAnimStart: now
+                spawnAnimStart: undefined // Без анимации - сразу на позицию
               };
             }
           }
