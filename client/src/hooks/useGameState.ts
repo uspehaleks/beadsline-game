@@ -1044,15 +1044,32 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         };
       }
       
+      // Find the minimum pathProgress (tail of the chain)
+      const minProgress = Math.min(...prev.balls.map(b => b.pathProgress));
       // Find the maximum pathProgress (leading ball position)
       const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
-      // Calculate 50% rewind distance
-      const rewindAmount = maxProgress * 0.5;
       
-      // Move all balls back by 50% of the leading ball's position
+      // Calculate chain length
+      const chainLength = maxProgress - minProgress;
+      
+      // Target: move the leading ball to 50% of its current position
+      // But keep the chain intact by shifting all balls by the same amount
+      const targetMaxProgress = maxProgress * 0.5;
+      const shiftAmount = maxProgress - targetMaxProgress;
+      
+      // Ensure minimum progress doesn't go below starting position (with some buffer)
+      const minStartPosition = GAME_CONFIG.balls.spacing;
+      const newMinProgress = minProgress - shiftAmount;
+      
+      // If shift would put tail below minimum, adjust
+      const actualShift = newMinProgress < minStartPosition 
+        ? minProgress - minStartPosition 
+        : shiftAmount;
+      
+      // Move all balls back by the same shift amount, preserving their spacing
       let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
-        pathProgress: Math.max(0, ball.pathProgress - rewindAmount),
+        pathProgress: Math.max(0, ball.pathProgress - actualShift),
       }));
       rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
       
@@ -1084,15 +1101,29 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         };
       }
       
+      // Find the minimum pathProgress (tail of the chain)
+      const minProgress = Math.min(...prev.balls.map(b => b.pathProgress));
       // Find the maximum pathProgress (leading ball position)
       const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
-      // Calculate 50% rewind distance
-      const rewindAmount = maxProgress * 0.5;
       
-      // Move all balls back by 50% of the leading ball's position
+      // Target: move the leading ball to 50% of its current position
+      // But keep the chain intact by shifting all balls by the same amount
+      const targetMaxProgress = maxProgress * 0.5;
+      const shiftAmount = maxProgress - targetMaxProgress;
+      
+      // Ensure minimum progress doesn't go below starting position (with some buffer)
+      const minStartPosition = GAME_CONFIG.balls.spacing;
+      const newMinProgress = minProgress - shiftAmount;
+      
+      // If shift would put tail below minimum, adjust
+      const actualShift = newMinProgress < minStartPosition 
+        ? minProgress - minStartPosition 
+        : shiftAmount;
+      
+      // Move all balls back by the same shift amount, preserving their spacing
       let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
-        pathProgress: Math.max(0, ball.pathProgress - rewindAmount),
+        pathProgress: Math.max(0, ball.pathProgress - actualShift),
       }));
       rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
       
