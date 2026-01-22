@@ -764,13 +764,14 @@ function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string
       return activeColors[Math.floor(Math.random() * activeColors.length)];
     }
     
-    // Инвертируем веса: цвета с меньшим количеством появляются чаще
+    // Инвертируем веса: цвета с меньшим количеством появляются НАМНОГО чаще
     const maxCount = Math.max(...colorsInChain.map(c => colorCounts.get(c) || 1));
     const weights: { color: string; weight: number }[] = [];
     for (const color of colorsInChain) {
       const count = colorCounts.get(color) || 1;
-      // Вес = (maxCount + 1 - count), минимум 1
-      const weight = Math.max(1, maxCount + 1 - count);
+      // Вес = (maxCount + 1 - count)^2, минимум 1 - квадратичная формула для большего приоритета
+      const baseWeight = Math.max(1, maxCount + 1 - count);
+      const weight = baseWeight * baseWeight; // Квадрат для более агрессивного приоритета
       weights.push({ color, weight });
     }
     

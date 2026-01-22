@@ -1056,6 +1056,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   }, [gameState.isPlaying, shooterPosition]);
 
   const addExtraLife = useCallback((extraSeconds: number) => {
+    gameEndedRef.current = false; // Сбрасываем флаг окончания игры
+    
     setGameState(prev => {
       const beforeCount = prev.balls.length;
       const spacing = GAME_CONFIG.balls.spacing;
