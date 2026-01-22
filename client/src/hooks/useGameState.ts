@@ -1047,9 +1047,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
       const beforeCount = prev.balls.length;
+      const spacing = GAME_CONFIG.balls.spacing;
       
       if (prev.balls.length === 0) {
-        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров`);
+        spawnFinishedRef.current = false;
+        totalSpawnedRef.current = 0;
+        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров, ещё выедут ${maxTotalBallsRef.current}`);
         return {
           ...prev,
           lives: prev.lives + 1,
@@ -1057,38 +1060,40 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         };
       }
       
-      // Find the minimum pathProgress (tail of the chain)
-      const minProgress = Math.min(...prev.balls.map(b => b.pathProgress));
-      // Find the maximum pathProgress (leading ball position)
-      const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
+      // Сортируем шары по pathProgress (от головы к хвосту)
+      let sortedBalls = [...prev.balls];
+      sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
       
-      // Target: move the leading ball to 50% of its current position
-      // But keep the chain intact by shifting all balls by the same amount
-      const targetMaxProgress = maxProgress * 0.5;
-      const shiftAmount = maxProgress - targetMaxProgress;
+      // Откат 50% = оставляем только половину шаров
+      const keepCount = Math.ceil(sortedBalls.length / 2);
+      let respawnedBalls = sortedBalls.slice(0, keepCount);
       
-      // Ensure minimum progress doesn't go below starting position (with some buffer)
-      const minStartPosition = GAME_CONFIG.balls.spacing;
-      const newMinProgress = minProgress - shiftAmount;
+      const n = respawnedBalls.length;
+      if (n > 0) {
+        const headPos = 0.5; // Голова на 50%
+        
+        for (let i = 0; i < n; i++) {
+          const newProgress = Math.max(0, headPos - i * spacing);
+          respawnedBalls[i] = { 
+            ...respawnedBalls[i], 
+            pathProgress: newProgress,
+            spawnAnimStart: undefined
+          };
+        }
+      }
       
-      // If shift would put tail below minimum, adjust
-      const actualShift = newMinProgress < minStartPosition 
-        ? minProgress - minStartPosition 
-        : shiftAmount;
+      respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+      respawnedBalls = updateBallPositions(respawnedBalls, pathRef.current);
       
-      // Move all balls back by the same shift amount, preserving their spacing
-      let rewindedBalls = prev.balls.map(ball => ({
-        ...ball,
-        pathProgress: Math.max(0, ball.pathProgress - actualShift),
-      }));
-      rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
+      gapContextRef.current = null;
+      spawnFinishedRef.current = false;
+      totalSpawnedRef.current = respawnedBalls.length;
       
-      const afterCount = rewindedBalls.length;
-      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: ${beforeCount} → ${afterCount} шаров`);
+      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
       
       return {
         ...prev,
-        balls: rewindedBalls,
+        balls: respawnedBalls,
         lives: prev.lives + 1,
         extraLivesBought: prev.extraLivesBought + 1,
       };
@@ -1102,8 +1107,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     lastTimeRef.current = 0;
     spawnAccumRef.current = 0;
     
+    const spacing = GAME_CONFIG.balls.spacing;
+    
     setGameState(prev => {
       if (prev.balls.length === 0) {
+        spawnFinishedRef.current = false;
+        totalSpawnedRef.current = 0;
         return {
           ...prev,
           lives: 1,
@@ -1114,35 +1123,41 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         };
       }
       
-      // Find the minimum pathProgress (tail of the chain)
-      const minProgress = Math.min(...prev.balls.map(b => b.pathProgress));
-      // Find the maximum pathProgress (leading ball position)
-      const maxProgress = Math.max(...prev.balls.map(b => b.pathProgress));
+      // Сортируем шары по pathProgress (от головы к хвосту)
+      let sortedBalls = [...prev.balls];
+      sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
       
-      // Target: move the leading ball to 50% of its current position
-      // But keep the chain intact by shifting all balls by the same amount
-      const targetMaxProgress = maxProgress * 0.5;
-      const shiftAmount = maxProgress - targetMaxProgress;
+      // Откат 50% = оставляем только половину шаров
+      const keepCount = Math.ceil(sortedBalls.length / 2);
+      let respawnedBalls = sortedBalls.slice(0, keepCount);
       
-      // Ensure minimum progress doesn't go below starting position (with some buffer)
-      const minStartPosition = GAME_CONFIG.balls.spacing;
-      const newMinProgress = minProgress - shiftAmount;
+      const n = respawnedBalls.length;
+      if (n > 0) {
+        const headPos = 0.5; // Голова на 50%
+        
+        for (let i = 0; i < n; i++) {
+          const newProgress = Math.max(0, headPos - i * spacing);
+          respawnedBalls[i] = { 
+            ...respawnedBalls[i], 
+            pathProgress: newProgress,
+            spawnAnimStart: undefined
+          };
+        }
+      }
       
-      // If shift would put tail below minimum, adjust
-      const actualShift = newMinProgress < minStartPosition 
-        ? minProgress - minStartPosition 
-        : shiftAmount;
+      respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
+      respawnedBalls = updateBallPositions(respawnedBalls, pathRef.current);
       
-      // Move all balls back by the same shift amount, preserving their spacing
-      let rewindedBalls = prev.balls.map(ball => ({
-        ...ball,
-        pathProgress: Math.max(0, ball.pathProgress - actualShift),
-      }));
-      rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
+      gapContextRef.current = null;
+      spawnFinishedRef.current = false;
+      totalSpawnedRef.current = respawnedBalls.length;
+      
+      const beforeCount = prev.balls.length;
+      sendDebugLog(`[ПРОДОЛЖИТЬ ИГРУ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${maxTotalBallsRef.current - respawnedBalls.length}`);
       
       return {
         ...prev,
-        balls: rewindedBalls,
+        balls: respawnedBalls,
         lives: 1,
         isPlaying: true,
         isGameOver: false,
