@@ -541,20 +541,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
-            const spacing = GAME_CONFIG.balls.spacing;
-            const targetHeadPosition = 0.5;
+            const originalSpacing = GAME_CONFIG.balls.spacing;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
             const n = respawnedBalls.length;
             if (n > 0) {
-              const chainLength = (n - 1) * spacing;
               const headPos = 0.5; // Всегда откатываемся на 50%
-              const now = Date.now();
+              const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+              const spacing = Math.min(originalSpacing, maxSpacing);
               
               for (let i = 0; i < n; i++) {
-                const newProgress = Math.max(0, headPos - i * spacing);
+                const newProgress = headPos - i * spacing;
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
@@ -592,20 +591,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               }, 0);
               
               // Сбрасываем шарики в начало (как при обычной потере жизни)
-              const spacing = GAME_CONFIG.balls.spacing;
-              const targetHeadPosition = 0.5;
+              const originalSpacing = GAME_CONFIG.balls.spacing;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
               const n = respawnedBalls.length;
               if (n > 0) {
-                const chainLength = (n - 1) * spacing;
                 const headPos = 0.5; // Всегда откатываемся на 50%
-                const now = Date.now();
+                const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+                const spacing = Math.min(originalSpacing, maxSpacing);
                 
                 for (let i = 0; i < n; i++) {
-                  const newProgress = Math.max(0, headPos - i * spacing);
+                  const newProgress = headPos - i * spacing;
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
@@ -639,22 +637,24 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return finalState;
           }
           
-          const spacing = GAME_CONFIG.balls.spacing;
-          const targetHeadPosition = 0.5;
+          const originalSpacing = GAME_CONFIG.balls.spacing;
           
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
           const n = respawnedBalls.length;
           if (n > 0) {
-            const chainLength = (n - 1) * spacing;
-            // Голова на 50% или на длину цепочки если она короткая
             const headPos = 0.5; // Всегда откатываемся на 50%
-            const now = Date.now();
+            
+            // Рассчитываем сжатый spacing чтобы все шары поместились от 0 до headPos
+            // Максимально допустимый spacing = headPos / (n - 1)
+            const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+            const spacing = Math.min(originalSpacing, maxSpacing);
+            
+            sendDebugLog(`[РЕСПАУН] ${n} шаров, spacing: ${spacing.toFixed(4)} (оригинал: ${originalSpacing})`);
             
             for (let i = 0; i < n; i++) {
-              const newProgress = Math.max(0, headPos - i * spacing);
-              // Добавляем анимацию выезда из портала
+              const newProgress = headPos - i * spacing;
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
@@ -1183,20 +1183,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         if (checkGameOver(newBalls)) {
           if (consumeShield()) {
-            const spacing = GAME_CONFIG.balls.spacing;
-            const targetHeadPosition = 0.5;
+            const originalSpacing = GAME_CONFIG.balls.spacing;
             
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
             const n = respawnedBalls.length;
             if (n > 0) {
-              const chainLength = (n - 1) * spacing;
               const headPos = 0.5; // Всегда откатываемся на 50%
-              const now = Date.now();
+              const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+              const spacing = Math.min(originalSpacing, maxSpacing);
               
               for (let i = 0; i < n; i++) {
-                const newProgress = Math.max(0, headPos - i * spacing);
+                const newProgress = headPos - i * spacing;
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
@@ -1234,20 +1233,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               }, 0);
               
               // Сбрасываем шарики в начало
-              const spacing = GAME_CONFIG.balls.spacing;
-              const targetHeadPosition = 0.5;
+              const originalSpacing = GAME_CONFIG.balls.spacing;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
               const n = respawnedBalls.length;
               if (n > 0) {
-                const chainLength = (n - 1) * spacing;
                 const headPos = 0.5; // Всегда откатываемся на 50%
-                const now = Date.now();
+                const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+                const spacing = Math.min(originalSpacing, maxSpacing);
                 
                 for (let i = 0; i < n; i++) {
-                  const newProgress = Math.max(0, headPos - i * spacing);
+                  const newProgress = headPos - i * spacing;
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
@@ -1282,22 +1280,21 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             return finalState;
           }
           
-          const spacing = GAME_CONFIG.balls.spacing;
-          const targetHeadPosition = 0.5;
+          const originalSpacing = GAME_CONFIG.balls.spacing;
           
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
           const n = respawnedBalls.length;
           if (n > 0) {
-            const chainLength = (n - 1) * spacing;
-            let headPos = targetHeadPosition;
+            const headPos = 0.5; // Всегда откатываемся на 50%
+            const maxSpacing = n > 1 ? headPos / (n - 1) : originalSpacing;
+            const spacing = Math.min(originalSpacing, maxSpacing);
             
-            headPos = 0.5; // Всегда откатываемся на 50%
-            const now = Date.now();
+            sendDebugLog(`[РЕСПАУН] ${n} шаров, spacing: ${spacing.toFixed(4)} (оригинал: ${originalSpacing})`);
             
             for (let i = 0; i < n; i++) {
-              const newProgress = Math.max(0, headPos - i * spacing);
+              const newProgress = headPos - i * spacing;
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
