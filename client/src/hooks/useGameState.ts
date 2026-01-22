@@ -574,7 +574,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false;
-            currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+            currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
             totalSpawnedRef.current = respawnedBalls.length;
             hapticFeedback('medium');
             return { ...updatedState, balls: respawnedBalls, combo: 0 };
@@ -630,7 +630,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false;
-              currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+              currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
               totalSpawnedRef.current = respawnedBalls.length;
               
               sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
@@ -681,7 +681,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false;
-          currentLifeMaxRef.current = beforeLossCount; // Лимит = сколько было
+          currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
           totalSpawnedRef.current = respawnedBalls.length;
           
           sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
@@ -1248,7 +1248,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false;
-            currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+            currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
             totalSpawnedRef.current = respawnedBalls.length;
             hapticFeedback('medium');
             return { ...prev, balls: respawnedBalls, combo: 0 };
@@ -1304,7 +1304,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false;
-              currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+              currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
               totalSpawnedRef.current = respawnedBalls.length;
               
               sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
@@ -1354,7 +1354,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false;
-          currentLifeMaxRef.current = beforeLossCount2; // Лимит = сколько было
+          currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
           totalSpawnedRef.current = respawnedBalls.length;
           
           sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
