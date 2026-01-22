@@ -1055,73 +1055,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     setShooterAngle(angle);
   }, [gameState.isPlaying, shooterPosition]);
 
-  const addExtraLife = useCallback((extraSeconds: number) => {
-    gameEndedRef.current = false; // Сбрасываем флаг окончания игры
-    
-    setGameState(prev => {
-      const beforeCount = prev.balls.length;
-      const spacing = GAME_CONFIG.balls.spacing;
-      
-      if (prev.balls.length === 0) {
-        spawnFinishedRef.current = false;
-        totalSpawnedRef.current = 0;
-        // currentLifeMaxRef остаётся прежним
-        sendDebugLog(`[ПОКУПКА ЖИЗНИ] Цепочка: 0 → 0 шаров, ещё выедут ${currentLifeMaxRef.current}`);
-        return {
-          ...prev,
-          lives: prev.lives + 1,
-          extraLivesBought: prev.extraLivesBought + 1,
-          isPlaying: true,
-          isGameOver: false,
-        };
-      }
-      
-      // Сортируем шары по pathProgress (от головы к хвосту)
-      let sortedBalls = [...prev.balls];
-      sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
-      
-      // keepCount = половина от изначального максимума, но не больше чем было
-      let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
-      keepCount = Math.min(keepCount, beforeCount);
-      let respawnedBalls = sortedBalls.slice(0, keepCount);
-      
-      const n = respawnedBalls.length;
-      if (n > 0) {
-        const headPos = 0.5; // Голова на 50%
-        
-        for (let i = 0; i < n; i++) {
-          const newProgress = Math.max(0, headPos - i * spacing);
-          respawnedBalls[i] = { 
-            ...respawnedBalls[i], 
-            pathProgress: newProgress,
-            spawnAnimStart: undefined
-          };
-        }
-      }
-      
-      respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
-      respawnedBalls = updateBallPositions(respawnedBalls, pathRef.current);
-      
-      gapContextRef.current = null;
-      spawnFinishedRef.current = false;
-      currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
-      totalSpawnedRef.current = respawnedBalls.length;
-      
-      sendDebugLog(`[ПОКУПКА ЖИЗНИ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
-      
-      return {
-        ...prev,
-        balls: respawnedBalls,
-        lives: prev.lives + 1,
-        extraLivesBought: prev.extraLivesBought + 1,
-        isPlaying: true,
-        isGameOver: false,
-      };
-    });
-    hapticFeedback('success');
-  }, []);
-
-  const resumeGame = useCallback(() => {
+  // resumeGame принимает опцию incrementLives для addExtraLife
+  const resumeGame = useCallback((options?: { incrementLives?: boolean }) => {
+    const shouldIncrementLives = options?.incrementLives ?? false;
     stopAllTimers();
     gameEndedRef.current = false;
     lastTimeRef.current = 0;
@@ -1136,9 +1072,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         spawnFinishedRef.current = false;
         totalSpawnedRef.current = 0;
         // currentLifeMaxRef остаётся прежним
+        const logType = shouldIncrementLives ? 'ПОКУПКА ЖИЗНИ' : 'ПРОДОЛЖИТЬ ИГРУ';
+        sendDebugLog(`[${logType}] Цепочка: 0 → 0 шаров, ещё выедут ${currentLifeMaxRef.current}`);
         return {
           ...prev,
-          lives: 1,
+          lives: shouldIncrementLives ? prev.lives + 1 : 1,
           isPlaying: true,
           isGameOver: false,
           won: false,
@@ -1177,12 +1115,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
       totalSpawnedRef.current = respawnedBalls.length;
       
-      sendDebugLog(`[ПРОДОЛЖИТЬ ИГРУ] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
+      const logType = shouldIncrementLives ? 'ПОКУПКА ЖИЗНИ' : 'ПРОДОЛЖИТЬ ИГРУ';
+      sendDebugLog(`[${logType}] Было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
       
       return {
         ...prev,
         balls: respawnedBalls,
-        lives: 1,
+        lives: shouldIncrementLives ? prev.lives + 1 : 1,
         isPlaying: true,
         isGameOver: false,
         won: false,
@@ -1414,6 +1353,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     });
     hapticFeedback('medium');
   }, []);
+
+  // addExtraLife вызывает resumeGame с флагом incrementLives
+  const addExtraLife = useCallback((extraSeconds: number) => {
+    resumeGame({ incrementLives: true });
+  }, [resumeGame]);
 
   return {
     gameState,
