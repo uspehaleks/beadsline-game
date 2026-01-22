@@ -555,9 +555,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               if (headPos - chainLength < 0) {
                 headPos = chainLength;
               }
-              if (headPos > 0.85) {
-                headPos = 0.85;
-              }
+              // Убрано ограничение 0.85 - при респауне нужен полноценный откат
               
               for (let i = 0; i < n; i++) {
                 respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
@@ -607,9 +605,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 if (headPos - chainLength < 0) {
                   headPos = chainLength;
                 }
-                if (headPos > 0.85) {
-                  headPos = 0.85;
-                }
+                // Убрано ограничение 0.85 - при респауне нужен полноценный откат
                 
                 for (let i = 0; i < n; i++) {
                   respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
@@ -652,12 +648,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const chainLength = (n - 1) * spacing;
             let headPos = targetHeadPosition;
             
+            // Если цепочка слишком длинная и не помещается от 0 до targetHeadPosition,
+            // сдвигаем голову вперёд чтобы хвост был на 0
             if (headPos - chainLength < 0) {
               headPos = chainLength;
             }
-            if (headPos > 0.85) {
-              headPos = 0.85;
-            }
+            // Убрано ограничение 0.85 - при респауне нужен полноценный откат
             
             for (let i = 0; i < n; i++) {
               respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
@@ -1197,9 +1193,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               if (headPos - chainLength < 0) {
                 headPos = chainLength;
               }
-              if (headPos > 0.85) {
-                headPos = 0.85;
-              }
+              // Убрано ограничение 0.85 - при респауне нужен полноценный откат
               
               for (let i = 0; i < n; i++) {
                 respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
@@ -1247,9 +1241,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 if (headPos - chainLength < 0) {
                   headPos = chainLength;
                 }
-                if (headPos > 0.85) {
-                  headPos = 0.85;
-                }
+                // Убрано ограничение 0.85 - при респауне нужен полноценный откат
                 
                 for (let i = 0; i < n; i++) {
                   respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
@@ -1293,9 +1285,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             if (headPos - chainLength < 0) {
               headPos = chainLength;
             }
-            if (headPos > 0.85) {
-              headPos = 0.85;
-            }
+            // Убрано ограничение 0.85 - при респауне нужен полноценный откат
             
             for (let i = 0; i < n; i++) {
               respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
