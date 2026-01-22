@@ -550,15 +550,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              let headPos = targetHeadPosition;
+              const maxHeadPos = 0.5;
               
-              if (headPos - chainLength < 0) {
-                headPos = chainLength;
+              let actualSpacing = spacing;
+              if (chainLength > maxHeadPos) {
+                actualSpacing = maxHeadPos / (n - 1);
               }
-              // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+              
+              const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
               
               for (let i = 0; i < n; i++) {
-                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
               }
             }
             
@@ -600,15 +602,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                let headPos = targetHeadPosition;
+                const maxHeadPos = 0.5;
                 
-                if (headPos - chainLength < 0) {
-                  headPos = chainLength;
+                let actualSpacing = spacing;
+                if (chainLength > maxHeadPos) {
+                  actualSpacing = maxHeadPos / (n - 1);
                 }
-                // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+                
+                const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
                 
                 for (let i = 0; i < n; i++) {
-                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
                 }
               }
               
@@ -646,17 +650,20 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           const n = respawnedBalls.length;
           if (n > 0) {
             const chainLength = (n - 1) * spacing;
-            let headPos = targetHeadPosition;
+            // Максимальная позиция головы после респауна - 50% пути
+            const maxHeadPos = 0.5;
             
-            // Если цепочка слишком длинная и не помещается от 0 до targetHeadPosition,
-            // сдвигаем голову вперёд чтобы хвост был на 0
-            if (headPos - chainLength < 0) {
-              headPos = chainLength;
+            // Если цепочка длинная, уменьшаем spacing чтобы она поместилась
+            let actualSpacing = spacing;
+            if (chainLength > maxHeadPos) {
+              // Сжимаем цепочку чтобы она поместилась от 0 до maxHeadPos
+              actualSpacing = maxHeadPos / (n - 1);
             }
-            // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+            
+            const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
             
             for (let i = 0; i < n; i++) {
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
             }
           }
           
@@ -1188,15 +1195,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const n = respawnedBalls.length;
             if (n > 0) {
               const chainLength = (n - 1) * spacing;
-              let headPos = targetHeadPosition;
+              const maxHeadPos = 0.5;
               
-              if (headPos - chainLength < 0) {
-                headPos = chainLength;
+              let actualSpacing = spacing;
+              if (chainLength > maxHeadPos) {
+                actualSpacing = maxHeadPos / (n - 1);
               }
-              // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+              
+              const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
               
               for (let i = 0; i < n; i++) {
-                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
               }
             }
             
@@ -1236,15 +1245,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               const n = respawnedBalls.length;
               if (n > 0) {
                 const chainLength = (n - 1) * spacing;
-                let headPos = targetHeadPosition;
+                const maxHeadPos = 0.5;
                 
-                if (headPos - chainLength < 0) {
-                  headPos = chainLength;
+                let actualSpacing = spacing;
+                if (chainLength > maxHeadPos) {
+                  actualSpacing = maxHeadPos / (n - 1);
                 }
-                // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+                
+                const headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
                 
                 for (let i = 0; i < n; i++) {
-                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+                  respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
                 }
               }
               
@@ -1282,13 +1293,17 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const chainLength = (n - 1) * spacing;
             let headPos = targetHeadPosition;
             
-            if (headPos - chainLength < 0) {
-              headPos = chainLength;
+            const maxHeadPos = 0.5;
+            
+            let actualSpacing = spacing;
+            if (chainLength > maxHeadPos) {
+              actualSpacing = maxHeadPos / (n - 1);
             }
-            // Убрано ограничение 0.85 - при респауне нужен полноценный откат
+            
+            headPos = Math.min(maxHeadPos, chainLength > 0 ? chainLength : maxHeadPos);
             
             for (let i = 0; i < n; i++) {
-              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * spacing) };
+              respawnedBalls[i] = { ...respawnedBalls[i], pathProgress: Math.max(0, headPos - i * actualSpacing) };
             }
           }
           
