@@ -787,10 +787,11 @@ function selectBalancedColor(balls: Ball[], forShooter: boolean = false): string
     return colorsInChain[0];
   }
   
-  // Для спавна в цепочку: когда мало шаров (<=15), спавним только цвета из цепочки
+  // Для спавна в цепочку: когда мало шаров (<=15) И в цепочке уже есть разнообразие цветов (минимум 3)
+  // Это предотвращает одноцветный спавн в начале игры
   const colorsInChain = activeColors.filter(c => (colorCounts.get(c) || 0) > 0);
   
-  if (totalBalls <= 15 && colorsInChain.length > 0) {
+  if (totalBalls <= 15 && colorsInChain.length >= 3) {
     // Используем ту же квадратичную формулу что и для shooter
     const maxCount = Math.max(...colorsInChain.map(c => colorCounts.get(c) || 1));
     const weights: { color: string; weight: number }[] = [];
