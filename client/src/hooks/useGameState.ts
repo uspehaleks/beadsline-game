@@ -1036,6 +1036,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
   const addExtraLife = useCallback((extraSeconds: number) => {
     setGameState(prev => {
+      console.log('[ADD_LIFE] Before: balls.length =', prev.balls.length);
+      
       if (prev.balls.length === 0) {
         return {
           ...prev,
@@ -1052,6 +1054,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       // Calculate chain length
       const chainLength = maxProgress - minProgress;
       
+      console.log('[ADD_LIFE] minProgress =', minProgress, 'maxProgress =', maxProgress, 'chainLength =', chainLength);
+      
       // Target: move the leading ball to 50% of its current position
       // But keep the chain intact by shifting all balls by the same amount
       const targetMaxProgress = maxProgress * 0.5;
@@ -1066,12 +1070,16 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         ? minProgress - minStartPosition 
         : shiftAmount;
       
+      console.log('[ADD_LIFE] shiftAmount =', shiftAmount, 'actualShift =', actualShift);
+      
       // Move all balls back by the same shift amount, preserving their spacing
       let rewindedBalls = prev.balls.map(ball => ({
         ...ball,
         pathProgress: Math.max(0, ball.pathProgress - actualShift),
       }));
       rewindedBalls = updateBallPositions(rewindedBalls, pathRef.current);
+      
+      console.log('[ADD_LIFE] After: rewindedBalls.length =', rewindedBalls.length);
       
       return {
         ...prev,
