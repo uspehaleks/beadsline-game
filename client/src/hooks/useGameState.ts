@@ -529,8 +529,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        // Победа: все шары уничтожены (спавн не может продолжаться без шаров)
-        if (checkWin(newBalls)) {
+        // Победа: все шары уничтожены И спавн завершён
+        if (checkWin(newBalls) && spawnFinishedRef.current) {
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -940,8 +940,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           setProjectile(null);
           
-          // Победа: все шары уничтожены
-          if (checkWin(newBalls)) {
+          // Победа: все шары уничтожены И спавн завершён
+          if (checkWin(newBalls) && spawnFinishedRef.current) {
             gameEndedRef.current = true;
             stopAllTimers();
             const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
@@ -1147,10 +1147,44 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           ? prev.balls 
           : moveBallsForward(prev.balls, deltaTime);
         newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
+        
+        // Логика спавна шаров (аналогично основному gameLoop)
+        const gameplayConfig = getGameplayConfig();
+        const { period } = gameplayConfig.spawn;
+        const { targetCount } = gameplayConfig.balls;
+        
+        spawnAccumRef.current += deltaTime;
+        
+        const canSpawn = !spawnFinishedRef.current && 
+                         newBalls.length < targetCount && 
+                         totalSpawnedRef.current < currentLifeMaxRef.current;
+        
+        if (spawnAccumRef.current >= period && canSpawn) {
+          const spacing = getBallSpacing();
+          
+          const tailBall = newBalls.length > 0 
+            ? newBalls.reduce((min, b) => b.pathProgress < min.pathProgress ? b : min, newBalls[0])
+            : null;
+          const tailProgress = tailBall?.pathProgress ?? spacing;
+          const spawnPosition = Math.max(0, tailProgress - spacing);
+          
+          spawnAccumRef.current = 0;
+          
+          const rawBall = createRandomBall(`spawn-${Date.now()}-${Math.random().toString(36).slice(2)}`, spawnPosition, newBalls);
+          const newBall = { ...rawBall, spawnAnimStart: Date.now() };
+          
+          newBalls = [newBall, ...newBalls];
+          totalSpawnedRef.current++;
+          
+          if (totalSpawnedRef.current >= currentLifeMaxRef.current) {
+            spawnFinishedRef.current = true;
+          }
+        }
+        
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        // Победа: все шары уничтожены
-        if (checkWin(newBalls)) {
+        // Победа: все шары уничтожены И спавн завершён
+        if (checkWin(newBalls) && spawnFinishedRef.current) {
           gameEndedRef.current = true;
           stopAllTimers();
           const duration = Math.floor((Date.now() - gameStartTimeRef.current) / 1000);
