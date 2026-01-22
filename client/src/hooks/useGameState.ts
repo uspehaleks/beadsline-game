@@ -574,8 +574,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           }
           
           const beforeLossCount = newBalls.length;
+          const maxProgressBefore = newBalls.length > 0 ? Math.max(...newBalls.map(b => b.pathProgress)) : 0;
           const newLives = updatedState.lives - 1;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount} шаров, осталось жизней: ${newLives}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount} шаров, голова на ${(maxProgressBefore * 100).toFixed(0)}%, осталось жизней: ${newLives}`);
           
           if (newLives <= 0) {
             // Проверяем есть ли бонусные жизни из BEADS BOX
@@ -668,7 +669,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров`);
+          const maxProgressAfter = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
+          const rollbackPercent = maxProgressBefore > 0 ? ((maxProgressBefore - maxProgressAfter) / maxProgressBefore * 100).toFixed(0) : 0;
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров, голова на ${(maxProgressAfter * 100).toFixed(0)}% (откат ${rollbackPercent}%)`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...updatedState, balls: respawnedBalls, lives: newLives, combo: 0 };
@@ -1211,8 +1214,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           }
           
           const beforeLossCount2 = newBalls.length;
+          const maxProgressBefore2 = newBalls.length > 0 ? Math.max(...newBalls.map(b => b.pathProgress)) : 0;
           const newLives = prev.lives - 1;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount2} шаров, осталось жизней: ${newLives}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount2} шаров, голова на ${(maxProgressBefore2 * 100).toFixed(0)}%, осталось жизней: ${newLives}`);
           
           if (newLives <= 0) {
             // Проверяем есть ли бонусные жизни из BEADS BOX
@@ -1255,7 +1259,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
               respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров`);
+              const maxProgressAfterBonus = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
+              const rollbackPercentBonus = maxProgressBefore2 > 0 ? ((maxProgressBefore2 - maxProgressAfterBonus) / maxProgressBefore2 * 100).toFixed(0) : 0;
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): ${respawnedBalls.length} шаров, голова на ${(maxProgressAfterBonus * 100).toFixed(0)}% (откат ${rollbackPercentBonus}%)`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -1299,7 +1305,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
           respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
           
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров`);
+          const maxProgressAfter2 = respawnedBalls.length > 0 ? Math.max(...respawnedBalls.map(b => b.pathProgress)) : 0;
+          const rollbackPercent2 = maxProgressBefore2 > 0 ? ((maxProgressBefore2 - maxProgressAfter2) / maxProgressBefore2 * 100).toFixed(0) : 0;
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После: ${respawnedBalls.length} шаров, голова на ${(maxProgressAfter2 * 100).toFixed(0)}% (откат ${rollbackPercent2}%)`);
           hapticFeedback('warning');
           playLifeLostSound();
           return { ...prev, balls: respawnedBalls, lives: newLives };
