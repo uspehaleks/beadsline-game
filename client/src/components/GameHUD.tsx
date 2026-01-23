@@ -16,6 +16,7 @@ interface GameHUDProps {
   ballsRemaining: number;
   totalBalls: number;
   totalSpawned: number;
+  currentLifeMax: number;
   userBeads: number;
   lifeCost: number;
   maxExtraLives: number;
@@ -26,6 +27,9 @@ interface GameHUDProps {
   isUsingBoost?: boolean;
   bonusLives?: number;
   useCryptoTicket?: boolean;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
+  onStepFrame?: () => void;
 }
 
 export function GameHUD({ 
@@ -35,6 +39,7 @@ export function GameHUD({
   ballsRemaining, 
   totalBalls,
   totalSpawned,
+  currentLifeMax,
   userBeads,
   lifeCost,
   maxExtraLives,
@@ -45,6 +50,9 @@ export function GameHUD({
   isUsingBoost = false,
   bonusLives = 0,
   useCryptoTicket = false,
+  isPaused = false,
+  onTogglePause,
+  onStepFrame,
 }: GameHUDProps) {
   const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
   const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
@@ -119,6 +127,17 @@ export function GameHUD({
                   )}
                 </Button>
               </div>
+              {/* DEBUG CONTROLS */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" onClick={onTogglePause} className="h-6 px-2 text-xs">
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={onStepFrame} disabled={!isPaused} className="h-6 px-2 text-xs">
+                    Step
+                  </Button>
+                </div>
+              )}
             </div>
             {boostInventory.length > 0 && (
               <div className="flex items-center gap-1">
@@ -151,20 +170,25 @@ export function GameHUD({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {combo > 1 && (
-              <div className="flex items-center gap-1 text-amber-400 animate-pulse">
-                <Zap className="w-4 h-4" />
-                <span className="font-display font-bold text-lg" data-testid="text-combo">
-                  x{combo}
+          <div className="flex flex-col items-end gap-1 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              {combo > 1 && (
+                <div className="flex items-center gap-1 text-amber-400 animate-pulse">
+                  <Zap className="w-4 h-4" />
+                  <span className="font-display font-bold text-lg" data-testid="text-combo">
+                    x{combo}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <Circle className="w-4 h-4" />
+                <span className="font-semibold text-sm tabular-nums" data-testid="text-balls">
+                  {ballsOnScreen}
                 </span>
               </div>
-            )}
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Circle className="w-4 h-4" />
-              <span className="font-semibold text-sm tabular-nums" data-testid="text-balls">
-                {ballsOnScreen}
-              </span>
+            </div>
+            <div className="text-xs tabular-nums" data-testid="spawn-counter">
+              Появилось: {totalSpawned} / {currentLifeMax}
             </div>
           </div>
         </div>

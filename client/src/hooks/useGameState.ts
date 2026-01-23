@@ -120,7 +120,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   const [shooterAngle, setShooterAngle] = useState(-Math.PI / 2);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [usedBonusLives, setUsedBonusLives] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   
+  const isPausedRef = useRef(false);
+  const stepFrameRef = useRef(false);
   const gameLoopRef = useRef<number | null>(null);
   const timeTrackerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTimeRef = useRef<number>(0);
@@ -274,6 +277,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     
     const runLoop = (timestamp: number) => {
       if (gameEndedRef.current) return;
+
+      if (isPausedRef.current && !stepFrameRef.current) {
+        lastTimeRef.current = timestamp; // Keep time up to date to avoid jump
+        gameLoopRef.current = requestAnimationFrame(runLoop);
+        return;
+      }
+      if (stepFrameRef.current) {
+        stepFrameRef.current = false; // Consume step signal
+      }
       
       frameCount++;
       
@@ -548,11 +560,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const spacing = GAME_CONFIG.balls.spacing;
             const beforeCount = newBalls.length;
             
+            // FIX: Лимит шаров на следующую жизнь = сколько было на экране
+            currentLifeMaxRef.current = beforeCount;
+            sendDebugLog(`[ЩИТ] Сработал. Было ${beforeCount} шаров. Новый лимит: ${currentLifeMaxRef.current}`);
+            
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
-            // keepCount = половина от изначального максимума, но не больше чем было
-            let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+            // FIX: keepCount = половина от того, что БЫЛО на экране
+            let keepCount = Math.ceil(beforeCount / 2);
             keepCount = Math.min(keepCount, beforeCount);
             respawnedBalls = respawnedBalls.slice(0, keepCount);
             
@@ -575,16 +591,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false;
-            currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+            // currentLifeMaxRef уже установлен
             totalSpawnedRef.current = respawnedBalls.length;
+
+            sendDebugLog(`[ЩИТ] После: осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
             hapticFeedback('medium');
             return { ...updatedState, balls: respawnedBalls, combo: 0 };
           }
           
           const beforeLossCount = newBalls.length;
           const maxProgressBefore = newBalls.length > 0 ? Math.max(...newBalls.map(b => b.pathProgress)) : 0;
+          
           const newLives = updatedState.lives - 1;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount} шаров, голова на ${(maxProgressBefore * 100).toFixed(0)}%, осталось жизней: ${newLives}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount} шаров, голова на ${(maxProgressBefore * 100).toFixed(0)}%, осталось жизней: ${newLives}.`);
           
           if (newLives <= 0) {
             // Проверяем есть ли бонусные жизни из BEADS BOX
@@ -602,14 +621,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               // Сбрасываем шарики в начало (как при обычной потере жизни)
               const spacing = GAME_CONFIG.balls.spacing;
-              const beforeCount = newBalls.length;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
-              // keepCount = половина от изначального максимума, но не больше чем было
-              let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
-              keepCount = Math.min(keepCount, beforeCount);
+              let keepCount = Math.ceil(beforeLossCount / 2);
+              keepCount = Math.min(keepCount, beforeLossCount);
               respawnedBalls = respawnedBalls.slice(0, keepCount);
               
               const n = respawnedBalls.length;
@@ -631,10 +648,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false;
-              currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+              currentLifeMaxRef.current = maxTotalBallsRef.current; // FIX: Лимит всегда сбрасывается на максимум
               totalSpawnedRef.current = respawnedBalls.length;
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeLossCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...updatedState, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -658,8 +675,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
-          // keepCount = половина от изначального максимума, но не больше чем было
-          let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+          let keepCount = Math.ceil(beforeLossCount / 2);
           keepCount = Math.min(keepCount, beforeLossCount);
           respawnedBalls = respawnedBalls.slice(0, keepCount);
           
@@ -682,7 +698,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false;
-          currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+          currentLifeMaxRef.current = maxTotalBallsRef.current; // FIX: Лимит всегда сбрасывается на максимум
           totalSpawnedRef.current = respawnedBalls.length;
           
           sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
@@ -1063,17 +1079,23 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     lastTimeRef.current = 0;
     spawnAccumRef.current = 0;
     
-    const spacing = GAME_CONFIG.balls.spacing;
-    
     setGameState(prev => {
+      let currentPath = pathRef.current;
+      if (currentPath.length === 0) {
+        console.warn("Path not initialized in resumeGame, regenerating...");
+        currentPath = generatePathForLevel(dimensionsRef.current.width, dimensionsRef.current.height, level);
+        pathRef.current = currentPath;
+        setPath(currentPath);
+      }
+      
       const beforeCount = prev.balls.length;
       
       if (prev.balls.length === 0) {
-        spawnFinishedRef.current = false;
+        spawnFinishedRef.current = true;
         totalSpawnedRef.current = 0;
-        // currentLifeMaxRef остаётся прежним
+        currentLifeMaxRef.current = 0;
         const logType = shouldIncrementLives ? 'ПОКУПКА ЖИЗНИ' : 'ПРОДОЛЖИТЬ ИГРУ';
-        sendDebugLog(`[${logType}] Цепочка: 0 → 0 шаров, ещё выедут ${currentLifeMaxRef.current}`);
+        sendDebugLog(`[${logType}] Цепочка: 0 → 0 шаров, спавн завершён.`);
         return {
           ...prev,
           lives: shouldIncrementLives ? prev.lives + 1 : 1,
@@ -1084,19 +1106,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         };
       }
       
-      // Сортируем шары по pathProgress (от головы к хвосту)
-      let sortedBalls = [...prev.balls];
-      sortedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
-      
-      // keepCount = половина от изначального максимума, но не больше чем было
-      let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+      // FIX: Логика, аналогичная потере жизни
+      const spacing = GAME_CONFIG.balls.spacing;
+      let respawnedBalls = [...prev.balls].sort((a, b) => b.pathProgress - a.pathProgress);
+
+      currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
+
+      let keepCount = Math.ceil(beforeCount / 2);
       keepCount = Math.min(keepCount, beforeCount);
-      let respawnedBalls = sortedBalls.slice(0, keepCount);
+      respawnedBalls = respawnedBalls.slice(0, keepCount);
       
       const n = respawnedBalls.length;
       if (n > 0) {
         const headPos = 0.5; // Голова на 50%
-        
         for (let i = 0; i < n; i++) {
           const newProgress = Math.max(0, headPos - i * spacing);
           respawnedBalls[i] = { 
@@ -1108,11 +1130,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       }
       
       respawnedBalls.sort((a, b) => a.pathProgress - b.pathProgress);
-      respawnedBalls = updateBallPositions(respawnedBalls, pathRef.current);
+      respawnedBalls = updateBallPositions(respawnedBalls, currentPath);
       
       gapContextRef.current = null;
       spawnFinishedRef.current = false;
-      currentLifeMaxRef.current = beforeCount; // Лимит = сколько было
       totalSpawnedRef.current = respawnedBalls.length;
       
       const logType = shouldIncrementLives ? 'ПОКУПКА ЖИЗНИ' : 'ПРОДОЛЖИТЬ ИГРУ';
@@ -1142,13 +1163,11 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       setGameState(prev => {
         if (!prev.isPlaying || gameEndedRef.current) return prev;
         
-        // During rollback, pause forward movement to let chain close gaps properly
         let newBalls = isRollbackActive() 
           ? prev.balls 
           : moveBallsForward(prev.balls, deltaTime);
         newBalls = processRollback(newBalls, deltaTime, spawnFinishedRef.current);
         
-        // Логика спавна шаров (аналогично основному gameLoop)
         const gameplayConfig = getGameplayConfig();
         const { period } = gameplayConfig.spawn;
         const { targetCount } = gameplayConfig.balls;
@@ -1183,7 +1202,6 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         
         newBalls = updateBallPositions(newBalls, currentPath);
         
-        // Победа: все шары уничтожены И спавн завершён
         if (checkWin(newBalls) && spawnFinishedRef.current) {
           gameEndedRef.current = true;
           stopAllTimers();
@@ -1205,21 +1223,20 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             let respawnedBalls = [...newBalls];
             respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
             
-            // keepCount = половина от изначального максимума, но не больше чем было
             let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
             keepCount = Math.min(keepCount, beforeCount);
             respawnedBalls = respawnedBalls.slice(0, keepCount);
             
             const n = respawnedBalls.length;
             if (n > 0) {
-              const headPos = 0.5; // Голова на 50%
+              const headPos = 0.5;
               
               for (let i = 0; i < n; i++) {
                 const newProgress = Math.max(0, headPos - i * spacing);
                 respawnedBalls[i] = { 
                   ...respawnedBalls[i], 
                   pathProgress: newProgress,
-                  spawnAnimStart: undefined // Без анимации - сразу на позицию
+                  spawnAnimStart: undefined
                 };
               }
             }
@@ -1229,7 +1246,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             gapContextRef.current = null;
             spawnFinishedRef.current = false;
-            currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+            currentLifeMaxRef.current = maxTotalBallsRef.current;
             totalSpawnedRef.current = respawnedBalls.length;
             hapticFeedback('medium');
             return { ...prev, balls: respawnedBalls, combo: 0 };
@@ -1237,45 +1254,40 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           const beforeLossCount2 = newBalls.length;
           const maxProgressBefore2 = newBalls.length > 0 ? Math.max(...newBalls.map(b => b.pathProgress)) : 0;
+
           const newLives = prev.lives - 1;
-          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount2} шаров, голова на ${(maxProgressBefore2 * 100).toFixed(0)}%, осталось жизней: ${newLives}`);
+          sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] До: ${beforeLossCount2} шаров, голова на ${(maxProgressBefore2 * 100).toFixed(0)}%, осталось жизней: ${newLives}.`);
           
           if (newLives <= 0) {
-            // Проверяем есть ли бонусные жизни из BEADS BOX
             const availableBonusLives = bonusLivesRef.current - usedBonusLivesRef.current;
             
             if (availableBonusLives > 0) {
-              // Используем бонусную жизнь
               usedBonusLivesRef.current += 1;
               setUsedBonusLives(prev => prev + 1);
               
-              // Вызываем callback для списания бонусной жизни с сервера
               setTimeout(() => {
                 onUseBonusLifeRef.current?.();
               }, 0);
               
-              // Сбрасываем шарики в начало
               const spacing = GAME_CONFIG.balls.spacing;
-              const beforeCount = newBalls.length;
               
               let respawnedBalls = [...newBalls];
               respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
               
-              // keepCount = половина от изначального максимума, но не больше чем было
-              let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
-              keepCount = Math.min(keepCount, beforeCount);
+              let keepCount = Math.ceil(beforeLossCount2 / 2);
+              keepCount = Math.min(keepCount, beforeLossCount2);
               respawnedBalls = respawnedBalls.slice(0, keepCount);
               
               const n = respawnedBalls.length;
               if (n > 0) {
-                const headPos = 0.5; // Голова на 50%
+                const headPos = 0.5;
                 
                 for (let i = 0; i < n; i++) {
                   const newProgress = Math.max(0, headPos - i * spacing);
                   respawnedBalls[i] = { 
                     ...respawnedBalls[i], 
                     pathProgress: newProgress,
-                    spawnAnimStart: undefined // Без анимации - сразу на позицию
+                    spawnAnimStart: undefined
                   };
                 }
               }
@@ -1285,10 +1297,10 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
               
               gapContextRef.current = null;
               spawnFinishedRef.current = false;
-              currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+              currentLifeMaxRef.current = maxTotalBallsRef.current; // FIX: Лимит всегда сбрасывается на максимум
               totalSpawnedRef.current = respawnedBalls.length;
               
-              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeCount}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
+              sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] После (бонус): было ${beforeLossCount2}, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
               hapticFeedback('warning');
               playLifeLostSound();
               return { ...prev, balls: respawnedBalls, lives: 1, combo: 0 };
@@ -1311,21 +1323,20 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           let respawnedBalls = [...newBalls];
           respawnedBalls.sort((a, b) => b.pathProgress - a.pathProgress);
           
-          // keepCount = половина от изначального максимума, но не больше чем было
-          let keepCount = Math.ceil(maxTotalBallsRef.current / 2);
+          let keepCount = Math.ceil(beforeLossCount2 / 2);
           keepCount = Math.min(keepCount, beforeLossCount2);
           respawnedBalls = respawnedBalls.slice(0, keepCount);
           
           const n = respawnedBalls.length;
           if (n > 0) {
-            const headPos = 0.5; // Голова на 50%
+            const headPos = 0.5;
             
             for (let i = 0; i < n; i++) {
               const newProgress = Math.max(0, headPos - i * spacing);
               respawnedBalls[i] = { 
                 ...respawnedBalls[i], 
                 pathProgress: newProgress,
-                spawnAnimStart: undefined // Без анимации - сразу на позицию
+                spawnAnimStart: undefined
               };
             }
           }
@@ -1335,7 +1346,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           
           gapContextRef.current = null;
           spawnFinishedRef.current = false;
-          currentLifeMaxRef.current = maxTotalBallsRef.current; // Лимит = максимум
+          currentLifeMaxRef.current = maxTotalBallsRef.current; // FIX: Лимит всегда сбрасывается на максимум
           totalSpawnedRef.current = respawnedBalls.length;
           
           sendDebugLog(`[ПОТЕРЯ ЖИЗНИ] Было ${beforeLossCount2} шаров, осталось ${respawnedBalls.length}, ещё выедут ${currentLifeMaxRef.current - respawnedBalls.length}`);
@@ -1372,12 +1383,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     }, 1000);
     
     hapticFeedback('success');
-  }, [stopAllTimers]);
+  }, [stopAllTimers, level]);
 
   const ballsOnScreen = gameState.balls.length;
   const totalBalls = maxTotalBallsRef.current;
   const totalSpawned = totalSpawnedRef.current;
   const ballsRemaining = totalBalls - totalSpawned + ballsOnScreen;
+  const currentLifeMax = currentLifeMaxRef.current;
 
   const applyRewind = useCallback(() => {
     setGameState(prev => {
@@ -1393,6 +1405,19 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     resumeGame({ incrementLives: true });
   }, [resumeGame]);
 
+  const togglePause = useCallback(() => {
+    isPausedRef.current = !isPausedRef.current;
+    setIsPaused(isPausedRef.current);
+    sendDebugLog(`[DEBUG] Game ${isPausedRef.current ? 'Paused' : 'Resumed'}`);
+  }, []);
+
+  const stepFrame = useCallback(() => {
+    if (isPausedRef.current) {
+      stepFrameRef.current = true;
+      sendDebugLog(`[DEBUG] Stepping one frame`);
+    }
+  }, []);
+
   return {
     gameState,
     path,
@@ -1404,11 +1429,15 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     ballsRemaining,
     totalBalls,
     totalSpawned,
+    currentLifeMax,
+    isPaused,
     startGame,
     shoot,
     updateAim,
     addExtraLife,
     resumeGame,
     applyRewind,
+    togglePause,
+    stepFrame,
   };
 }

@@ -217,12 +217,16 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
     ballsRemaining,
     totalBalls,
     totalSpawned,
+    currentLifeMax,
+    isPaused,
     startGame: originalStartGame,
     shoot,
     updateAim,
     addExtraLife,
     resumeGame,
     applyRewind,
+    togglePause,
+    stepFrame,
   } = useGameState({
     canvasWidth: dimensions.width,
     canvasHeight: dimensions.height,
@@ -367,6 +371,7 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           ballsRemaining={ballsRemaining}
           totalBalls={totalBalls}
           totalSpawned={totalSpawned}
+          currentLifeMax={currentLifeMax}
           userBeads={user?.totalPoints || 0}
           lifeCost={livesConfig?.extraLifeCost || 50}
           maxExtraLives={livesConfig?.maxExtraLives || 5}
@@ -377,6 +382,9 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
           isUsingBoost={useBoostMutation.isPending}
           bonusLives={user?.bonusLives || 0}
           useCryptoTicket={cryptoTicketActive}
+          isPaused={isPaused}
+          onTogglePause={togglePause}
+          onStepFrame={stepFrame}
         />
       )}
 
