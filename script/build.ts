@@ -50,7 +50,7 @@ async function buildAll() {
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
-    format: "cjs",
+    format: "esm",
     outdir: "dist",
     splitting: true,
     define: {
