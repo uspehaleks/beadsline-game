@@ -2,22 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/node@3.0.12",
-      "config": { "includeFiles": ["dist/**", "client/dist/**"] }
-    },
-    {
-      "src": "client/index.html",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "client/dist/public" }
+      "src": "dist/index.cjs",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "dist/index.cjs" },
-    { "src": "/static/(.*)", "dest": "/client/dist/public/static/$1" },
-    { "src": "/assets/(.*)", "dest": "/client/dist/public/assets/$1" },
-    { "src": "/(.*)", "dest": "/client/dist/public/index.html" }
-  ],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build"
+    {
+      "src": "/(.*)",
+      "dest": "dist/index.cjs"
+    }
+  ]
 }
