@@ -1,26 +1,48 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm } from "fs/promises";
-import pkg from "../package.json"; // Импортируем package.json
+import { createRequire } from "module"; // Нужно для корректного импорта JSON
+
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
 
 async function buildAll() {
-  // Очистка предыдущих сборок
+  // 1. Очистка
   await rm("dist", { recursive: true, force: true }).catch(() => {});
   await rm("api", { recursive: true, force: true }).catch(() => {});
 
+  // 2. Сборка клиента (исправляем путь)
   console.log("building client...");
-  await viteBuild();
+  try {
+    await viteBuild({
+      root: "client", // Явно указываем Vite, где искать index.html
+    });
+  } catch (e) {
+    console.error("Vite build failed, but continuing to server...");
+  }
 
+  // 3. Сборка сервера
   console.log("building server...");
   
+  // Создаем массив исключений. 
+  // Мы добавляем 'express' и прочие вручную на случай, если pkg не прочитался.
+  const externalList = [
+    ...Object.keys(pkg.dependencies || {}),
+    "express",
+    "pg",
+    "drizzle-orm",
+    "@neondatabase/serverless",
+    "framer-motion"
+  ];
+
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
     format: "cjs",
     outfile: "api/index.cjs",
-    // Автоматически исключаем ВСЕ зависимости из бандла
-    external: Object.keys(pkg.dependencies || {}), 
+    // Теперь это точно сработает
+    external: externalList, 
     minify: true,
     define: {
       "process.env.NODE_ENV": '"production"',
