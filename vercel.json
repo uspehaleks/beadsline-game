@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "dist/public/api/index.cjs": {
-      "runtime": "nodejs20.x"
+      "runtime": "nodejs20.x",
+      "memory": 1024
     }
   },
   "rewrites": [
