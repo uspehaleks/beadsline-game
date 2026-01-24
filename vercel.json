@@ -1,14 +1,14 @@
 {
   "version": 2,
   "functions": {
-    "api/index.cjs": {
+    "dist/public/api/index.cjs": {
       "runtime": "nodejs20.x"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.cjs"
+      "destination": "/dist/public/api/index.cjs"
     },
     {
       "source": "/assets/(.*)",
