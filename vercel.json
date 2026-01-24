@@ -1,26 +1,13 @@
 {
   "version": 2,
-  "functions": {
-    "dist/public/api/index.cjs": {
-      "runtime": "nodejs20.x",
-      "memory": 1024
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/dist/public/api/index.cjs"
+      "source": "/api/(.*)",
+      "destination": "/public/api/index.cjs"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/dist/public/assets/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
+      "source": "/:path((?!api/|assets/).*)",
+      "destination": "/public/index.html"
     }
   ]
 }
