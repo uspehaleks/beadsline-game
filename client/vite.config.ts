@@ -19,22 +19,6 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "../dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 2000,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            const module = id.split('node_modules/').pop().split('/')[0];
-            if (['react', 'react-dom', 'wouter'].includes(module)) {
-              return `vendor-react`;
-            }
-            if (['framer-motion', 'embla-carousel-react'].includes(module)) {
-              return `vendor-animation`;
-            }
-            return 'vendor-core';
-          }
-        }
-      }
-    }
   },
   server: {
     fs: {
