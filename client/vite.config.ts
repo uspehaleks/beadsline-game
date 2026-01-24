@@ -36,13 +36,13 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules')) {
             const module = id.split('node_modules/').pop().split('/')[0];
-            if (['react', 'react-dom', 'react-router-dom', 'wouter'].includes(module)) {
+            if (['react', 'react-dom', 'wouter'].includes(module)) {
               return `vendor-react`;
             }
             if (['framer-motion', 'embla-carousel-react'].includes(module)) {
               return `vendor-animation`;
             }
-            return 'vendor';
+            return 'vendor-core';
           }
         }
       }
