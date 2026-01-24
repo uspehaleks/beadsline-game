@@ -744,6 +744,21 @@ export async function registerRoutes(
     console.error('Failed to initialize default boost packages:', err);
   });
   
+  app.get("/api/health-check", async (req, res) => {
+    try {
+      // Выполняем самый простой запрос, чтобы проверить соединение
+      await db.execute(sql`select 1`);
+      res.status(200).json({ status: 'ok', message: 'База данных успешно подключена' });
+    } catch (error: any) {
+      console.error("Health check failed:", error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Ошибка подключения к базе данных', 
+        error: error.message 
+      });
+    }
+  });
+
   app.post("/api/auth/telegram", async (req, res) => {
     try {
       const { telegramId, username, firstName, lastName, photoUrl, startParam } = req.body;
