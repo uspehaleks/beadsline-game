@@ -47,7 +47,7 @@ async function buildAll() {
     platform: "node",
     bundle: true,
     format: "cjs",
-    outfile: path.join(publicDir, "api/index.cjs"),
+    outfile: path.join(distDir, "api/index.cjs"),
     external: externalList,
     minify: true,
     define: {
