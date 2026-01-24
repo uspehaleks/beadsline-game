@@ -1,31 +1,38 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm } from "fs/promises";
-import { createRequire } from "module"; // Нужно для корректного импорта JSON
+import { rm, mkdir } from "fs/promises";
+import { createRequire } from "module";
+import { copy } from "fs-extra";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json");
 
 async function buildAll() {
-  // 1. Очистка
-  await rm("dist", { recursive: true, force: true }).catch(() => {});
-  await rm("api", { recursive: true, force: true }).catch(() => {});
+  const rootDir = path.resolve(__dirname, '..');
+  const distDir = path.join(rootDir, 'dist');
+  const publicDir = path.join(distDir, 'public');
 
-  // 2. Сборка клиента (исправляем путь)
+  // 1. Очистка
+  await rm(distDir, { recursive: true, force: true }).catch(() => {});
+  await mkdir(publicDir, { recursive: true });
+
+  // 2. Сборка клиента
   console.log("building client...");
-  try {
-    await viteBuild({
-      root: "client", // Явно указываем Vite, где искать index.html
-    });
-  } catch (e) {
-    console.error("Vite build failed, but continuing to server...");
-  }
+  await viteBuild({
+    root: path.join(rootDir, "client"),
+    build: {
+      outDir: publicDir, // Собираем фронтенд сразу в dist/public
+      emptyOutDir: true, // Vite очистит папку перед сборкой
+    },
+  });
 
   // 3. Сборка сервера
   console.log("building server...");
-  
-  // Создаем массив исключений. 
-  // Мы добавляем 'express' и прочие вручную на случай, если pkg не прочитался.
   const externalList = [
     ...Object.keys(pkg.dependencies || {}),
     "express",
@@ -36,19 +43,24 @@ async function buildAll() {
   ];
 
   await esbuild({
-    entryPoints: ["server/index.ts"],
+    entryPoints: [path.join(rootDir, "server/index.ts")],
     platform: "node",
     bundle: true,
     format: "cjs",
-    outfile: "dist/public/api/index.cjs",
-    // Теперь это точно сработает
-    external: externalList, 
+    outfile: path.join(publicDir, "api/index.cjs"),
+    external: externalList,
     minify: true,
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     logLevel: "info",
   });
+  
+  // 4. Копирование дополнительных файлов сервера (если нужно)
+  // Например, папки uploads
+  const uploadsDir = path.join(rootDir, 'server', 'uploads');
+  const destUploadsDir = path.join(distDir, 'uploads');
+  await copy(uploadsDir, destUploadsDir, { recursive: true }).catch(err => console.log('No uploads folder to copy, skipping.'));
 }
 
 buildAll().catch((err) => {
