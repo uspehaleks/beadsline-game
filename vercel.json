@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "dist/public/api/index.cjs": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
