@@ -1,18 +1,18 @@
 {
   "version": 2,
   "functions": {
-    "api/index.cjs": {
+    "public/api/index.cjs": {
       "runtime": "nodejs20.x"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.cjs"
+      "destination": "/public/api/index.cjs"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/public/index.html"
     }
   ]
 }
