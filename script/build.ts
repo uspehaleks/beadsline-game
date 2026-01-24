@@ -40,7 +40,7 @@ async function buildAll() {
     platform: "node",
     bundle: true,
     format: "cjs",
-    outfile: "api/index.cjs",
+    outfile: "dist/public/api/index.cjs",
     // Теперь это точно сработает
     external: externalList, 
     minify: true,
