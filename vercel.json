@@ -1,17 +1,17 @@
 {
-  "version": 2,
-  "routes": [
+  "functions": {
+    "api/index.cjs": {
+      "runtime": "vercel-node@latest"
+    }
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.cjs"
+      "source": "/api/(.*)",
+      "destination": "/api/index.cjs"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/dist/public/$1"
     }
   ]
 }
