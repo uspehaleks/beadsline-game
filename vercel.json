@@ -1,7 +1,17 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.cjs" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.cjs"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/public/assets/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/index.html"
+    }
   ]
 }
