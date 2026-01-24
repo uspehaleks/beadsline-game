@@ -1,22 +1,21 @@
 {
   "version": 2,
-  "functions": {
-    "dist/public/api/index.cjs": {
-      "runtime": "nodejs20.x"
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**",
+          "server/uploads/**"
+        ]
+      }
     }
-  },
-  "rewrites": [
+  ],
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/dist/public/api/index.cjs"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/dist/public/assets/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/dist/public/index.html"
+      "src": "/(.*)",
+      "dest": "dist/index.cjs"
     }
   ]
 }
