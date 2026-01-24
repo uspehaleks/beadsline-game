@@ -30,7 +30,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    chunkSizeWarningLimit: 2000, // suppress warning for server bundle
+    chunkSizeWarningLimit: 5000, // suppress warning for large client bundle
     rollupOptions: {
       output: {
         manualChunks(id) {
