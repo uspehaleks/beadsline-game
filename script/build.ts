@@ -55,7 +55,13 @@ async function buildAll() {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
-    external: externals.concat(['@neondatabase/serverless', 'drizzle-orm', 'express', 'pg']),
+    external: [
+      "@neondatabase/serverless",
+      "drizzle-orm",
+      "express",
+      "pg",
+      "@google/generative-ai"
+    ],
     logLevel: "info",
   });
 }
