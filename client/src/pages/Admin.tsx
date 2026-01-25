@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
-import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats, Boost, HouseAccountConfig, RevenueSummary } from "@shared/schema";
+import type { User, GameConfig, PrizePool, GameScore, GameEconomyConfig, ReferralConfig, ReferralUserStats, Boost, HouseAccountConfig, RevenueSummary, insertGameScoreSchema } from "@shared/schema";
 import { 
   Users, 
   Users2,
@@ -1913,6 +1913,7 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
   return (
     <div className="space-y-4">
       <SignupBonusCard configs={configs} />
+      <GameScoreLimitsCard />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
