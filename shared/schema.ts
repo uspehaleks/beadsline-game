@@ -1074,6 +1074,31 @@ export interface BeadsBoxConfig {
   cryptoTicketMinLevel: number; // Minimum completed levels to get crypto ticket
 }
 
+export const updateBeadsBoxConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  boxCount: z.number().int().min(1).max(10).optional(),
+  rewards: z.object({
+    beads: z.object({
+      min: z.number().int().min(0),
+      max: z.number().int().min(z.ref('min')).optional(), // max >= min
+      weight: z.number().min(0),
+    }).optional(),
+    boost: z.object({
+      quantity: z.number().int().min(0),
+      weight: z.number().min(0),
+    }).optional(),
+    lives: z.object({
+      min: z.number().int().min(0),
+      max: z.number().int().min(z.ref('min')).optional(), // max >= min
+      weight: z.number().min(0),
+    }).optional(),
+    cryptoTicket: z.object({
+      weight: z.number().min(0),
+    }).optional(),
+  }).optional(),
+  cryptoTicketMinLevel: z.number().int().min(0).optional(),
+});
+
 export const adminUserUpdateSchema = z.object({
   username: z.string().min(1).optional(),
   totalPoints: z.number().int().optional(),
@@ -1088,4 +1113,9 @@ export const adminUserUpdateSchema = z.object({
 
 export const adminUserIsAdminUpdateSchema = z.object({
   isAdmin: z.boolean(),
+});
+
+export const updateFundTogglesSchema = z.object({
+  cryptoFundEnabled: z.boolean().optional(),
+  usdtFundEnabled: z.boolean().optional(),
 });

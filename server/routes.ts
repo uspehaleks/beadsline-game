@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema } from "@shared/schema";
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1529,7 +1529,16 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const config = await storage.updateBeadsBoxConfig(req.body);
+      const validationResult = updateBeadsBoxConfigSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided", 
+          details: validationResult.error.flatten() 
+        });
+      }
+
+      const config = await storage.updateBeadsBoxConfig(validationResult.data);
       res.json(config);
     } catch (error) {
       console.error("Update beads box config error:", error);
@@ -1785,7 +1794,16 @@ export async function registerRoutes(
 
   app.put("/api/admin/fund-toggles", requireAdmin, async (req, res) => {
     try {
-      const { cryptoFundEnabled, usdtFundEnabled } = req.body;
+      const validationResult = updateFundTogglesSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided", 
+          details: validationResult.error.flatten() 
+        });
+      }
+      
+      const { cryptoFundEnabled, usdtFundEnabled } = validationResult.data;
       
       if (typeof cryptoFundEnabled === "boolean") {
         await storage.setGameConfig({
