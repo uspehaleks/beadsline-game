@@ -354,6 +354,7 @@ export interface IStorage {
   getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]>;
   useCryptoTicket(ticketId: string, gameScoreId?: string | null): Promise<{ success: boolean; error?: string }>;
   createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket>;
+  getGameConfigsForLevel(levelId: number): Promise<{ gameplayConfig: GameplayConfig; gameEconomyConfig: GameEconomyConfig; livesConfig: LivesConfig }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4141,6 +4142,22 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return ticket;
+  }
+
+  async getGameConfigsForLevel(levelId: number): Promise<{ gameplayConfig: GameplayConfig; gameEconomyConfig: GameEconomyConfig; livesConfig: LivesConfig }> {
+    // Currently, configs are global and not level-specific. 
+    // In the future, levelId could be used to fetch level-specific configurations.
+    const [gameplayConfig, gameEconomyConfig, livesConfig] = await Promise.all([
+      this.getGameplayConfig(),
+      this.getGameEconomyConfig(),
+      this.getLivesConfig(),
+    ]);
+
+    return {
+      gameplayConfig,
+      gameEconomyConfig,
+      livesConfig,
+    };
   }
 }
 

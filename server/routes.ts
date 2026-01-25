@@ -621,10 +621,16 @@ interface IpRateLimit {
   firstAttempt: number;
 }
 
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, GameplayConfig, GameEconomyConfig, LivesConfig } from "@shared/schema";
+
 interface ActiveSession {
   sessionId: string;
   startedAt: number;
-  userId?: number;
+  userId?: string; // Change to string to match user.id type
+  levelId: number;
+  gameplayConfig: GameplayConfig;
+  gameEconomyConfig: GameEconomyConfig;
+  livesConfig: LivesConfig; // Add livesConfig
 }
 
 const adminCodes = new Map<string, AdminCode>();
@@ -995,20 +1001,82 @@ export async function registerRoutes(
   app.post("/api/scores", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      
+      const { sessionId, ...clientScoreData } = req.body;
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const activeSession = activeSessions.get(sessionId);
+
+      if (!activeSession || activeSession.userId !== userId) {
+        // Log this potential cheating attempt for investigation
+        console.warn(`[ANTI-CHEAT] Invalid or expired session ID (${sessionId}) for user ${userId}. Submitted score:`, clientScoreData);
+        return res.status(403).json({ error: "Invalid or expired game session" });
+      }
+
+      // Remove session immediately after it's used to prevent replay attacks
+      activeSessions.delete(sessionId);
+
       // Get current league BEFORE any updates (for promotion detection)
       const previousLeagueInfo = await storage.getUserLeague(userId);
       const previousLeagueSlug = previousLeagueInfo?.league.slug || 'bronze';
       const previousLeagueSortOrder = previousLeagueInfo?.league.sortOrder || 0;
-      
+
       const scoreData = {
-        ...req.body,
+        ...clientScoreData,
         odUserId: userId,
       };
-      
+
       const validatedData = insertGameScoreSchema.parse(scoreData);
       const isVictory = validatedData.won === true;
       const levelId = validatedData.levelId ?? 1;
+
+      // --- SERVER-SIDE ANTI-CHEAT VALIDATION ---
+
+      const serverNow = Date.now();
+      const serverDurationMs = serverNow - activeSession.startedAt;
+      const serverDurationSeconds = Math.floor(serverDurationMs / 1000);
+
+      const clientDurationSeconds = validatedData.duration;
+
+      // Allow for some network latency/client-side processing time (e.g., 5 seconds buffer)
+      const DURATION_TOLERANCE_SECONDS = 15; 
+      if (clientDurationSeconds > serverDurationSeconds + DURATION_TOLERANCE_SECONDS) {
+        console.warn(`[ANTI-CHEAT] Time manipulation detected for user ${userId} in session ${sessionId}. Client duration: ${clientDurationSeconds}s, Server duration: ${serverDurationSeconds}s`);
+        return res.status(403).json({ error: "Game duration mismatch" });
+      }
+      
+      // Use configs from the *started* session to ensure consistency
+      const { gameplayConfig, gameEconomyConfig, livesConfig } = activeSession;
+
+      // Basic check: is the score even theoretically possible?
+      // Max possible beads = max balls * max combo multiplier * max points per ball
+      // This is a very rough upper bound
+      const MAX_POSSIBLE_SCORE_PER_BALL = gameEconomyConfig.points.normal * gameEconomyConfig.combo.multiplier ** gameEconomyConfig.combo.maxChain;
+      const MAX_THEORETICAL_SCORE = gameplayConfig.balls.maxTotalBalls * Math.ceil(MAX_POSSIBLE_SCORE_PER_BALL * 1.5); // 1.5x buffer
+
+      if (validatedData.score > MAX_THEORETICAL_SCORE) {
+        console.warn(`[ANTI-CHEAT] Unrealistic score detected for user ${userId} in session ${sessionId}. Submitted: ${validatedData.score}, Theoretical Max: ${MAX_THEORETICAL_SCORE}`);
+        // Optionally, cap the score or reject entirely
+        // validatedData.score = Math.min(validatedData.score, MAX_THEORETICAL_SCORE); 
+        return res.status(403).json({ error: "Unrealistic score detected" });
+      }
+
+      // Validate crypto amounts against per-game limits
+      if (validatedData.cryptoBtc > gameEconomyConfig.perGameLimits.btcMaxBeadsPerGame ||
+          validatedData.cryptoEth > gameEconomyConfig.perGameLimits.ethMaxBeadsPerGame ||
+          validatedData.cryptoUsdt > gameEconomyConfig.perGameLimits.usdtMaxBeadsPerGame) {
+        console.warn(`[ANTI-CHEAT] Crypto limit exceeded for user ${userId} in session ${sessionId}. Submitted: BTC=${validatedData.cryptoBtc}, ETH=${validatedData.cryptoEth}, USDT=${validatedData.cryptoUsdt}. Limits: BTC=${gameEconomyConfig.perGameLimits.btcMaxBeadsPerGame}, ETH=${gameEconomyConfig.perGameLimits.ethMaxBeadsPerGame}, USDT=${gameEconomyConfig.perGameLimits.usdtMaxBeadsPerGame}`);
+        return res.status(403).json({ error: "Crypto collection limit exceeded" });
+      }
+
+      // Further validation could include:
+      // - Verifying maxCombo against duration (e.g., impossible to get max combo in 1 second)
+      // - Verifying accuracy (e.g., 100% accuracy with many shots is suspicious)
+      // - More complex game state reconstruction (if server has more granular client actions)
+
+      // --- END SERVER-SIDE ANTI-CHEAT VALIDATION ---
       
       const score = await storage.createGameScore(validatedData);
       
@@ -2280,11 +2348,23 @@ export async function registerRoutes(
     try {
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const userId = (req.session as any)?.userId;
+      const { levelId } = req.body; // Expect levelId from client
+
+      if (typeof levelId !== 'number' || levelId < 1) {
+        return res.status(400).json({ error: "Invalid levelId provided" });
+      }
+
+      // Fetch current configs from storage (these are globally configured, not per-user)
+      const { gameplayConfig, gameEconomyConfig, livesConfig } = await storage.getGameConfigsForLevel(levelId);
       
       activeSessions.set(sessionId, {
         sessionId,
         startedAt: Date.now(),
         userId,
+        levelId,
+        gameplayConfig,
+        gameEconomyConfig,
+        livesConfig,
       });
       
       res.json({ sessionId, activePlayers: getActivePlayersCount() });
