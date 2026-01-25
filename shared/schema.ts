@@ -1082,20 +1082,25 @@ export const updateBeadsBoxConfigSchema = z.object({
       min: z.number().int().min(0),
       max: z.number().int().min(0).optional(), // max >= min
       weight: z.number().min(0),
-    }).optional(),
+    }).default({ min: 10, max: 100, weight: 40 }),
     boost: z.object({
       quantity: z.number().int().min(0),
       weight: z.number().min(0),
-    }).optional(),
+    }).default({ quantity: 1, weight: 20 }),
     lives: z.object({
       min: z.number().int().min(0),
       max: z.number().int().min(0).optional(), // max >= min
       weight: z.number().min(0),
-    }).optional(),
+    }).default({ min: 1, max: 3, weight: 30 }),
     cryptoTicket: z.object({
       weight: z.number().min(0),
-    }).optional(),
-  }).optional(),
+    }).default({ weight: 10 }),
+  }).default({
+    beads: { min: 10, max: 100, weight: 40 },
+    boost: { quantity: 1, weight: 20 },
+    lives: { min: 1, max: 3, weight: 30 },
+    cryptoTicket: { weight: 10 },
+  }),
   cryptoTicketMinLevel: z.number().int().min(0).optional(),
 });
 
