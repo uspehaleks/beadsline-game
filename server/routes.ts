@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema } from "@shared/schema";
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1479,8 +1479,9 @@ export async function registerRoutes(
       const cryptoTickets = await storage.getUserCryptoTickets(userId);
 
       // Normalize boxes format for frontend (use 'amount' instead of 'value')
-      const normalizedBoxes = session.selectedBoxIndex !== null 
-        ? (session.boxes || []).map((box: any) => ({
+      const boxesArray = (session.boxes || []) as any[];
+      const normalizedBoxes = session.selectedBoxIndex !== null
+        ? boxesArray.map((box: any) => ({
             type: box.type,
             amount: box.value ?? box.amount ?? 0,
             boostType: box.boostType,
