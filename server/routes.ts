@@ -1545,15 +1545,17 @@ export async function registerRoutes(
       const reward = result.reward;
 
       // Normalize reward format for frontend (use 'amount' instead of 'value')
-      const normalizedReward = reward ? {
-        type: reward.type,
-        amount: reward.value ?? reward.amount ?? 0,
-        boostType: reward.boostType,
-        boostId: reward.boostId,
+      const typedReward = reward as any; // или более точный тип, если он известен
+      const normalizedReward = typedReward ? {
+        type: typedReward.type,
+        amount: typedReward.value ?? typedReward.amount ?? 0,
+        boostType: typedReward.boostType,
+        boostId: typedReward.boostId,
       } : null;
 
       // Normalize all boxes format
-      const normalizedBoxes = (fullSession?.boxes || []).map((box: any) => ({
+      const boxesArray = (fullSession?.boxes || []) as any[];
+      const normalizedBoxes = boxesArray.map((box: any) => ({
         type: box.type,
         amount: box.value ?? box.amount ?? 0,
         boostType: box.boostType,
