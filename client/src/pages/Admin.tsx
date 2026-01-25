@@ -1871,7 +1871,7 @@ function GameScoreLimitsCard() {
   const { toast } = useToast();
 
   // Получаем текущие настройки экономики игры
-  const { data: gameEconomyConfig } = useQuery({
+  const { data: gameEconomyConfig } = useQuery<GameEconomyConfig>({
     queryKey: ["/api/admin/game-economy"],
   });
 
