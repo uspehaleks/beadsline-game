@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig } from "@shared/schema";
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig, type GameplayConfig, type GameEconomyConfig } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
