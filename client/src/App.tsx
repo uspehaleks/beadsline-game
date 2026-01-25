@@ -53,7 +53,7 @@ function TelegramRequiredScreen() {
           <path fill="#cfd8dc" d="M29.897,18.196c-0.169-0.22-0.481-0.26-0.701-0.093L16,26c0,0,2.106,5.892,2.427,6.912 c0.322,1.021,0.58,1.045,0.58,1.045l0.964-5.965l9.832-9.096C30.022,18.679,30.066,18.417,29.897,18.196z"/>
         </svg>
       </div>
-      <h1 className="text-2xl font-bold mb-2">Beads Line</h1>
+      <h1 className="text-2xl font-bold mb-2 text-foreground">Beads Line</h1>
       <p className="text-muted-foreground mb-6">
         Игра доступна только в Telegram
       </p>
@@ -77,25 +77,30 @@ function MaintenanceWrapper() {
   const {
     data: maintenance,
     isLoading: maintenanceLoading,
-    isFetching: maintenanceFetching,
   } = useQuery<MaintenanceConfig>({
     queryKey: ["/api/maintenance"],
     refetchInterval: 15000,
     staleTime: 0,
   });
 
-  const isAdminPage = location === '/admin';
-  const isInitialLoading = maintenanceLoading || (userLoading && !isAdminPage);
+  // 1. ОПРЕДЕЛЯЕМ АДМИНКУ
+  const isAdminPage = location.startsWith('/admin');
 
-  if (isInitialLoading) {
+  // 2. ЕСЛИ ЭТО АДМИНКА - ПРОПУСКАЕМ СРАЗУ (БЕЗ ТЕХРАБОТ И ТЕЛЕГРАМА)
+  if (isAdminPage) {
+    return <Router />;
+  }
+
+  // 3. СТАНДАРТНЫЕ ПРОВЕРКИ ДЛЯ ИГРОКОВ
+  if (maintenanceLoading || userLoading) {
     return <LoadingScreen />;
   }
 
-  if (error === 'telegram_required' && !isAdminPage) {
+  if (error === 'telegram_required') {
     return <TelegramRequiredScreen />;
   }
 
-  if (maintenance?.enabled && !user?.isAdmin && !isAdminPage) {
+  if (maintenance?.enabled && !user?.isAdmin) {
     return (
       <MaintenancePage
         endTime={maintenance.endTime}
