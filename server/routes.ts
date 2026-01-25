@@ -111,7 +111,8 @@ function generateDailyBoxes(config: BeadsBoxConfig, completedLevels: number): Be
     // Beads reward
     cumWeight += rewards.beads.weight;
     if (roll < cumWeight) {
-      const amount = Math.floor(Math.random() * (rewards.beads.max - rewards.beads.min + 1)) + rewards.beads.min;
+      const max = rewards.beads.max ?? rewards.beads.min; // Если max не определен, используем min
+      const amount = Math.floor(Math.random() * (max - rewards.beads.min + 1)) + rewards.beads.min;
       boxes.push({ type: 'beads', value: amount });
       continue;
     }
@@ -132,7 +133,8 @@ function generateDailyBoxes(config: BeadsBoxConfig, completedLevels: number): Be
     // Lives reward
     cumWeight += rewards.lives.weight;
     if (roll < cumWeight) {
-      const amount = Math.floor(Math.random() * (rewards.lives.max - rewards.lives.min + 1)) + rewards.lives.min;
+      const max = rewards.lives.max ?? rewards.lives.min; // Если max не определен, используем min
+      const amount = Math.floor(Math.random() * (max - rewards.lives.min + 1)) + rewards.lives.min;
       boxes.push({ type: 'lives', value: amount });
       continue;
     }

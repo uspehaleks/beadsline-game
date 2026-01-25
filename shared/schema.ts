@@ -1066,9 +1066,9 @@ export interface BeadsBoxConfig {
   enabled: boolean;
   boxCount: number; // Default 6
   rewards: {
-    beads: { min: number; max: number; weight: number };
+    beads: { min: number; max?: number; weight: number };
     boost: { quantity: number; weight: number };
-    lives: { min: number; max: number; weight: number };
+    lives: { min: number; max?: number; weight: number };
     cryptoTicket: { weight: number }; // Only for level 10+ players
   };
   cryptoTicketMinLevel: number; // Minimum completed levels to get crypto ticket
