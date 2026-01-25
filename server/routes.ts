@@ -90,9 +90,9 @@ function generateDailyBoxes(config: BeadsBoxConfig, completedLevels: number): Be
   const { rewards, cryptoTicketMinLevel } = config;
   
   // Calculate total weight
-  let totalWeight = (rewards.beads?.weight || 0) + (rewards.boost?.weight || 0) + (rewards.lives?.weight || 0);
+  let totalWeight = rewards.beads.weight + rewards.boost.weight + rewards.lives.weight;
   const canGetCryptoTicket = completedLevels >= cryptoTicketMinLevel;
-  if (canGetCryptoTicket && rewards.cryptoTicket) {
+  if (canGetCryptoTicket) {
     totalWeight += rewards.cryptoTicket.weight;
   }
   
@@ -118,12 +118,12 @@ function generateDailyBoxes(config: BeadsBoxConfig, completedLevels: number): Be
     }
     
     // Boost reward
-    cumWeight += rewards.boost?.weight || 0;
+    cumWeight += rewards.boost.weight;
     if (roll < cumWeight) {
       const boost = boostTypes[Math.floor(Math.random() * boostTypes.length)];
       boxes.push({
         type: 'boost',
-        value: rewards.boost?.quantity || 0,
+        value: rewards.boost.quantity,
         boostId: boost.id,
         boostType: boost.name
       });
