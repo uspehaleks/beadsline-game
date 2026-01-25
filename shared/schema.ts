@@ -498,7 +498,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
-export const insertGameScoreSchema = createInsertSchema(gameScores).omit({
+export const insertGameScoreSchema = createInsertSchema(gameScores, {
+  score: z.number().int().min(0, "Score cannot be negative").max(100000, "Score is unrealistically high"),
+  cryptoBtc: z.number().int().min(0).max(100, "Too many BTC collected"),
+  cryptoEth: z.number().int().min(0).max(100, "Too many ETH collected"),
+  cryptoUsdt: z.number().int().min(0).max(100, "Too many USDT collected"),
+  maxCombo: z.number().int().min(0).max(500, "Max combo is unrealistically high"),
+  accuracy: z.number().int().min(0).max(100, "Accuracy must be between 0 and 100"),
+  duration: z.number().int().min(0).max(300, "Game duration is out of bounds"), // Allows for up to 5 minutes for games with extra lives
+}).omit({
   id: true,
   createdAt: true,
 });
