@@ -86,34 +86,13 @@ function MaintenanceWrapper() {
   // 1. ОПРЕДЕЛЯЕМ АДМИНКУ
   const isAdminPage = location.startsWith('/admin');
 
-  // 2. ЕСЛИ ЭТО АДМИНКА - ПРОВЕРЯЕМ АДМИНСКИЕ ПРАВА
+  // 2. ЕСЛИ ЭТО АДМИНКА - ПРОПУСКАЕМ ДАЛЬШЕ ДЛЯ ПРОВЕРКИ В КОМПОНЕНТЕ
   if (isAdminPage) {
-    // Пропускаем проверку Telegram для админки, но проверяем права администратора
+    // Пропускаем проверку Telegram для админки, но проверяем права в компоненте Admin
     if (userLoading) {
       return <LoadingScreen />;
     }
-
-    // Проверяем, является ли пользователь администратором
-    if (!user?.isAdmin) {
-      // Если пользователь не админ, показываем сообщение об ошибке
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Доступ запрещен</h1>
-            <p className="text-muted-foreground mb-4">
-              У вас нет прав администратора для доступа к этой странице
-            </p>
-            <a
-              href="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium"
-            >
-              На главную
-            </a>
-          </div>
-        </div>
-      );
-    }
-
+    // Показываем компонент Admin, где будет проверка прав и форма входа
     return <Router />;
   }
 
