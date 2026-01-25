@@ -469,6 +469,17 @@ export const insertLeagueSchema = createInsertSchema(leagues).omit({
   createdAt: true,
 });
 
+export const updateLeagueSchema = z.object({
+  nameRu: z.string().optional(),
+  nameEn: z.string().optional(),
+  icon: z.string().optional(),
+  minBeads: z.number().int().optional(),
+  maxRank: z.number().int().optional().nullable(),
+  themeColor: z.string().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+
 export type InsertLeague = z.infer<typeof insertLeagueSchema>;
 export type League = typeof leagues.$inferSelect;
 
@@ -1054,3 +1065,19 @@ export interface BeadsBoxConfig {
   };
   cryptoTicketMinLevel: number; // Minimum completed levels to get crypto ticket
 }
+
+export const adminUserUpdateSchema = z.object({
+  username: z.string().min(1).optional(),
+  totalPoints: z.number().int().optional(),
+  gamesPlayed: z.number().int().optional(),
+  bestScore: z.number().int().optional(),
+  isAdmin: z.boolean().optional(),
+  btcBalanceSats: z.number().int().optional(),
+  ethBalanceWei: z.number().int().optional(),
+  usdtBalance: z.number().optional(),
+  referredBy: z.string().nullable().optional(),
+});
+
+export const adminUserIsAdminUpdateSchema = z.object({
+  isAdmin: z.boolean(),
+});

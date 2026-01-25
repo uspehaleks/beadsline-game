@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, IStorage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward } from "@shared/schema";
+import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1245,27 +1245,19 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/admin/leagues/:id", requireAuth, async (req, res) => {
+  app.put("/api/admin/leagues/:id", requireAdmin, async (req, res) => {
     try {
-      const userId = (req.session as any).userId;
-      const user = await storage.getUser(userId);
-      if (!user?.isAdmin) {
-        return res.status(403).json({ error: "Admin access required" });
+      const { id } = req.params;
+      const validationResult = updateLeagueSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided", 
+          details: validationResult.error.flatten() 
+        });
       }
       
-      const { id } = req.params;
-      const { nameRu, nameEn, icon, minBeads, maxRank, themeColor, sortOrder, isActive } = req.body;
-      
-      const updated = await storage.updateLeague(id, {
-        nameRu,
-        nameEn,
-        icon,
-        minBeads,
-        maxRank,
-        themeColor,
-        sortOrder,
-        isActive,
-      });
+      const updated = await storage.updateLeague(id, validationResult.data);
       
       if (!updated) {
         return res.status(404).json({ error: "League not found" });
@@ -1858,11 +1850,16 @@ export async function registerRoutes(
   app.patch("/api/admin/users/:id/admin", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { isAdmin } = req.body;
-      
-      if (typeof isAdmin !== "boolean") {
-        return res.status(400).json({ error: "isAdmin must be a boolean" });
+      const validationResult = adminUserIsAdminUpdateSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided", 
+          details: validationResult.error.flatten() 
+        });
       }
+
+      const { isAdmin } = validationResult.data;
       
       const user = await storage.setUserAdmin(id, isAdmin);
       if (!user) {
@@ -1879,27 +1876,29 @@ export async function registerRoutes(
   app.put("/api/admin/users/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, totalPoints, gamesPlayed, bestScore, isAdmin, referredBy, btcBalanceSats, ethBalanceWei, usdtBalance } = req.body;
       
-      const updates: Record<string, unknown> = {};
-      if (username !== undefined) updates.username = username;
-      if (totalPoints !== undefined) updates.totalPoints = Number(totalPoints);
-      if (gamesPlayed !== undefined) updates.gamesPlayed = Number(gamesPlayed);
-      if (bestScore !== undefined) updates.bestScore = Number(bestScore);
-      if (isAdmin !== undefined) updates.isAdmin = Boolean(isAdmin);
-      if (btcBalanceSats !== undefined) updates.btcBalanceSats = Number(btcBalanceSats);
-      if (ethBalanceWei !== undefined) updates.ethBalanceWei = Number(ethBalanceWei);
-      if (usdtBalance !== undefined) updates.usdtBalance = Number(usdtBalance);
+      const validationResult = adminUserUpdateSchema.safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid data provided", 
+          details: validationResult.error.flatten() 
+        });
+      }
+
+      const validatedData = validationResult.data;
+      
+      const updates: Record<string, unknown> = { ...validatedData };
       
       // Handle referredBy (sponsor) update
-      if (referredBy !== undefined) {
+      if (validatedData.referredBy !== undefined) {
         const currentUser = await storage.getUser(id);
         if (!currentUser) {
           return res.status(404).json({ error: "User not found" });
         }
         
         const oldSponsorCode = currentUser.referredBy;
-        const newSponsorCode = referredBy === "" ? null : referredBy;
+        const newSponsorCode = validatedData.referredBy === "" ? null : validatedData.referredBy;
         
         // Validate new sponsor if provided
         if (newSponsorCode) {
