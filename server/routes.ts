@@ -624,8 +624,6 @@ interface IpRateLimit {
   firstAttempt: number;
 }
 
-import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, GameplayConfig, GameEconomyConfig, LivesConfig } from "@shared/schema";
-
 interface ActiveSession {
   sessionId: string;
   startedAt: number;
