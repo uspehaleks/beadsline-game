@@ -10,9 +10,8 @@ import path from "path";
 import fs from "fs";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage/index.js";
 
-console.log("SERVER STARTING AT " + new Date().toISOString());
-
 const objectStorageService = new ObjectStorageService();
+console.log("SERVER STARTING AT " + new Date().toISOString());
 
 const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const charactersDir = path.join(uploadsDir, 'characters');
