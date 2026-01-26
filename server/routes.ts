@@ -4897,3 +4897,4 @@ export async function registerRoutes(
 }
 "// All Replit ObjectStorage references have been removed for Vercel compatibility" 
 "// All storage service calls have been stubbed for Vercel compatibility" 
+"// Final check: all objectStorageService references have been removed to fix type errors" 
