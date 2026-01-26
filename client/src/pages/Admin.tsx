@@ -188,7 +188,7 @@ export default function Admin() {
 
   const requestCodeMutation = useMutation({
     mutationFn: async (username: string) => {
-      const res = await apiRequest("POST", "/api/auth/admin/request-code", { username });
+      const res = await apiRequest("POST", "/api/admin/request-code", { username });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Ошибка запроса кода");
@@ -213,7 +213,7 @@ export default function Admin() {
 
   const verifyCodeMutation = useMutation({
     mutationFn: async ({ username, code }: { username: string; code: string }) => {
-      const res = await apiRequest("POST", "/api/auth/admin/verify-code", { username, code });
+      const res = await apiRequest("POST", "/api/admin/verify-code", { username, code });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Ошибка проверки кода");

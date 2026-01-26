@@ -877,8 +877,8 @@ export async function registerRoutes(
     });
   });
 
-  app.post("/api/auth/admin/request-code", async (req, res) => {
-    console.log("DEBUG: Request received at /api/auth/admin/request-code");
+  app.post("/api/admin/request-code", async (req, res) => {
+    console.log("DEBUG: Request received at /api/admin/request-code");
     try {
       cleanupExpiredCodes();
 
@@ -946,7 +946,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/admin/verify-code", async (req, res) => {
+  app.post("/api/admin/verify-code", async (req, res) => {
     try {
       cleanupExpiredCodes();
       
