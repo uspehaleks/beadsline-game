@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, mkdir } from "fs/promises";
+import { rm, mkdir, copyFile } from "fs/promises";
 import { createRequire } from "module";
 import { copy } from "fs-extra";
 import path from "path";
@@ -16,6 +16,8 @@ async function buildAll() {
   const rootDir = path.resolve(__dirname, '..');
   const distDir = path.join(rootDir, 'dist');
   const publicDir = path.join(distDir, 'public');
+  const vercelOutputDir = path.join(rootDir, '.vercel', 'output');
+  const vercelStaticDir = path.join(vercelOutputDir, 'static');
 
   // 1. Очистка
   await rm(distDir, { recursive: true, force: true }).catch(() => {});
@@ -26,7 +28,7 @@ async function buildAll() {
   await viteBuild({
     root: path.join(rootDir, "client"),
     build: {
-      outDir: publicDir, // Собираем фронтенд сразу в dist/public
+      outDir: publicDir, // Собираем фронтенд в dist/public
       emptyOutDir: true, // Vite очистит папку перед сборкой
     },
   });
@@ -55,8 +57,29 @@ async function buildAll() {
     },
     logLevel: "info",
   });
-  
-  // 4. Копирование дополнительных файлов сервера (если нужно)
+
+  // 4. Подготовка для Vercel (если мы в Vercel окружении)
+  if (process.env.VERCEL) {
+    // Создаем структуру для Vercel output
+    await rm(vercelOutputDir, { recursive: true, force: true }).catch(() => {});
+    await mkdir(vercelStaticDir, { recursive: true });
+
+    // Копируем файлы из dist/public в .vercel/output/static
+    const fs = await import('fs');
+    const files = fs.readdirSync(publicDir);
+    for (const file of files) {
+      const sourcePath = path.join(publicDir, file);
+      const destPath = path.join(vercelStaticDir, file);
+
+      if (fs.statSync(sourcePath).isDirectory()) {
+        await copy(sourcePath, destPath);
+      } else {
+        await copyFile(sourcePath, destPath);
+      }
+    }
+  }
+
+  // 5. Копирование дополнительных файлов сервера (если нужно)
   // Например, папки uploads
   const uploadsDir = path.join(rootDir, 'server', 'uploads');
   const destUploadsDir = path.join(distDir, 'uploads');
