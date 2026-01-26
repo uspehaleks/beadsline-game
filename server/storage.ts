@@ -102,7 +102,7 @@ import {
   type BeadsBoxReward,
   type BeadsBoxConfig,
 } from "@shared/schema";
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
 
 export interface IStorage {

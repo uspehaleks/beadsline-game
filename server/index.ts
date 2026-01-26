@@ -1,10 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { registerRoutes } from "./routes";
-import { serveStatic } from "./static";
+import { registerRoutes } from "./routes.js";
+import { serveStatic } from "./static.js";
 import { createServer } from "http";
-import { pool } from "./db";
+import { pool } from "./db.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -95,7 +95,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const { storage } = await import("./storage");
+  const { storage } = await import("./storage.js");
   await storage.ensureDefaultBaseBodies();
   
   await registerRoutes(httpServer, app);
@@ -115,7 +115,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   } else {
     // @ts-ignore - Игнорируем отсутствие файла в продакшене (он только для dev)
-    const { setupVite } = await import("./vite");
+    const { setupVite } = await import("./vite.js");
     await setupVite(httpServer, app);
   }
 
