@@ -101,7 +101,7 @@ import {
   type InsertCryptoGameTicket,
   type BeadsBoxReward,
   type BeadsBoxConfig,
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { db } from "./db.js";
 import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
 
@@ -1378,7 +1378,7 @@ export class DatabaseStorage implements IStorage {
     return { btcAwarded, ethAwarded, usdtAwarded, btcSatsAwarded, ethWeiAwarded };
   }
 
-  async getCryptoAvailability(userId: string): Promise<import('@shared/schema').CryptoAvailability> {
+  async getCryptoAvailability(userId: string): Promise<import('../shared/schema.js').CryptoAvailability> {
     const user = await this.getUser(userId);
     const config = await this.getGameEconomyConfig();
     const { dailyLimits, pools, perGameLimits, cryptoRewards } = config;
