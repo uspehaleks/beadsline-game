@@ -911,8 +911,6 @@ export async function registerRoutes(
         lastRequestedAt: now,
       });
 
-      console.log("DEBUG: Admin code for " + username + " is: " + code);
-
       if (user.telegramId) {
         const message = `🔐 <b>Код для входа в админ-панель Beads Line:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
         const sent = await sendTelegramMessage(user.telegramId, message);
