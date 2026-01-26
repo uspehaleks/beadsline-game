@@ -8,6 +8,8 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+console.log("SERVER STARTING AT " + new Date().toISOString());
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage/index.js";
 
 const objectStorageService = new ObjectStorageService();
