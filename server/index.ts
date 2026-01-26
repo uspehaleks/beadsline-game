@@ -114,6 +114,7 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
+    // @ts-ignore - Игнорируем отсутствие файла в продакшене (он только для dev)
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
