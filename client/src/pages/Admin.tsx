@@ -195,15 +195,12 @@ export default function Admin() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setCodeSent(true);
       toast({
         title: "Запрос отправлен",
         description: "Если аккаунт существует, код будет доступен",
       });
-      if (data.code) {
-        alert("Твой код: " + data.code);
-      }
     },
     onError: (error: Error) => {
       toast({
