@@ -10,7 +10,7 @@ import path from "path";
 import fs from "fs";
 
 // Stub for Replit ObjectStorageService to fix Vercel build
-const objectStorageService = {
+let objectStorageService = {
   getObjectEntityFile: () => Promise.reject(new Error('Object storage not available')),
   canAccessObjectEntity: () => Promise.resolve(true),
   downloadObject: () => Promise.reject(new Error('Object storage not available')),
@@ -4905,6 +4905,3 @@ export async function registerRoutes(
 
   return httpServer;
 }
-"// All Replit ObjectStorage references have been removed for Vercel compatibility" 
-"// All storage service calls have been stubbed for Vercel compatibility" 
-"// Final check: all objectStorageService references have been removed to fix type errors" 
