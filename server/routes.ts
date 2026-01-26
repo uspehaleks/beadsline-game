@@ -871,11 +871,12 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/admin/request-code", async (req, res) => {
+    console.log("DEBUG: Request received at /api/auth/admin/request-code");
     try {
       cleanupExpiredCodes();
-      
+
       const clientIp = getClientIp(req);
-      
+
       if (!checkIpRateLimit(clientIp)) {
         return res.status(429).json({ error: "Слишком много попыток. Попробуйте позже" });
       }
@@ -892,12 +893,14 @@ export async function registerRoutes(
       if (!user || !user.isAdmin) {
         console.log(`Admin code request failed for unknown/non-admin user: ${username} from IP: ${clientIp}`);
         await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+        console.log("DEBUG: Returning success response for non-admin user");
         return res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
       }
       
       const existing = adminCodes.get(username);
       
       if (existing && now - existing.lastRequestedAt < 60000) {
+        console.log("DEBUG: Rate limit exceeded, returning 429");
         return res.status(429).json({ error: "Подождите минуту перед повторным запросом кода" });
       }
       
@@ -918,6 +921,7 @@ export async function registerRoutes(
           console.log(`Admin code sent to Telegram for user: ${username}`);
         } else {
           console.log(`Failed to send Telegram message for user: ${username}`);
+          console.log("DEBUG: Telegram send failed, returning 500 error");
           return res.status(500).json({ error: "Не удалось отправить код в Telegram. Попробуйте позже." });
         }
       } else {
@@ -927,6 +931,7 @@ export async function registerRoutes(
         console.log(`========================================\n`);
       }
 
+      console.log("DEBUG: Returning success response after code generation");
       res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
     } catch (error) {
       console.error("Request admin code error:", error);
