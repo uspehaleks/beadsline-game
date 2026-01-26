@@ -182,7 +182,7 @@ export default function Admin() {
     },
   });
 
-  const [loginUsername, setLoginUsername] = useState("");
+  const [loginUsername, setLoginUsername] = useState("alex851466");
   const [loginCode, setLoginCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
 
@@ -316,11 +316,12 @@ export default function Admin() {
                 </div>
               </>
             )}
+
             <Separator />
 
-            <Button
-              variant="ghost"
-              className="w-full"
+            <Button 
+              variant="ghost" 
+              className="w-full" 
               onClick={() => setLocation("/")}
               data-testid="button-back-home"
             >
@@ -1867,180 +1868,6 @@ function SignupBonusCard({ configs }: { configs: GameConfig[] }) {
   );
 }
 
-function GameScoreLimitsCard() {
-  const { toast } = useToast();
-
-  // Получаем текущие настройки экономики игры
-  const { data: gameEconomyConfig } = useQuery<GameEconomyConfig>({
-    queryKey: ["/api/admin/game-economy"],
-  });
-
-  // Состояния для управления лимитами
-  const [btcMaxBeadsPerGame, setBtcMaxBeadsPerGame] = useState(() => {
-    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
-      return gameEconomyConfig.perGameLimits.btcMaxBeadsPerGame?.toString() || '15';
-    }
-    return '15';
-  });
-
-  const [ethMaxBeadsPerGame, setEthMaxBeadsPerGame] = useState(() => {
-    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
-      return gameEconomyConfig.perGameLimits.ethMaxBeadsPerGame?.toString() || '15';
-    }
-    return '15';
-  });
-
-  const [usdtMaxBeadsPerGame, setUsdtMaxBeadsPerGame] = useState(() => {
-    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
-      return gameEconomyConfig.perGameLimits.usdtMaxBeadsPerGame?.toString() || '15';
-    }
-    return '15';
-  });
-
-  const [normalPointsPerBall, setNormalPointsPerBall] = useState(() => {
-    if (gameEconomyConfig && gameEconomyConfig.points) {
-      return gameEconomyConfig.points.normal?.toString() || '5';
-    }
-    return '5';
-  });
-
-  // Обновляем состояние при изменении данных
-  useEffect(() => {
-    if (gameEconomyConfig) {
-      setBtcMaxBeadsPerGame(gameEconomyConfig.perGameLimits?.btcMaxBeadsPerGame?.toString() || '15');
-      setEthMaxBeadsPerGame(gameEconomyConfig.perGameLimits?.ethMaxBeadsPerGame?.toString() || '15');
-      setUsdtMaxBeadsPerGame(gameEconomyConfig.perGameLimits?.usdtMaxBeadsPerGame?.toString() || '15');
-      setNormalPointsPerBall(gameEconomyConfig.points?.normal?.toString() || '5');
-    }
-  }, [gameEconomyConfig]);
-
-  const updateMutation = useMutation({
-    mutationFn: async (updates: any) => {
-      return apiRequest("PUT", "/api/admin/game-economy", updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/game-economy"] });
-      toast({ title: "Сохранено", description: "Лимиты игры обновлены" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось сохранить настройки",
-        variant: "destructive"
-      });
-    },
-  });
-
-  const handleSave = () => {
-    const parsedBtc = parseInt(btcMaxBeadsPerGame);
-    const parsedEth = parseInt(ethMaxBeadsPerGame);
-    const parsedUsdt = parseInt(usdtMaxBeadsPerGame);
-    const parsedPoints = parseInt(normalPointsPerBall);
-
-    if (isNaN(parsedBtc) || parsedBtc < 0) {
-      toast({ title: "Ошибка", description: "Введите корректное значение для BTC лимита", variant: "destructive" });
-      return;
-    }
-    if (isNaN(parsedEth) || parsedEth < 0) {
-      toast({ title: "Ошибка", description: "Введите корректное значение для ETH лимита", variant: "destructive" });
-      return;
-    }
-    if (isNaN(parsedUsdt) || parsedUsdt < 0) {
-      toast({ title: "Ошибка", description: "Введите корректное значение для USDT лимита", variant: "destructive" });
-      return;
-    }
-    if (isNaN(parsedPoints) || parsedPoints < 0) {
-      toast({ title: "Ошибка", description: "Введите корректное значение для очков за шар", variant: "destructive" });
-      return;
-    }
-
-    updateMutation.mutate({
-      perGameLimits: {
-        btcMaxBeadsPerGame: parsedBtc,
-        ethMaxBeadsPerGame: parsedEth,
-        usdtMaxBeadsPerGame: parsedUsdt,
-      },
-      points: {
-        normal: parsedPoints,
-      }
-    });
-  };
-
-  return (
-    <Card className="mb-4">
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <CardTitle className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-blue-500" />
-          Лимиты игры
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Настройки лимитов для сбора криптовалюты и очков за игру
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="btc-limit">BTC за игру</Label>
-            <Input
-              id="btc-limit"
-              type="number"
-              min="0"
-              value={btcMaxBeadsPerGame}
-              onChange={(e) => setBtcMaxBeadsPerGame(e.target.value)}
-              placeholder="15"
-            />
-          </div>
-          <div>
-            <Label htmlFor="eth-limit">ETH за игру</Label>
-            <Input
-              id="eth-limit"
-              type="number"
-              min="0"
-              value={ethMaxBeadsPerGame}
-              onChange={(e) => setEthMaxBeadsPerGame(e.target.value)}
-              placeholder="15"
-            />
-          </div>
-          <div>
-            <Label htmlFor="usdt-limit">USDT за игру</Label>
-            <Input
-              id="usdt-limit"
-              type="number"
-              min="0"
-              value={usdtMaxBeadsPerGame}
-              onChange={(e) => setUsdtMaxBeadsPerGame(e.target.value)}
-              placeholder="15"
-            />
-          </div>
-          <div>
-            <Label htmlFor="points-per-ball">Очки за шар</Label>
-            <Input
-              id="points-per-ball"
-              type="number"
-              min="0"
-              value={normalPointsPerBall}
-              onChange={(e) => setNormalPointsPerBall(e.target.value)}
-              placeholder="5"
-            />
-          </div>
-        </div>
-        <Button
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-          className="w-full"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4 mr-2" />
-          )}
-          Сохранить лимиты
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ConfigTab({ configs }: { configs: GameConfig[] }) {
   const { toast } = useToast();
   const [newConfig, setNewConfig] = useState({ key: "", value: "", description: "" });
@@ -2086,8 +1913,7 @@ function ConfigTab({ configs }: { configs: GameConfig[] }) {
   return (
     <div className="space-y-4">
       <SignupBonusCard configs={configs} />
-      <GameScoreLimitsCard />
-      <Card>
+      {/* <GameScoreLimitsCard /> */}      <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
