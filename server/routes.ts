@@ -24,7 +24,7 @@ if (!process.env.VERCEL) {
 }
 
 // Используем /tmp директорию в Vercel среде для временных файлов
-const getUploadDestination = (dir) => {
+const getUploadDestination = (dir: string) => {
   if (process.env.VERCEL) {
     return '/tmp';
   }
