@@ -8,8 +8,27 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export function serveStatic(app: Express) {
-  // В продакшене сервер запускается из корня проекта, поэтому путь к public должен быть относительно корня
-  const distPath = path.resolve(__dirname, "..", "..", "dist", "public");
+  // Определяем путь к папке public в зависимости от среды
+  let distPath = path.resolve(__dirname, "..", "..", "dist", "public");
+
+  // Проверяем, возможно, сборка находится в другой структуре (например, в Vercel)
+  if (!fs.existsSync(distPath)) {
+    // Попробуем найти папку public в других возможных местах
+    const possiblePaths = [
+      path.resolve(__dirname, "..", "dist", "public"), // server/../dist/public
+      path.resolve(__dirname, "..", "..", "..", "dist", "public"), // server/../../dist/public
+      path.resolve(process.cwd(), "dist", "public"), // текущая рабочая директория
+      path.resolve(__dirname, "dist", "public"), // server/dist/public
+    ];
+
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        distPath = possiblePath;
+        break;
+      }
+    }
+  }
+
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
