@@ -9,7 +9,15 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const objectStorageService: any = {};
+// Stub for Replit ObjectStorageService to fix Vercel build
+const objectStorageService = {
+  getObjectEntityFile: () => Promise.reject(new Error('Object storage not available')),
+  canAccessObjectEntity: () => Promise.resolve(true),
+  downloadObject: () => Promise.reject(new Error('Object storage not available')),
+  getObjectEntityUploadURL: () => Promise.reject(new Error('Object storage not available')),
+  normalizeObjectEntityPath: (path: string) => path,
+  trySetObjectEntityAclPolicy: () => Promise.reject(new Error('Object storage not available'))
+};
 
 const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const charactersDir = path.join(uploadsDir, 'characters');
