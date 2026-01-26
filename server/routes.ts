@@ -16,12 +16,23 @@ const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const charactersDir = path.join(uploadsDir, 'characters');
 const accessoriesDir = path.join(uploadsDir, 'accessories');
 
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-if (!fs.existsSync(charactersDir)) fs.mkdirSync(charactersDir, { recursive: true });
-if (!fs.existsSync(accessoriesDir)) fs.mkdirSync(accessoriesDir, { recursive: true });
+// В Vercel среде не создаем директории, так как файловая система только для чтения
+if (!process.env.VERCEL) {
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs.existsSync(charactersDir)) fs.mkdirSync(charactersDir, { recursive: true });
+  if (!fs.existsSync(accessoriesDir)) fs.mkdirSync(accessoriesDir, { recursive: true });
+}
+
+// Используем /tmp директорию в Vercel среде для временных файлов
+const getUploadDestination = (dir) => {
+  if (process.env.VERCEL) {
+    return '/tmp';
+  }
+  return dir;
+};
 
 const characterStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, charactersDir),
+  destination: (req, file, cb) => cb(null, getUploadDestination(charactersDir)),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
@@ -29,7 +40,7 @@ const characterStorage = multer.diskStorage({
 });
 
 const accessoryStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, accessoriesDir),
+  destination: (req, file, cb) => cb(null, getUploadDestination(accessoriesDir)),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
