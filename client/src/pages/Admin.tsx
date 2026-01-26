@@ -111,7 +111,7 @@ interface FundToggles {
 
 export default function Admin() {
   const [, setLocation] = useLocation();
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
   const { toast } = useToast();
 
   const isAdmin = user?.isAdmin === true;
@@ -195,12 +195,15 @@ export default function Admin() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setCodeSent(true);
       toast({
         title: "Запрос отправлен",
         description: "Если аккаунт существует, код будет доступен",
       });
+      if (data.code) {
+        alert("Твой код: " + data.code);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -220,12 +223,20 @@ export default function Admin() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (userData) => {
       toast({
         title: "Успешный вход",
         description: "Добро пожаловать в админ-панель",
       });
-      window.location.reload();
+      // Update the user context by calling refreshUser to get the latest user data
+      // This will cause the component to re-render with the updated admin status
+      // Refresh user data to reflect admin status
+      if (refreshUser) {
+        refreshUser();
+      } else {
+        // Fallback to reload if refreshUser is not available
+        window.location.reload();
+      }
     },
     onError: (error: Error) => {
       toast({

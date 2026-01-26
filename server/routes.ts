@@ -929,7 +929,7 @@ export async function registerRoutes(
         console.log(`========================================\n`);
       }
 
-      res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
+      res.json({ success: true, message: "Если аккаунт существует, код будет отправлен", code: code });
     } catch (error) {
       console.error("Request admin code error:", error);
       res.status(500).json({ error: "Ошибка при запросе кода" });
