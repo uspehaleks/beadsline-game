@@ -1771,76 +1771,22 @@ export async function registerRoutes(
 
   // Admin Routes
   
-  // Serve uploaded objects from Object Storage (with ACL enforcement)
+  // Serve uploaded objects from Object Storage (with ACL enforcement) - REPLIT SPECIFIC, REPLACED FOR VERCEL
   app.get("/objects/:objectPath(*)", async (req, res) => {
-    try {
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
-      
-      // Check if user can access this object (enforces ACL policy)
-      const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
-        requestedPermission: undefined, // defaults to READ
-      });
-      
-      if (!canAccess) {
-        return res.status(403).json({ error: "Access denied" });
-      }
-      
-      await objectStorageService.downloadObject(objectFile, res);
-    } catch (error) {
-      console.error("Error serving object:", error);
-      return res.status(404).json({ error: "Object not found" });
-    }
+    // Replit Object Storage specific functionality removed for Vercel compatibility
+    return res.status(501).json({ error: "Object storage not available" });
   });
 
-  // Admin: Request upload URL for character/accessory images (public assets)
+  // Admin: Request upload URL for character/accessory images (public assets) - REPLIT SPECIFIC, REPLACED FOR VERCEL
   app.post("/api/admin/upload/request-url", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { name, contentType, uploadType } = req.body;
-      
-      if (!name || !contentType) {
-        return res.status(400).json({ error: "Missing name or contentType" });
-      }
-      
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-      if (!allowedTypes.includes(contentType)) {
-        return res.status(400).json({ error: "Only PNG, JPG, WEBP, GIF images are allowed" });
-      }
-      
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
-      
-      res.json({ 
-        uploadURL, 
-        objectPath,
-        metadata: { name, contentType, uploadType }
-      });
-    } catch (error) {
-      console.error("Request upload URL error:", error);
-      res.status(500).json({ error: "Failed to generate upload URL" });
-    }
+    // Replit Object Storage specific functionality removed for Vercel compatibility
+    return res.status(501).json({ error: "Object storage not available" });
   });
 
-  // Admin: Set ACL for uploaded object (make it public after upload)
+  // Admin: Set ACL for uploaded object (make it public after upload) - REPLIT SPECIFIC, REPLACED FOR VERCEL
   app.post("/api/admin/upload/set-public", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { objectPath } = req.body;
-      
-      if (!objectPath) {
-        return res.status(400).json({ error: "Missing objectPath" });
-      }
-      
-      // Set ACL to public for character/accessory images
-      const finalPath = await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
-        owner: 'admin',
-        visibility: 'public',
-      });
-      
-      res.json({ objectPath: finalPath, visibility: 'public' });
-    } catch (error) {
-      console.error("Set public ACL error:", error);
-      res.status(500).json({ error: "Failed to set public access" });
-    }
+    // Replit Object Storage specific functionality removed for Vercel compatibility
+    return res.status(501).json({ error: "Object storage not available" });
   });
 
   app.get("/api/admin/stats", requireAdmin, async (req, res) => {
