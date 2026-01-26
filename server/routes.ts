@@ -9,6 +9,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
+const objectStorageService: any = {};
+
 const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const charactersDir = path.join(uploadsDir, 'characters');
 const accessoriesDir = path.join(uploadsDir, 'accessories');
