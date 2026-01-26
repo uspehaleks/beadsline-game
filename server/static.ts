@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 export function serveStatic(app: Express) {
   // В продакшене сервер запускается из корня проекта, поэтому путь к public должен быть относительно корня
-  const distPath = path.resolve(__dirname, "..", "dist", "public");
+  const distPath = path.resolve(__dirname, "..", "..", "dist", "public");
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
