@@ -910,14 +910,17 @@ export async function registerRoutes(
         attempts: 0,
         lastRequestedAt: now,
       });
-      
+
+      console.log("DEBUG: Admin code for " + username + " is: " + code);
+
       if (user.telegramId) {
         const message = `🔐 <b>Код для входа в админ-панель Beads Line:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
         const sent = await sendTelegramMessage(user.telegramId, message);
         if (sent) {
           console.log(`Admin code sent to Telegram for user: ${username}`);
         } else {
-          console.log(`Failed to send Telegram, code for ${username}: ${code}`);
+          console.log(`Failed to send Telegram message for user: ${username}`);
+          return res.status(500).json({ error: "Не удалось отправить код в Telegram. Попробуйте позже." });
         }
       } else {
         console.log(`\n========================================`);
@@ -925,7 +928,7 @@ export async function registerRoutes(
         console.log(`Expires in 5 minutes`);
         console.log(`========================================\n`);
       }
-      
+
       res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
     } catch (error) {
       console.error("Request admin code error:", error);
