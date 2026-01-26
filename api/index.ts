@@ -26,7 +26,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Инициализируем маршруты
-const dummyServer = createServer(app);
+// В Vercel не нужно создавать настоящий HTTP-сервер, просто передаем фиктивный объект
+const dummyServer: any = {};
 registerRoutes(dummyServer, app);
 
 if (isProduction) {

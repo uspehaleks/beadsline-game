@@ -45,14 +45,18 @@ export function serveStatic(app: Express) {
     }
   }));
 
-  // fall through to index.html if the file doesn't exist
+  // fall through to index.html if the non-API request doesn't match any static file
   app.use("*", (req, res) => {
-    // Don't redirect API calls to index.html
+    // Only redirect non-API calls to index.html
+    // API calls should be handled by Express routes and return 404 if not found elsewhere
     if (req.path.startsWith('/api/')) {
-      res.status(404).send('API endpoint not found');
+      // If we reach this point, it means the API route was not found in Express
+      // Let Express handle the 404 normally
+      res.status(404).json({ error: 'API endpoint not found' });
       return;
     }
 
+    // For non-API routes, serve index.html for client-side routing
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
