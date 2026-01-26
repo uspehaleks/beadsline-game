@@ -1,9 +1,9 @@
 import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { registerRoutes } from '../server/routes.ts';
-import { serveStatic } from '../server/static.ts';
-import { pool } from '../server/db.ts';
+import { registerRoutes } from '../server/routes';
+import { serveStatic } from '../server/static';
+import { pool } from '../server/db';
 
 // Создаем приложение Express для Vercel
 const app = express();
