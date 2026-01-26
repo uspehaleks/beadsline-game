@@ -1,9 +1,9 @@
 import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { registerRoutes } from '../server/routes';
-import { serveStatic } from '../server/static';
-import { pool } from '../server/db';
+import { registerRoutes } from '../server/routes.js';
+import { serveStatic } from '../server/static.js';
+import { pool } from '../server/db.js';
 import { createServer } from 'http';
 
 const app = express();
