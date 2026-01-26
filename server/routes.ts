@@ -339,7 +339,7 @@ interface TelegramUpdate {
 }
 
 // Production Mini App URL - HARDCODED to avoid dev domain issues
-const PRODUCTION_APP_URL = 'https://igri--uspehaleks.replit.app';
+const PRODUCTION_APP_URL = process.env.PRODUCTION_APP_URL || 'https://beadsline-game.vercel.app';
 
 // App URL for Mini App - always use production URL for Telegram bot
 function getAppUrl(): string {
