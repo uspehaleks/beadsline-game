@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
@@ -98,7 +98,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.4.4",
