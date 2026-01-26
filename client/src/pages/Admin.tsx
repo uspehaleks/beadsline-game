@@ -1876,10 +1876,33 @@ function GameScoreLimitsCard() {
   });
 
   // Состояния для управления лимитами
-  const [btcMaxBeadsPerGame, setBtcMaxBeadsPerGame] = useState(gameEconomyConfig?.perGameLimits?.btcMaxBeadsPerGame?.toString() || '15');
-  const [ethMaxBeadsPerGame, setEthMaxBeadsPerGame] = useState(gameEconomyConfig?.perGameLimits?.ethMaxBeadsPerGame?.toString() || '15');
-  const [usdtMaxBeadsPerGame, setUsdtMaxBeadsPerGame] = useState(gameEconomyConfig?.perGameLimits?.usdtMaxBeadsPerGame?.toString() || '15');
-  const [normalPointsPerBall, setNormalPointsPerBall] = useState(gameEconomyConfig?.points?.normal?.toString() || '5');
+  const [btcMaxBeadsPerGame, setBtcMaxBeadsPerGame] = useState(() => {
+    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
+      return gameEconomyConfig.perGameLimits.btcMaxBeadsPerGame?.toString() || '15';
+    }
+    return '15';
+  });
+
+  const [ethMaxBeadsPerGame, setEthMaxBeadsPerGame] = useState(() => {
+    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
+      return gameEconomyConfig.perGameLimits.ethMaxBeadsPerGame?.toString() || '15';
+    }
+    return '15';
+  });
+
+  const [usdtMaxBeadsPerGame, setUsdtMaxBeadsPerGame] = useState(() => {
+    if (gameEconomyConfig && gameEconomyConfig.perGameLimits) {
+      return gameEconomyConfig.perGameLimits.usdtMaxBeadsPerGame?.toString() || '15';
+    }
+    return '15';
+  });
+
+  const [normalPointsPerBall, setNormalPointsPerBall] = useState(() => {
+    if (gameEconomyConfig && gameEconomyConfig.points) {
+      return gameEconomyConfig.points.normal?.toString() || '5';
+    }
+    return '5';
+  });
 
   // Обновляем состояние при изменении данных
   useEffect(() => {
