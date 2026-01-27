@@ -27,12 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     testPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false,
-        // Для Supabase с self-signed сертификатами используем только эти настройки
-        requestCert: true,
-        agent: false
-      }
+      // Отключаем SSL для Vercel, так как могут быть проблемы с самоподписанными сертификатами
+      // SSL будет управляться на уровне строки подключения
     });
 
     // Проверяем подключение к базе данных

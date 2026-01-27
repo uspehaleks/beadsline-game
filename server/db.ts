@@ -15,12 +15,8 @@ console.log("DATABASE_URL length:", process.env.DATABASE_URL ? process.env.DATAB
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-    // Для Supabase с self-signed сертификатами используем только эти настройки
-    requestCert: true,
-    agent: false
-  }
+  // Отключаем SSL для Vercel, так как могут быть проблемы с самоподписанными сертификатами
+  // SSL будет управляться на уровне строки подключения
 });
 
 // Test the connection
