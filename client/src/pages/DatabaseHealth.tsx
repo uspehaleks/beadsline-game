@@ -12,6 +12,9 @@ export default function DatabaseHealth() {
     lastCheck: null as string | null,
     error: null as string | null,
     details: null as string | null,
+    errorCode: null as string | null,
+    errorDetail: null as string | null,
+    errorHint: null as string | null,
   });
   
   const [loading, setLoading] = useState(false);
@@ -38,6 +41,9 @@ export default function DatabaseHealth() {
           lastCheck: new Date().toLocaleString('ru-RU'),
           error: null,
           details: null,
+          errorCode: null,
+          errorDetail: null,
+          errorHint: null,
         });
       } else {
         setStatus({
@@ -47,6 +53,9 @@ export default function DatabaseHealth() {
           lastCheck: new Date().toLocaleString('ru-RU'),
           error: data.error || 'Неизвестная ошибка',
           details: data.stack || null,
+          errorCode: data.code || null,
+          errorDetail: data.detail || null,
+          errorHint: data.hint || null,
         });
       }
     } catch (error) {
@@ -57,6 +66,9 @@ export default function DatabaseHealth() {
         lastCheck: new Date().toLocaleString('ru-RU'),
         error: error instanceof Error ? error.message : 'Ошибка при проверке подключения',
         details: error instanceof Error ? error.stack : null,
+        errorCode: null,
+        errorDetail: null,
+        errorHint: null,
       });
     } finally {
       setLoading(false);
@@ -160,6 +172,14 @@ export default function DatabaseHealth() {
                   <details className="mt-2 text-xs text-destructive">
                     <summary>Подробнее</summary>
                     <pre className="whitespace-pre-wrap">{status.details}</pre>
+                  </details>
+                )}
+                {(status.errorCode || status.errorDetail || status.errorHint) && (
+                  <details className="mt-2 text-xs text-destructive">
+                    <summary>Дополнительная информация об ошибке</summary>
+                    {status.errorCode && <div><strong>Код ошибки:</strong> {status.errorCode}</div>}
+                    {status.errorDetail && <div><strong>Детали:</strong> {status.errorDetail}</div>}
+                    {status.errorHint && <div><strong>Подсказка:</strong> {status.errorHint}</div>}
                   </details>
                 )}
               </div>
