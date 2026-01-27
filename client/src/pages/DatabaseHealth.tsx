@@ -11,6 +11,7 @@ export default function DatabaseHealth() {
     isTablesAccessible: false,
     lastCheck: null as string | null,
     error: null as string | null,
+    details: null as string | null,
   });
   
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ export default function DatabaseHealth() {
           isTablesAccessible: data.tablesAccessible,
           lastCheck: new Date().toLocaleString('ru-RU'),
           error: null,
+          details: null,
         });
       } else {
         setStatus({
@@ -44,6 +46,7 @@ export default function DatabaseHealth() {
           isTablesAccessible: false,
           lastCheck: new Date().toLocaleString('ru-RU'),
           error: data.error || 'Неизвестная ошибка',
+          details: data.stack || null,
         });
       }
     } catch (error) {
@@ -53,6 +56,7 @@ export default function DatabaseHealth() {
         isTablesAccessible: false,
         lastCheck: new Date().toLocaleString('ru-RU'),
         error: error instanceof Error ? error.message : 'Ошибка при проверке подключения',
+        details: error instanceof Error ? error.stack : null,
       });
     } finally {
       setLoading(false);
@@ -152,6 +156,12 @@ export default function DatabaseHealth() {
               <div className="mt-4 p-3 bg-destructive/10 border border-destructive rounded-lg">
                 <p className="text-sm font-medium text-destructive">Ошибка:</p>
                 <p className="text-sm">{status.error}</p>
+                {status.details && (
+                  <details className="mt-2 text-xs text-destructive">
+                    <summary>Подробнее</summary>
+                    <pre className="whitespace-pre-wrap">{status.details}</pre>
+                  </details>
+                )}
               </div>
             )}
           </CardContent>

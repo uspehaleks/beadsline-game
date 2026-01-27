@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     // Проверяем доступ к таблице пользователей
     const userCount = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
-    const tablesAccessible = userCount.length > 0;
+    const tablesAccessible = userCount.length >= 0; // Даже если 0 пользователей, таблица доступна
 
     res.status(200).json({
       status: 'healthy',
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
       tablesAccessible: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined,
       message: 'Ошибка подключения к базе данных'
     });
   }
