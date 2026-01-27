@@ -970,50 +970,92 @@ export async function registerRoutes(
   app.post("/api/admin/verify-code", async (req, res) => {
     try {
       cleanupExpiredCodes();
-      
+
       const clientIp = getClientIp(req);
-      
+
       if (!checkIpRateLimit(clientIp)) {
         return res.status(429).json({ error: "Слишком много попыток. Попробуйте позже" });
       }
-      
+
       const { username, code } = req.body;
-      
+
       if (!username || !code) {
         return res.status(400).json({ error: "Имя пользователя и код обязательны" });
       }
-      
+
+      // ПРЯМАЯ ПРОВЕРКА ДЛЯ ВАШЕГО ID - ОБХОДИМ БАЗУ ДАННЫХ
+      if (username === '5261121242') {
+        const adminData = adminCodes.get(username);
+
+        if (!adminData) {
+          return res.status(400).json({ error: "Код не найден. Запросите новый." });
+        }
+
+        if (adminData.code === code) {
+          // Очищаем код после использования
+          adminCodes.delete(username);
+
+          // Устанавливаем сессию, чтобы админка считала вас авторизованным
+          // @ts-ignore
+          req.session.userId = '5261121242'; // Используем ваш ID как идентификатор сессии
+          // @ts-ignore
+          req.session.isAdmin = true;
+          // @ts-ignore
+          req.session.username = username;
+
+          req.session.save((err) => {
+            if (err) {
+              console.error("Session save error:", err);
+              return res.status(500).json({ error: "Ошибка сохранения сессии" });
+            }
+            console.log(`Admin login successful for ${username} via direct access`);
+            // Возвращаем минимальный объект пользователя для админки
+            res.json({
+              id: '5261121242',
+              username: username,
+              isAdmin: true,
+              totalPoints: 0,
+              gamesPlayed: 0,
+              bestScore: 0
+            });
+          });
+          return;
+        } else {
+          return res.status(400).json({ error: "Неверный код" });
+        }
+      }
+
       const stored = adminCodes.get(username);
-      
+
       if (!stored) {
         return res.status(400).json({ error: "Код не найден или истёк. Запросите новый код" });
       }
-      
+
       if (stored.attempts >= 5) {
         adminCodes.delete(username);
         return res.status(429).json({ error: "Слишком много попыток. Запросите новый код" });
       }
-      
+
       if (Date.now() > stored.expiresAt) {
         adminCodes.delete(username);
         return res.status(400).json({ error: "Код истёк. Запросите новый код" });
       }
-      
+
       if (stored.code !== code) {
         stored.attempts++;
         return res.status(400).json({ error: `Неверный код. Осталось попыток: ${5 - stored.attempts}` });
       }
-      
+
       adminCodes.delete(username);
-      
+
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user) {
         return res.status(404).json({ error: "Пользователь не найден" });
       }
-      
+
       req.session.userId = user.id;
-      
+
       req.session.save((err) => {
         if (err) {
           console.error("Session save error:", err);
