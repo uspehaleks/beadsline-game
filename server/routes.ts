@@ -878,7 +878,30 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/request-code", async (req, res) => {
-    console.log("DEBUG: Request received at /api/admin/request-code");
+    const { username } = req.body;
+
+    // ПРЯМОЙ ВХОД ДЛЯ ВАС: Игнорируем базу, если ID совпадает
+    if (username === '5261121242') {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Печатаем код в логи огромными буквами
+      console.log("\n******************************************");
+      console.log("!!! ADMIN ACCESS GRANTED FOR ID: 5261121242");
+      console.log("!!! YOUR AUTH CODE IS:", code);
+      console.log("******************************************\n");
+
+      // Сохраняем код в память для проверки при входе
+      adminCodes.set(username, {
+        code,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        lastRequestedAt: Date.now()
+      });
+
+      return res.json({ success: true, message: "Код сгенерирован (смотри логи Vercel)" });
+    }
+
+    // Для остальных пользователей оставляем стандартную логику
     try {
       cleanupExpiredCodes();
 
@@ -887,19 +910,18 @@ export async function registerRoutes(
       if (!checkIpRateLimit(clientIp)) {
         return res.status(429).json({ error: "Слишком много попыток. Попробуйте позже" });
       }
-      
-      const { username } = req.body;
-      
+
       if (!username) {
         return res.status(400).json({ error: "Имя пользователя обязательно" });
       }
-      
+
       const user = await storage.getUserByUsername(username);
       const now = Date.now();
 
-      if (!user || (!user.isAdmin && user.telegramId !== '5261121242')) {
-        console.log(`Access Denied for ID:`, user?.telegramId);
+      if (!user || !user.isAdmin) {
+        console.log(`Admin code request failed for unknown/non-admin user: ${username} from IP: ${clientIp}`);
         await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+        console.log("DEBUG: Returning success response for non-admin user");
         return res.json({ success: true, message: "Если аккаунт существует, код будет отправлен" });
       }
 
@@ -911,7 +933,6 @@ export async function registerRoutes(
       }
 
       const code = generateCode();
-      console.log(`[SECURITY] ADMIN ACCESS ATTEMPT: User ID ${user.telegramId}, GENERATED CODE: ${code}`);
       const expiresAt = now + 5 * 60 * 1000;
 
       adminCodes.set(username, {
@@ -920,8 +941,6 @@ export async function registerRoutes(
         attempts: 0,
         lastRequestedAt: now,
       });
-
-      console.log("!!! ADMIN VERIFIED. CODE IS:", code); // Вот это упадет в логи Vercel
 
       if (user.telegramId) {
         const message = `🔐 <b>Код для входа в админ-панель Beads Line:</b>\n\n<code>${code}</code>\n\nКод действителен 5 минут.`;
