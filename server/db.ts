@@ -15,7 +15,15 @@ console.log("DATABASE_URL length:", process.env.DATABASE_URL ? process.env.DATAB
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: {
+    rejectUnauthorized: false,
+    // Дополнительные настройки для работы с Supabase
+    ca: process.env.SUPABASE_SSL_CERT || undefined,
+    cert: process.env.SSL_CERT || undefined,
+    key: process.env.SSL_KEY || undefined,
+    // Для Supabase используем sslmode=require
+    sslmode: 'require'
+  }
 });
 
 // Test the connection

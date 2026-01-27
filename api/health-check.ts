@@ -27,7 +27,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     testPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: {
+        rejectUnauthorized: false,
+        // Дополнительные настройки для работы с Supabase
+        ca: process.env.SUPABASE_SSL_CERT || undefined,
+        cert: process.env.SSL_CERT || undefined,
+        key: process.env.SSL_KEY || undefined,
+        // Для Supabase используем sslmode=require
+        sslmode: 'require'
+      }
     });
 
     // Проверяем подключение к базе данных
