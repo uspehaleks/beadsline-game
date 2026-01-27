@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { NextApiRequest as VercelRequest, NextApiResponse as VercelResponse } from 'next';
 import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
