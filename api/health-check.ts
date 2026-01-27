@@ -29,8 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       connectionString: process.env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: false,
-        // Для Supabase используем sslmode=no-verify, так как сертификаты могут быть self-signed
-        sslmode: 'no-verify'
+        // Для Supabase с self-signed сертификатами используем только эти настройки
+        requestCert: true,
+        agent: false
       }
     });
 
