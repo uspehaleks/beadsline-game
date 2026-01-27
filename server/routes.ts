@@ -1001,7 +1001,15 @@ export async function registerRoutes(
             // @ts-ignore
             req.session.save((err) => {
               if (err) return res.status(500).json({ error: "Ошибка сессии" });
-              res.json({ success: true, redirect: "/admin/dashboard" });
+              // Возвращаем объект пользователя с isAdmin: true, чтобы клиент мог обновить статус
+              res.json({
+                id: '5261121242',
+                username: '5261121242',
+                isAdmin: true,
+                totalPoints: 0,
+                gamesPlayed: 0,
+                bestScore: 0
+              });
               resolve(null);
             });
           });
