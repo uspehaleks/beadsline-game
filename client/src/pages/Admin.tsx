@@ -327,15 +327,31 @@ export default function Admin() {
 
             <Separator />
 
-            <Button 
-              variant="ghost" 
-              className="w-full" 
+            <Button
+              variant="ghost"
+              className="w-full"
               onClick={() => setLocation("/")}
               data-testid="button-back-home"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               На главную
             </Button>
+
+            {/* Debug Info Block - Visible only for debugging */}
+            <div className="mt-6 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
+              <div className="font-semibold mb-1">Отладочная информация:</div>
+              <pre className="text-xs overflow-x-auto">
+                {JSON.stringify({
+                  userId: user?.id,
+                  isAdmin: user?.isAdmin,
+                  isLoading: isLoading,
+                  error: error,
+                  lastResponse: verifyCodeMutation.data || null,
+                  lastError: verifyCodeMutation.error || null,
+                  sessionStatus: user ? (user.isAdmin ? "AUTHORIZED" : "UNAUTHORIZED") : "NO_SESSION"
+                }, null, 2)}
+              </pre>
+            </div>
           </CardContent>
         </Card>
       </div>
