@@ -427,12 +427,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
-    const [user] = await db
+    const result = await db
       .update(users)
       .set({ isAdmin })
       .where(eq(users.id, userId))
       .returning();
-    return user || undefined;
+
+    if (Array.isArray(result) && result.length > 0) {
+      return result[0];
+    }
+    return undefined;
   }
 
   async updateUser(userId: string, updates: UserUpdate): Promise<User | undefined> {

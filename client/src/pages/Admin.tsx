@@ -234,6 +234,8 @@ export default function Admin() {
         // Fallback to reload if refreshUser is not available
         window.location.reload();
       }
+      // Принудительно перегружаем страницу на корень админки
+      window.location.href = '/admin';
     },
     onError: (error: Error) => {
       toast({
@@ -340,7 +342,7 @@ export default function Admin() {
             {/* Debug Info Block - Visible only for debugging */}
             <div className="mt-6 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
               <div className="font-semibold mb-1">Отладочная информация:</div>
-              <pre className="text-xs overflow-x-auto">
+              <pre className="text-xs overflow-x-auto text-black">
                 {JSON.stringify({
                   userId: user?.id,
                   isAdmin: user?.isAdmin,
