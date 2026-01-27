@@ -1,6 +1,6 @@
-import { 
-  users, 
-  gameScores, 
+import {
+  users,
+  gameScores,
   gameConfig,
   prizePool,
   usdtFundSettings,
@@ -21,6 +21,7 @@ import {
   cryptoPayments,
   teamMembers,
   revenueShares,
+  systemLogs,
   type User, 
   type InsertUser,
   type GameScore,
