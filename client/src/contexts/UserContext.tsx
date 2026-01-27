@@ -71,12 +71,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     if (!user) return;
-    
+
     try {
-      const response = await fetch(`/api/users/${user.id}`);
+      // Use /api/auth/me endpoint which checks session and returns current user data including admin status
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setUser(data);
+      } else {
+        // Fallback to /api/users/:id if /api/auth/me fails
+        const userResponse = await fetch(`/api/users/${user.id}`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUser(userData);
+        }
       }
     } catch (err) {
       console.error('Failed to refresh user:', err);

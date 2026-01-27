@@ -861,7 +861,12 @@ export async function registerRoutes(
         req.session.destroy(() => {});
         return res.status(401).json({ error: "User not found" });
       }
-      res.json(user);
+
+      // Return user data with isAdmin status from session (important for admin panel access)
+      res.json({
+        ...user,
+        isAdmin: req.session.isAdmin || user.isAdmin || false
+      });
     } catch (error) {
       console.error("Get current user error:", error);
       res.status(500).json({ error: "Failed to get user" });
