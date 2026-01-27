@@ -1,38 +1,47 @@
+// Vercel API handler for the Express server
 import express from 'express';
-import session from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
+import { createServer } from 'http';
 import { registerRoutes } from '../server/routes.js';
 import { serveStatic } from '../server/static.js';
-import { pool } from '../server/db.js';
-import { createServer } from 'http';
+import { storage } from '../server/storage.js';
 
+// Create an Express app instance
 const app = express();
-const isProduction = true;
-const PgSession = connectPgSimple(session);
 
-app.use(session({
-  store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
-  secret: process.env.SESSION_SECRET || 'crypto-zuma-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  },
-}));
+// Middleware to parse JSON
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
-app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Инициализируем маршруты
-// В Vercel не нужно создавать настоящий HTTP-сервер, просто передаем фиктивный объект
-const dummyServer: any = {};
-registerRoutes(dummyServer, app);
+// Initialize the routes and middleware
+let routesInitialized = false;
 
-if (isProduction) {
-  serveStatic(app);
+async function initializeRoutes() {
+  if (!routesInitialized) {
+    try {
+      await storage.ensureDefaultBaseBodies();
+      const httpServer = createServer(app);
+      await registerRoutes(httpServer, app);
+
+      // In production, serve static files
+      if (process.env.NODE_ENV === 'production') {
+        serveStatic(app);
+      }
+      routesInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize server:', error);
+    }
+  }
 }
 
-// ЭТО КРИТИЧЕСКИ ВАЖНО ДЛЯ VERCEL
+// Initialize routes on startup
+initializeRoutes().catch(console.error);
+
+// Export the app for Vercel
 export default app;
