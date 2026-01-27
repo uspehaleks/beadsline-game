@@ -220,22 +220,8 @@ export default function Admin() {
       }
       return res.json();
     },
-    onSuccess: (userData) => {
-      toast({
-        title: "Успешный вход",
-        description: "Добро пожаловать в админ-панель",
-      });
-      // Update the user context by calling refreshUser to get the latest user data
-      // This will cause the re-render with the updated admin status
-      // Refresh user data to reflect admin status
-      if (refreshUser) {
-        refreshUser();
-      } else {
-        // Fallback to reload if refreshUser is not available
-        window.location.reload();
-      }
-      // Это сработает даже если React Context еще не обновился
-      window.location.href = '/admin';
+    onSuccess: (data) => {
+      if (data) window.location.href = '/admin';
     },
     onError: (error: Error) => {
       toast({
