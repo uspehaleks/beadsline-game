@@ -1,3 +1,11 @@
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+    isAdmin?: boolean;
+    username?: string;
+  }
+}
+
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, IStorage, logDiagnostic } from "./storage.js";
@@ -873,7 +881,6 @@ export async function registerRoutes(
       // Return user data with isAdmin status from session (important for admin panel access)
       res.json({
         ...user,
-        // @ts-ignore
         isAdmin: req.session.isAdmin || user.isAdmin || false
       });
     } catch (error) {
@@ -1033,11 +1040,8 @@ export async function registerRoutes(
           }
 
           // Принудительно создаем сессию
-          // @ts-ignore
           req.session.userId = '5261121242';
-          // @ts-ignore
           req.session.isAdmin = true;
-          // @ts-ignore
           req.session.username = '5261121242';
 
           // Log session creation
@@ -1087,11 +1091,8 @@ export async function registerRoutes(
           adminCodes.delete(username);
 
           // Устанавливаем сессию, чтобы админка считала вас авторизованным
-          // @ts-ignore
           req.session.userId = '5261121242'; // Используем ваш ID как идентификатор сессии
-          // @ts-ignore
           req.session.isAdmin = true;
-          // @ts-ignore
           req.session.username = username;
 
           req.session.save((err) => {
