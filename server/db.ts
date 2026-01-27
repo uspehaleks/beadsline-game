@@ -17,12 +17,8 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false,
-    // Дополнительные настройки для работы с Supabase
-    ca: process.env.SUPABASE_SSL_CERT || undefined,
-    cert: process.env.SSL_CERT || undefined,
-    key: process.env.SSL_KEY || undefined,
-    // Для Supabase используем sslmode=require
-    sslmode: 'require'
+    // Для Supabase используем sslmode=no-verify, так как сертификаты могут быть self-signed
+    sslmode: 'no-verify'
   }
 });
 
