@@ -357,6 +357,18 @@ export interface IStorage {
   getGameConfigsForLevel(levelId: number): Promise<{ gameplayConfig: GameplayConfig; gameEconomyConfig: GameEconomyConfig; livesConfig: LivesConfig }>;
 }
 
+// Function to log diagnostic information to the database
+export async function logDiagnostic(message: string, data?: any) {
+  try {
+    await db.insert(systemLogs).values({
+      message,
+      data: data || null,
+    });
+  } catch (error) {
+    console.error('Failed to log diagnostic:', error);
+  }
+}
+
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

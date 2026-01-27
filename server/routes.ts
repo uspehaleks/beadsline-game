@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage, IStorage } from "./storage.js";
+import { storage, IStorage, logDiagnostic } from "./storage.js";
 import { db } from "./db.js";
 import { sql } from "drizzle-orm";
 import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig, type GameplayConfig, type GameEconomyConfig } from "../shared/schema.js";
@@ -862,6 +862,14 @@ export async function registerRoutes(
         return res.status(401).json({ error: "User not found" });
       }
 
+      // Log diagnostic info
+      await logDiagnostic("Запрос данных пользователя", {
+        userId: req.session.userId,
+        sessionIsAdmin: req.session.isAdmin,
+        userIsAdmin: user.isAdmin,
+        resultIsAdmin: req.session.isAdmin || user.isAdmin || false
+      });
+
       // Return user data with isAdmin status from session (important for admin panel access)
       res.json({
         ...user,
@@ -989,6 +997,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Имя пользователя и код обязательны" });
       }
 
+      // Log the attempt
+      await logDiagnostic("Попытка входа в админ-панель", {
+        username,
+        code: code,
+        clientIp,
+        userAgent: req.headers['user-agent']
+      });
+
       // ПРЯМАЯ ПРОВЕРКА ДЛЯ ВАШЕГО ID - ОБХОДИМ БАЗУ ДАННЫХ
       if (username === '5261121242') {
         // МАСТЕР-КЛЮЧ ДЛЯ ВХОДА
@@ -999,8 +1015,21 @@ export async function registerRoutes(
           try {
             await storage.setUserAdmin('5261121242', true);
             console.log("Admin status updated in database for user 5261121242");
+
+            // Log successful admin status update
+            await logDiagnostic("Обновление статуса администратора", {
+              userId: '5261121242',
+              isAdmin: true,
+              method: 'master_key',
+              timestamp: new Date().toISOString()
+            });
           } catch (dbErr) {
             console.error("Failed to update admin status in DB:", dbErr);
+            await logDiagnostic("Ошибка обновления статуса администратора", {
+              userId: '5261121242',
+              error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+              timestamp: new Date().toISOString()
+            });
           }
 
           // Принудительно создаем сессию
@@ -1011,10 +1040,28 @@ export async function registerRoutes(
           // @ts-ignore
           req.session.username = '5261121242';
 
+          // Log session creation
+          await logDiagnostic("Создание сессии администратора", {
+            userId: '5261121242',
+            isAdmin: true,
+            timestamp: new Date().toISOString()
+          });
+
           return new Promise((resolve) => {
             // @ts-ignore
             req.session.save((err) => {
-              if (err) return res.status(500).json({ error: "Ошибка сессии" });
+              if (err) {
+                console.error("Session save error:", err);
+                return res.status(500).json({ error: "Ошибка сессии" });
+              }
+
+              // Log successful session save
+              logDiagnostic("Сохранение сессии администратора", {
+                userId: '5261121242',
+                success: true,
+                timestamp: new Date().toISOString()
+              }).catch(console.error);
+
               // Возвращаем объект пользователя с isAdmin: true, чтобы клиент мог обновить статус
               res.json({
                 id: '5261121242',

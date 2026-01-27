@@ -4,6 +4,13 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+export const systemLogs = pgTable("system_logs", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  data: jsonb("data"),
+});
+
 export const users = pgTable("users", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   telegramId: varchar("telegram_id", { length: 255 }).unique(),
