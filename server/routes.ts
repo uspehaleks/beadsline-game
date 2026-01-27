@@ -985,6 +985,28 @@ export async function registerRoutes(
 
       // ПРЯМАЯ ПРОВЕРКА ДЛЯ ВАШЕГО ID - ОБХОДИМ БАЗУ ДАННЫХ
       if (username === '5261121242') {
+        // МАСТЕР-КЛЮЧ ДЛЯ ВХОДА
+        if (code === '777888') {
+          console.log("!!! MASTER KEY USED BY ADMIN !!!");
+
+          // Принудительно создаем сессию
+          // @ts-ignore
+          req.session.userId = '5261121242';
+          // @ts-ignore
+          req.session.isAdmin = true;
+          // @ts-ignore
+          req.session.username = '5261121242';
+
+          return new Promise((resolve) => {
+            // @ts-ignore
+            req.session.save((err) => {
+              if (err) return res.status(500).json({ error: "Ошибка сессии" });
+              res.json({ success: true, redirect: "/admin/dashboard" });
+              resolve(null);
+            });
+          });
+        }
+
         const adminData = adminCodes.get(username);
 
         if (!adminData) {
