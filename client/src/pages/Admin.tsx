@@ -344,8 +344,8 @@ export default function Admin() {
                 {JSON.stringify({
                   userId: user?.id,
                   isAdmin: user?.isAdmin,
-                  isLoading: isLoading,
-                  error: error,
+                  isLoading: false,
+                  error: verifyCodeMutation.error || null,
                   lastResponse: verifyCodeMutation.data || null,
                   lastError: verifyCodeMutation.error || null,
                   sessionStatus: user ? (user.isAdmin ? "AUTHORIZED" : "UNAUTHORIZED") : "NO_SESSION"
