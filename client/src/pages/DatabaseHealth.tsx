@@ -169,11 +169,11 @@ export default function DatabaseHealth() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Среда выполнения:</span>
-                <span>{process.env.NODE_ENV || 'development'}</span>
+                <span>production</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Версия Node.js:</span>
-                <span>{process.version}</span>
+                <span className="text-muted-foreground">Серверная часть:</span>
+                <span>Vercel Serverless</span>
               </div>
             </div>
             

@@ -1,7 +1,7 @@
 // API endpoint for database health check
-import { db } from '../../server/db.js';
+import { db } from '../server/db.js';
 import { sql } from 'drizzle-orm';
-import { users } from '../../shared/schema.js';
+import { users } from '../shared/schema.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,11 +11,11 @@ export default async function handler(req, res) {
   try {
     // Проверяем подключение к базе данных
     await db.execute(sql`SELECT 1`);
-    
+
     // Проверяем доступ к таблице пользователей
     const userCount = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
     const tablesAccessible = userCount.length > 0;
-    
+
     res.status(200).json({
       status: 'healthy',
       databaseConnected: true,
