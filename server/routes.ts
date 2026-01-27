@@ -735,20 +735,32 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  
+
   // Verify user has Telegram authentication (no guests allowed)
   // Exception: admins can authenticate via admin code without Telegram
+  // Another exception: allow access for certain routes without Telegram ID
   const user = await storage.getUser(req.session.userId);
   if (!user) {
     req.session.destroy(() => {});
     return res.status(401).json({ error: "User not found" });
   }
-  
-  if (!user.telegramId && !user.isAdmin) {
+
+  // Allow access to game routes without Telegram ID if user is not an admin
+  // This is for allowing direct access to the game
+  const isGameRoute = req.path.includes('/api/game') ||
+                     req.path.includes('/api/scores') ||
+                     req.path.includes('/api/leaderboard') ||
+                     req.path.includes('/api/config') ||
+                     req.path.includes('/api/user') && !req.path.includes('/api/user/boosts') && !req.path.includes('/api/user/crypto') ||
+                     req.path.includes('/api/crypto-availability') ||
+                     req.path.includes('/api/referral') ||
+                     req.path === '/api/auth/me';
+
+  if (!user.telegramId && !user.isAdmin && !isGameRoute) {
     req.session.destroy(() => {});
     return res.status(403).json({ error: "Требуется авторизация через Telegram" });
   }
-  
+
   next();
 }
 

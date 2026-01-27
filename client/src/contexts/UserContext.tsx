@@ -45,7 +45,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       const telegramUser = getTelegramUser();
       const startParam = getStartParam();
-      
+
       if (telegramUser) {
         const response = await apiRequest('POST', '/api/auth/telegram', {
           telegramId: telegramUser.id.toString(),
@@ -55,11 +55,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
           photoUrl: telegramUser.photo_url,
           startParam: startParam || undefined,
         });
-        
+
         const data = await response.json();
         setUser(data);
       } else {
-        setError('telegram_required');
+        // Попробуем получить данные пользователя без Telegram, если сессия существует
+        try {
+          const meResponse = await fetch('/api/auth/me', { credentials: 'include' });
+          if (meResponse.ok) {
+            const userData = await meResponse.json();
+            setUser(userData);
+          } else {
+            // Если нет сессии, оставляем пользователя как null, но не устанавливаем ошибку
+            setUser(null);
+          }
+        } catch (err) {
+          console.error('Error fetching user without Telegram:', err);
+          setUser(null);
+        }
       }
     } catch (err) {
       console.error('Failed to initialize user:', err);

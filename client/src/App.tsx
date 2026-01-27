@@ -101,9 +101,8 @@ function MaintenanceWrapper() {
     return <LoadingScreen />;
   }
 
-  if (error === 'telegram_required') {
-    return <TelegramRequiredScreen />;
-  }
+  // Показываем экран Telegram только для определенных случаев, не для всех пользователей
+  // Убираем проверку telegram_required, чтобы игра была доступна всем
 
   if (maintenance?.enabled && !user?.isAdmin) {
     return (
