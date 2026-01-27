@@ -15,8 +15,9 @@ console.log("DATABASE_URL length:", process.env.DATABASE_URL ? process.env.DATAB
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Отключаем SSL для Vercel, так как могут быть проблемы с самоподписанными сертификатами
-  // SSL будет управляться на уровне строки подключения
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Test the connection

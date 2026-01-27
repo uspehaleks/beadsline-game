@@ -27,8 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     testPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      // Отключаем SSL для Vercel, так как могут быть проблемы с самоподписанными сертификатами
-      // SSL будет управляться на уровне строки подключения
+      ssl: {
+        rejectUnauthorized: false
+      }
     });
 
     // Проверяем подключение к базе данных
