@@ -40,7 +40,6 @@ async function buildAll() {
     "express",
     "pg",
     "drizzle-orm",
-    "@neondatabase/serverless",
     "framer-motion"
   ];
 
