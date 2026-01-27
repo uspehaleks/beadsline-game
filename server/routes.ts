@@ -865,6 +865,7 @@ export async function registerRoutes(
       // Return user data with isAdmin status from session (important for admin panel access)
       res.json({
         ...user,
+        // @ts-ignore
         isAdmin: req.session.isAdmin || user.isAdmin || false
       });
     } catch (error) {
@@ -1015,7 +1016,7 @@ export async function registerRoutes(
                 gamesPlayed: 0,
                 bestScore: 0
               });
-              resolve(null);
+              resolve();
             });
           });
         }
