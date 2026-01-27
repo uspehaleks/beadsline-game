@@ -302,9 +302,9 @@ export default function Admin() {
                     className="flex-1"
                     onClick={() => {
                       console.log("Клик по кнопке 'Войти'!", { username: loginUsername, code: loginCode }); // Это должно появиться в F12
+                      console.log("Мутация вызвана"); // Добавлено по инструкции
                       verifyCodeMutation.mutate({ username: loginUsername, code: loginCode });
                     }}
-                    disabled={loginCode.length !== 6 || verifyCodeMutation.isPending}
                     data-testid="button-verify-code"
                   >
                     {verifyCodeMutation.isPending ? (
