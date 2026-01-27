@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import Admin from "@/pages/Admin";
 import LeagueLeaderboard from "@/pages/LeagueLeaderboard";
 import Withdraw from "@/pages/Withdraw";
+import DatabaseHealth from "@/pages/DatabaseHealth";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/components/MaintenancePage";
 import { Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/league/:slug" component={LeagueLeaderboard} />
       <Route path="/withdraw" component={Withdraw} />
+      <Route path="/db-health" component={DatabaseHealth} />
       <Route component={NotFound} />
     </Switch>
   );
