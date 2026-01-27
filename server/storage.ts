@@ -433,10 +433,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
 
-    if (Array.isArray(result) && result.length > 0) {
-      return result[0];
-    }
-    return undefined;
+    return Array.isArray(result) && result.length > 0 ? result[0] : undefined;
   }
 
   async updateUser(userId: string, updates: UserUpdate): Promise<User | undefined> {

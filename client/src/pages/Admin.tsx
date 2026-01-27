@@ -226,7 +226,7 @@ export default function Admin() {
         description: "Добро пожаловать в админ-панель",
       });
       // Update the user context by calling refreshUser to get the latest user data
-      // This will cause the component to re-render with the updated admin status
+      // This will cause the re-render with the updated admin status
       // Refresh user data to reflect admin status
       if (refreshUser) {
         refreshUser();
@@ -234,7 +234,7 @@ export default function Admin() {
         // Fallback to reload if refreshUser is not available
         window.location.reload();
       }
-      // Принудительно перегружаем страницу на корень админки
+      // Это сработает даже если React Context еще не обновился
       window.location.href = '/admin';
     },
     onError: (error: Error) => {
