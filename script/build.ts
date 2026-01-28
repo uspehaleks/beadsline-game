@@ -43,19 +43,20 @@ async function buildAll() {
     "framer-motion"
   ];
 
-  await esbuild({
-    entryPoints: [path.join(rootDir, "server/index.ts")],
-    platform: "node",
-    bundle: true,
-    format: "cjs",
-    outfile: path.join(distDir, "api/index.cjs"),
-    external: externalList,
-    minify: true,
-    define: {
-      "process.env.NODE_ENV": '"production"',
-    },
-    logLevel: "info",
-  });
+  // Пропускаем сборку Vercel API функций, так как используем Next.js API routes
+  // await esbuild({
+  //   entryPoints: [path.join(rootDir, "server/index.ts")],
+  //   platform: "node",
+  //   bundle: true,
+  //   format: "cjs",
+  //   outfile: path.join(distDir, "api/index.cjs"),
+  //   external: externalList,
+  //   minify: true,
+  //   define: {
+  //     "process.env.NODE_ENV": '"production"',
+  //   },
+  //   logLevel: "info",
+  // });
 
   // 4. Подготовка для Vercel (если мы в Vercel окружении)
   if (process.env.VERCEL) {
