@@ -1,4 +1,6 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
+import { useMemo } from "react";
+import { useRouter } from "next/router";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,16 +22,22 @@ interface MaintenanceConfig {
 }
 
 function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/league/:slug" component={LeagueLeaderboard} />
-      <Route path="/withdraw" component={Withdraw} />
-      <Route path="/db-health" component={DatabaseHealth} />
-      <Route component={NotFound} />
-    </Switch>
-  );
+  const router = useRouter();
+
+  // Определяем, какой компонент отображать в зависимости от маршрута
+  if (router.pathname === '/') {
+    return <Home />;
+  } else if (router.pathname === '/admin' || router.pathname.startsWith('/admin')) {
+    return <Admin />;
+  } else if (router.pathname.startsWith('/league/')) {
+    return <LeagueLeaderboard />;
+  } else if (router.pathname === '/withdraw') {
+    return <Withdraw />;
+  } else if (router.pathname === '/db-health') {
+    return <DatabaseHealth />;
+  } else {
+    return <NotFound />;
+  }
 }
 
 function LoadingScreen() {
@@ -74,7 +82,8 @@ function TelegramRequiredScreen() {
 
 function MaintenanceWrapper() {
   const { user, isLoading: userLoading, error } = useUser();
-  const [location] = useLocation();
+  const router = useRouter();
+  const location = router.asPath;
 
   const {
     data: maintenance,
@@ -86,7 +95,7 @@ function MaintenanceWrapper() {
   });
 
   // 1. ОПРЕДЕЛЯЕМ АДМИНКУ
-  const isAdminPage = location.startsWith('/admin');
+  const isAdminPage = router.pathname.startsWith('/admin');
 
   // 2. ЕСЛИ ЭТО АДМИНКА - ПРОПУСКАЕМ ДАЛЬШЕ ДЛЯ ПРОВЕРКИ В КОМПОНЕНТЕ
   if (isAdminPage) {
