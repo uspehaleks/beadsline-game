@@ -7,9 +7,8 @@
     "node": "20.x"
   },
   "scripts": {
-    "prebuild": "node script/prepare-next.js",
     "dev": "next dev",
-    "build": "node script/prepare-next.js && next build",
+    "build": "next build",
     "start": "next start",
     "check": "tsc --skipLibCheck || true",
     "db:push": "drizzle-kit push",
