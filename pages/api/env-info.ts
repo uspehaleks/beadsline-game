@@ -5,6 +5,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('Environment info endpoint called');
+  console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+  console.log('SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+
   // Получаем информацию об окружении
   const databaseUrl = process.env.DATABASE_URL;
   let databaseHost = 'Not Set';
@@ -12,11 +17,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (databaseUrl) {
     try {
+      console.log('DATABASE_URL found, attempting to parse:', databaseUrl.substring(0, 50) + '...');
+
       // Создаем вспомогательную функцию для парсинга URL базы данных
       const parseDbUrl = (url: string) => {
         // Для URL в формате postgresql://user:pass@host:port/database?params
         const match = url.match(/:\/\/[^:]+:[^@]+@([^:\/]+):(\d+)/);
         if (match) {
+          console.log('Regex match found:', match[1], match[2]);
           return { host: match[1], port: match[2] };
         }
         // Если не удалось распарсить с помощью регулярного выражения,
@@ -29,6 +37,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
           const port = parsed.port || '5432';
           // Извлекаем хост
           const host = parsed.hostname;
+          console.log('URL parsing successful:', host, port);
           return { host, port };
         } catch (urlError) {
           console.error('URL parsing failed:', urlError);
@@ -48,6 +57,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       databaseHost = 'Parse Error';
       databasePort = 'Parse Error';
     }
+  } else {
+    console.log('DATABASE_URL is not set in environment variables');
   }
 
   const sessionSecretStatus = process.env.SESSION_SECRET ? 'Set' : 'Not Set';
