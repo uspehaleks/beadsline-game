@@ -1,4 +1,5 @@
 # Игнорировать старые файлы сборки
+client/vite.config.ts
 client/
 server/
 script/
@@ -7,5 +8,7 @@ dist/
 !pages/**
 !public/**
 !components/**
+!contexts/**
+!hooks/**
 !lib/**
 !shared/**
