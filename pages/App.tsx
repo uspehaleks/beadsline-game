@@ -6,7 +6,7 @@ import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider, useUser } from "@/contexts/UserContext";
-import Home from "./Home";
+import Home from "./index";
 import Admin from "./Admin";
 import LeagueLeaderboard from "./LeagueLeaderboard";
 import Withdraw from "./Withdraw";
