@@ -13,18 +13,6 @@ async function getStorage() {
   return storageInstance;
 }
 
-async function initializeStorageIfNeeded() {
-  if (!storageInitialized) {
-    try {
-      const storage = await getStorage();
-      await storage.ensureDefaultBaseBodies();
-      storageInitialized = true;
-    } catch (error) {
-      console.error('Failed to initialize storage:', error);
-    }
-  }
-}
-
 // Create a router
 const router = createRouter();
 

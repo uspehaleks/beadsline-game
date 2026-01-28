@@ -96,9 +96,28 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Не производим инициализацию хранилища при запуске сервера в serverless среде
-  // Инициализация будет происходить по требованию при первом обращении к базе данных
-  console.log("Server starting without pre-initializing storage (for serverless compatibility)");
+  // Инициализация хранилища с использованием прямого подключения (порт 5432)
+  // для миграций и инициализации, если DIRECT_URL доступен
+  console.log("Server starting, initializing storage if needed");
+
+  try {
+    // Импортируем функцию для создания прямого соединения
+    const { createDirectDbConnection } = await import('./db.js');
+
+    // Создаем временное прямое соединение для инициализации
+    const { pool: directPool } = await createDirectDbConnection();
+    const storageModule = await import('./storage.js');
+
+    // Инициализируем хранилище с прямым соединением
+    await storageModule.storage.ensureDefaultBaseBodies();
+    console.log("Default base bodies initialized successfully");
+
+    // Закрываем прямое соединение после инициализации
+    await directPool.end();
+  } catch (error) {
+    console.error("Failed to initialize storage:", error);
+    // Не прерываем запуск сервера, даже если инициализация не удалась
+  }
 
   await registerRoutes(httpServer, app);
 
