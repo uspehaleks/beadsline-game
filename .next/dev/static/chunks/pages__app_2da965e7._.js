@@ -24,7 +24,8 @@
   "static/chunks/node_modules_react-icons_si_index_mjs_81654ddc._.js",
   "static/chunks/node_modules_react-icons_lib_7cd2a28b._.js",
   "static/chunks/node_modules_framer-motion_dist_es_fd7aa80f._.js",
-  "static/chunks/node_modules_29ae29ac._.js"
+  "static/chunks/node_modules_29ae29ac._.js",
+  "static/chunks/client_src_index_0965b493.css"
 ],
     source: "entry"
 });

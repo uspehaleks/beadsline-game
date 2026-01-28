@@ -270,3 +270,68 @@ See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode de
 [00:17:32.668] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
 [00:17:32.691] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626454400", 1]
 [00:17:32.939] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:22:14.075] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626735777", 1]
+[00:22:14.566] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:22:14.590] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626736298", 1]
+[00:22:14.921] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:22:15.125] Server  LOG     Environment info endpoint called
+[00:22:15.126] Server  LOG     DATABASE_URL exists: true
+[00:22:15.126] Server  LOG     SESSION_SECRET exists: true
+[00:22:15.127] Server  LOG     NODE_ENV: "development"
+[00:22:15.360] Browser LOG     Environment info received: {"databaseHost":"aws-1-eu-west-1.pooler.supabase.com","databasePort":"6543","nodeEnv":"development","sessionSecretStatus":"Set","timestamp":"2026-01-28T18:58:56.837Z"}
+[00:22:20.014] Server  LOG     Environment variables check:
+[00:22:20.014] Server  LOG     - DATABASE_URL Status: "Found"
+[00:22:20.014] Server  LOG     - PORT: "3000"
+[00:22:20.014] Server  LOG     - NODE_ENV: "development"
+[00:22:29.671] Server  LOG     Environment variables check:
+[00:22:29.672] Server  LOG     - DATABASE_URL Status: "Found"
+[00:22:29.672] Server  LOG     - PORT: "3000"
+[00:22:29.672] Server  LOG     - NODE_ENV: "development"
+[00:26:02.594] Server  LOG     Environment variables check:
+[00:26:02.602] Server  LOG     - DATABASE_URL Status: "Found"
+[00:26:02.602] Server  LOG     - PORT: "3000"
+[00:26:02.603] Server  LOG     - NODE_ENV: "development"
+[00:26:10.371] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626972079", 1]
+[00:26:10.802] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:26:10.818] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626972526", 1]
+[00:26:11.059] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:26:11.096] Server  LOG     Environment info endpoint called
+[00:26:11.096] Server  LOG     DATABASE_URL exists: true
+[00:26:11.096] Server  LOG     SESSION_SECRET exists: true
+[00:26:11.097] Server  LOG     NODE_ENV: "development"
+[00:26:11.206] Browser LOG     Environment info received: {"databaseHost":"aws-1-eu-west-1.pooler.supabase.com","databasePort":"6543","nodeEnv":"development","sessionSecretStatus":"Set","timestamp":"2026-01-28T19:02:52.806Z"}
+[00:26:15.286] Browser LOG     Refreshing page data due to server-side change
+[00:26:15.288] Browser LOG     Refreshing page data due to server-side change
+[00:26:20.234] Server  LOG     ✓ Compiled in 5.9s
+[00:26:21.341] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:21.343] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx

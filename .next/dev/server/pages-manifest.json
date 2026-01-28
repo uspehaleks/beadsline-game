@@ -6,6 +6,8 @@
   "/api/auth/me": "pages/api/auth/me.js",
   "/api/character": "pages/api/character.js",
   "/api/character/exists": "pages/api/character/exists.js",
+  "/api/env-info": "pages/api/env-info.js",
+  "/api/health-check": "pages/api/health-check.js",
   "/api/maintenance": "pages/api/maintenance.js",
   "/api/user/crypto-tickets/count": "pages/api/user/crypto-tickets/count.js",
   "/db-health": "pages/db-health.js"

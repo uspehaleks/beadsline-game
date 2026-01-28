@@ -4158,6 +4158,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$pages$2f$App$2e$tsx__$5b$cli
 var _s = __turbopack_context__.k.signature();
 ;
 ;
+;
 function WrappedApp(props) {
     _s();
     const [isMounted, setIsMounted] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -4170,7 +4171,7 @@ function WrappedApp(props) {
         // Возвращаем пустой div на сервере
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
             fileName: "[project]/pages/_app.tsx",
-            lineNumber: 14,
+            lineNumber: 15,
             columnNumber: 12
         }, this);
     }
@@ -4179,7 +4180,7 @@ function WrappedApp(props) {
         ...props
     }, void 0, false, {
         fileName: "[project]/pages/_app.tsx",
-        lineNumber: 18,
+        lineNumber: 19,
         columnNumber: 10
     }, this);
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import App from './App';
+import '../client/src/index.css';
 
 // Обертка для SSR
 export default function WrappedApp(props: any) {

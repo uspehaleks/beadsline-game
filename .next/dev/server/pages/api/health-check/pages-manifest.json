@@ -1,0 +1,3 @@
+{
+  "/api/health-check": "pages/api/health-check.js"
+}
