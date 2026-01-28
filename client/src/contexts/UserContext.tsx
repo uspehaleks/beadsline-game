@@ -153,6 +153,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
               directReferralsCount: 0,
               completedLevels: [1, 2, 3, 4, 5],
               signupBonusReceived: true,
+              btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+              ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+              usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
               ratingScore: 1200,
               totalScore: 5000,
               totalWins: 5,
@@ -165,6 +168,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
               characterHealthState: 'normal',
               characterMood: 'happy',
               bonusLives: 0,
+              btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+              ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+              usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
               lastActivityAt: new Date().toISOString(),
               createdAt: new Date().toISOString(),
               deletedAt: null,
