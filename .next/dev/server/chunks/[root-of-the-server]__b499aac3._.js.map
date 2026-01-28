@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 16, "column": 0}, "map": {"version":3,"sources":["file:///D:/BeadsLine/pages/api/maintenance.ts"],"sourcesContent":["// pages/api/maintenance.ts\nimport type { NextApiRequest, NextApiResponse } from 'next';\n\nexport default async function handler(req: NextApiRequest, res: NextApiResponse) {\n  if (req.method !== 'GET') {\n    return res.status(405).json({ error: 'Method not allowed' });\n  }\n\n  try {\n    // Возвращаем информацию о состоянии обслуживания\n    const maintenance = {\n      enabled: false, // по умолчанию обслуживание отключено\n      endTime: null,\n      message: null,\n    };\n\n    res.status(200).json(maintenance);\n  } catch (error) {\n    console.error('Error in /api/maintenance:', error);\n    res.status(500).json({ error: 'Internal server error' });\n  }\n}"],"names":[],"mappings":"AAAA,2BAA2B;;;;;AAGZ,eAAe,QAAQ,GAAmB,EAAE,GAAoB;IAC7E,IAAI,IAAI,MAAM,KAAK,OAAO;QACxB,OAAO,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;YAAE,OAAO;QAAqB;IAC5D;IAEA,IAAI;QACF,iDAAiD;QACjD,MAAM,cAAc;YAClB,SAAS;YACT,SAAS;YACT,SAAS;QACX;QAEA,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;IACvB,EAAE,OAAO,OAAO;QACd,QAAQ,KAAK,CAAC,8BAA8B;QAC5C,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;YAAE,OAAO;QAAwB;IACxD;AACF"}}]
+}

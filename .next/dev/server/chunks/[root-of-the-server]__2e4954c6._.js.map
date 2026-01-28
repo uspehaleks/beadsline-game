@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 16, "column": 0}, "map": {"version":3,"sources":["file:///D:/BeadsLine/pages/api/character/exists.ts"],"sourcesContent":["// pages/api/character/exists.ts\nimport type { NextApiRequest, NextApiResponse } from 'next';\n\nexport default async function handler(req: NextApiRequest, res: NextApiResponse) {\n  if (req.method !== 'GET') {\n    return res.status(405).json({ error: 'Method not allowed' });\n  }\n\n  try {\n    // Возвращаем информацию о наличии персонажа у пользователя\n    // В реальном приложении здесь будет логика проверки в базе данных\n    const exists = false; // по умолчанию персонаж не создан\n\n    res.status(200).json({ exists });\n  } catch (error) {\n    console.error('Error in /api/character/exists:', error);\n    res.status(500).json({ error: 'Internal server error' });\n  }\n}"],"names":[],"mappings":"AAAA,gCAAgC;;;;;AAGjB,eAAe,QAAQ,GAAmB,EAAE,GAAoB;IAC7E,IAAI,IAAI,MAAM,KAAK,OAAO;QACxB,OAAO,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;YAAE,OAAO;QAAqB;IAC5D;IAEA,IAAI;QACF,2DAA2D;QAC3D,kEAAkE;QAClE,MAAM,SAAS,OAAO,kCAAkC;QAExD,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;YAAE;QAAO;IAChC,EAAE,OAAO,OAAO;QACd,QAAQ,KAAK,CAAC,mCAAmC;QACjD,IAAI,MAAM,CAAC,KAAK,IAAI,CAAC;YAAE,OAAO;QAAwB;IACxD;AACF"}}]
+}
