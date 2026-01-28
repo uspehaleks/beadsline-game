@@ -7,9 +7,9 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
-    "build": "tsx script/build.ts",
-    "start": "cross-env NODE_ENV=production node --no-warnings dist/index.cjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "check": "tsc --skipLibCheck || true",
     "db:push": "drizzle-kit push",
     "db:migrate": "node script/run-migrations.js",
