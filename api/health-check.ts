@@ -25,17 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let testPool;
   try {
-    // Modify the connection string to include SSL parameters
-    let connectionString = process.env.DATABASE_URL;
-
-    if (connectionString && !connectionString.includes('sslmode=')) {
-      // Add sslmode=require to the connection string to handle self-signed certificates
-      const separator = connectionString.includes('?') ? '&' : '?';
-      connectionString = `${connectionString}${separator}sslmode=require`;
-    }
-
     testPool = new Pool({
-      connectionString: connectionString,
+      connectionString: process.env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: false
       }
