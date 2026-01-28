@@ -20,13 +20,16 @@ export const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  // Параметры для serverless среды Vercel
-  connectionTimeoutMillis: 2000,  // Уменьшаем таймаут подключения
-  idleTimeoutMillis: 10000,       // Уменьшаем таймаут простоя
-  max: 1,                         // Только одно соединение для serverless
-  // Дополнительные параметры для стабильности
+  // Агрессивная оптимизация для serverless среды Vercel
+  connectionTimeoutMillis: 1000,  // Минимальный таймаут подключения
+  idleTimeoutMillis: 5000,        // Минимальный таймаут простоя
+  max: 1,                         // Минимальное количество соединений
+  // Дополнительные параметры для стабильности в serverless
+  maxUses: 750,                   // Количество использований соединения до пересоздания (около 5-10 мин при 1 запросе в сек)
+  statement_timeout: 3000,        // Таймаут выполнения SQL запроса
+  query_timeout: 5000,            // Таймаут выполнения запроса
   keepAlive: true,                // Поддерживать соединение активным
-  keepAliveInitialDelayMillis: 5000 // Задержка перед первой проверкой keep-alive
+  keepAliveInitialDelayMillis: 1000 // Уменьшенная задержка keep-alive
 });
 
 // В serverless среде не производим тестовое подключение при запуске
