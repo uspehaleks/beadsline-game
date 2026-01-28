@@ -793,8 +793,62 @@ export async function registerRoutes(
     console.error('Failed to initialize default boost packages:', err);
   });
   
-  import { healthCheckHandler } from "./health-check.js";
-  app.get("/api/health-check", healthCheckHandler);
+  // Импортируем sql для проверки работоспособности
+  // Используем временное соединение для проверки работоспособности в serverless среде
+  app.get("/api/health-check", async (req, res) => {
+    console.log("Health check endpoint called from:", req.ip || 'unknown IP');
+
+    // Создаем временное соединение для проверки
+    const { Pool } = await import('pg');
+    const { drizzle } = await import('drizzle-orm/node-postgres');
+    const schemaModule = await import('../shared/schema.js');
+
+    const tempPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      },
+      // Настройки для краткосрочного соединения в serverless
+      connectionTimeoutMillis: 2000,
+      idleTimeoutMillis: 5000,
+      max: 1,
+    });
+
+    try {
+      // Выполняем самый простой запрос, чтобы проверить соединение
+      const client = await tempPool.connect();
+      await client.query('SELECT 1');
+      client.release();
+
+      const tempDb = drizzle(tempPool, { schema: schemaModule });
+
+      // Проверяем доступ к таблице пользователей
+      const userCountResult = await tempDb.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
+      const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
+      console.log("Tables accessibility check successful");
+
+      res.status(200).json({
+        status: 'healthy',
+        databaseConnected: true,
+        tablesAccessible: tablesAccessible,
+        timestamp: new Date().toISOString(),
+        message: 'База данных подключена и доступна'
+      });
+    } catch (error: any) {
+      console.error("Health check failed:", error);
+      res.status(500).json({
+        status: 'unhealthy',
+        databaseConnected: false,
+        tablesAccessible: false,
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        message: 'Ошибка подключения к базе данных'
+      });
+    } finally {
+      // Обязательно закрываем соединение
+      await tempPool.end();
+    }
+  });
 
 
   app.post("/api/auth/telegram", async (req, res) => {
