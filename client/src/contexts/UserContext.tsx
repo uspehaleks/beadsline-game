@@ -115,6 +115,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 characterHealthState: 'normal',
                 characterMood: 'happy',
                 bonusLives: 0,
+                btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+                ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+                usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
                 lastActivityAt: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
                 deletedAt: null,
