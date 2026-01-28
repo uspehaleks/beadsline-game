@@ -12,8 +12,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Получаем информацию об окружении
   const databaseUrl = process.env.DATABASE_URL;
-  let databaseHost = 'Not Set';
-  let databasePort = 'Not Set';
+  let databaseHost = 'Not Available (Check Vercel Env Vars)';
+  let databasePort = 'Not Available (Check Vercel Env Vars)';
 
   if (databaseUrl) {
     try {
@@ -51,6 +51,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         databasePort = parsed.port;
       } else {
         console.log("Could not parse DATABASE_URL:", databaseUrl);
+        databaseHost = 'Parse Error';
+        databasePort = 'Parse Error';
       }
     } catch (parseError) {
       console.error('Error parsing DATABASE_URL:', parseError);
@@ -61,8 +63,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log('DATABASE_URL is not set in environment variables');
   }
 
-  const sessionSecretStatus = process.env.SESSION_SECRET ? 'Set' : 'Not Set';
-  const nodeEnv = process.env.NODE_ENV || 'development';
+  const sessionSecretStatus = process.env.SESSION_SECRET ? 'Set' : 'Not Set (Check Vercel Env Vars)';
+  const nodeEnv = process.env.NODE_ENV || 'development (Default)';
 
   console.log("Environment info response:", {
     databaseHost,
