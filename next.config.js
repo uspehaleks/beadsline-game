@@ -31,11 +31,10 @@ const nextConfig = {
   },
   // Указываем, где искать pages
   // Но для этого нужно использовать другую стратегию
-  // Явно указываем использовать Webpack, а не Turbopack
   experimental: {
-    turbo: {
-      rules: {}
-    }
+    // Настройки для улучшения стабильности сборки
+    workerThreads: false,
+    cpus: 1
   }
 };
 
