@@ -1,7 +1,9 @@
 // Общий API маршрут для обработки запросов к API
 // Этот файл будет обрабатывать все /api/ запросы, которые не имеют специфического маршрута
 
-export default function handler(req, res) {
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Возвращаем информацию о доступных API маршрутах
   res.status(200).json({
     message: "BeadsLine API",
