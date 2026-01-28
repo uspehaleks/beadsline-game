@@ -10,12 +10,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Получаем ID пользователя из сессии или заголовков (в зависимости от вашей системы аутентификации)
-    // В данном случае предполагаем, что ID пользователя передается в заголовке или сессии
-    const userId = req.headers['x-user-id'] as string || req.cookies?.userId;
+    // В Telegram Mini Apps пользователь часто передается через заголовки
+    // Проверяем различные источники ID пользователя
+    let userId = req.headers['x-user-id'] as string ||
+                 req.headers['user-id'] as string ||
+                 req.query.userId as string ||
+                 req.cookies?.userId;
 
+    // Если нет userId, проверяем, может быть, это тестовый режим
     if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      // В тестовом режиме можем использовать фиксированный ID
+      if (process.env.NODE_ENV === 'development') {
+        userId = 'test-user-' + Date.now();
+      } else {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
     }
 
     // Проверяем, существует ли пользователь в базе данных
@@ -39,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ethTodayWei: 0n,
         usdtToday: "0",
         referralCode: `REF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        referredBy: null,
         directReferralsCount: 0,
         completedLevels: [],
         signupBonusReceived: false,
@@ -48,10 +58,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currentWinStreak: 0,
         bestWinStreak: 0,
         totalCombo5Plus: 0,
+        characterGender: null,
+        characterName: null,
         characterEnergy: 100,
+        characterHealthState: "normal",
+        characterMood: "neutral",
         bonusLives: 0,
         lastActivityAt: new Date(),
         createdAt: new Date(),
+        deletedAt: null,
       }).returning();
 
       user = newUser;

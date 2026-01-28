@@ -135,3 +135,120 @@ Import trace:
     ./pages/api/auth/me.ts
 
 https://nextjs.org/docs/messages/module-not-found
+[00:12:07.284] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:12:07.284] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:12:07.285] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:12:07.285] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:13:22.690] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:13:22.690] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:13:23.856] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:13:25.300] Server  LOG     Attempting to connect to database...
+[00:13:25.302] Server  LOG     Connecting to host: "aws-1-eu-west-1.pooler.supabase.com" "on port:" "6543"
+[00:13:25.304] Server  LOG     DATABASE_URL exists: true
+[00:13:25.304] Server  LOG     DIRECT_URL exists: false
+[00:13:25.304] Server  LOG     DATABASE_URL being used: "postgresql://postgres.obgqrgauhciixcijofkl:BeadsLi..."
