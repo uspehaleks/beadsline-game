@@ -1420,13 +1420,16 @@ async function handler(req, res) {
         });
     }
     try {
-        // Получаем ID пользователя из сессии или заголовков (в зависимости от вашей системы аутентификации)
-        // В данном случае предполагаем, что ID пользователя передается в заголовке или сессии
-        const userId = req.headers['x-user-id'] || req.cookies?.userId;
+        // В Telegram Mini Apps пользователь часто передается через заголовки
+        // Проверяем различные источники ID пользователя
+        let userId = req.headers['x-user-id'] || req.headers['user-id'] || req.query.userId || req.cookies?.userId;
+        // Если нет userId, проверяем, может быть, это тестовый режим
         if (!userId) {
-            return res.status(401).json({
-                error: 'User not authenticated'
-            });
+            // В тестовом режиме можем использовать фиксированный ID
+            if ("TURBOPACK compile-time truthy", 1) {
+                userId = 'test-user-' + Date.now();
+            } else //TURBOPACK unreachable
+            ;
         }
         // Проверяем, существует ли пользователь в базе данных
         let user = await __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$db$2e$ts__$5b$api$5d$__$28$ecmascript$29$__$3c$locals$3e$__["db"].select().from(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$api$5d$__$28$ecmascript$29$__["users"]).where((0, __TURBOPACK__imported__module__$5b$externals$5d2f$drizzle$2d$orm__$5b$external$5d$__$28$drizzle$2d$orm$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$29$__["eq"])(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$api$5d$__$28$ecmascript$29$__["users"].id, userId)).limit(1);
@@ -1448,6 +1451,7 @@ async function handler(req, res) {
                 ethTodayWei: 0n,
                 usdtToday: "0",
                 referralCode: `REF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+                referredBy: null,
                 directReferralsCount: 0,
                 completedLevels: [],
                 signupBonusReceived: false,
@@ -1457,10 +1461,15 @@ async function handler(req, res) {
                 currentWinStreak: 0,
                 bestWinStreak: 0,
                 totalCombo5Plus: 0,
+                characterGender: null,
+                characterName: null,
                 characterEnergy: 100,
+                characterHealthState: "normal",
+                characterMood: "neutral",
                 bonusLives: 0,
                 lastActivityAt: new Date(),
-                createdAt: new Date()
+                createdAt: new Date(),
+                deletedAt: null
             }).returning();
             user = newUser;
         } else {

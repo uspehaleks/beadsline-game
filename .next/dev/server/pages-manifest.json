@@ -7,5 +7,6 @@
   "/api/character": "pages/api/character.js",
   "/api/character/exists": "pages/api/character/exists.js",
   "/api/maintenance": "pages/api/maintenance.js",
-  "/api/user/crypto-tickets/count": "pages/api/user/crypto-tickets/count.js"
+  "/api/user/crypto-tickets/count": "pages/api/user/crypto-tickets/count.js",
+  "/db-health": "pages/db-health.js"
 }

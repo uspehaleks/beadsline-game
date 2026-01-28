@@ -5,6 +5,9 @@ self.__BUILD_MANIFEST = {
   "/_error": [
     "static/chunks/pages/_error.js"
   ],
+  "/db-health": [
+    "static/chunks/pages/db-health.js"
+  ],
   "__rewrites": {
     "afterFiles": [],
     "beforeFiles": [],
@@ -42,6 +45,7 @@ self.__BUILD_MANIFEST = {
     "/api/user/crypto-tickets/count",
     "/api/user/crypto-tickets/use",
     "/api/user/league",
+    "/db-health",
     "/not-found"
   ]
 };self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()

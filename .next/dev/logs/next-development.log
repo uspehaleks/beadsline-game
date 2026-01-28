@@ -252,3 +252,21 @@ https://nextjs.org/docs/messages/module-not-found
 [00:13:25.304] Server  LOG     DATABASE_URL exists: true
 [00:13:25.304] Server  LOG     DIRECT_URL exists: false
 [00:13:25.304] Server  LOG     DATABASE_URL being used: "postgresql://postgres.obgqrgauhciixcijofkl:BeadsLi..."
+[00:17:32.173] Server  LOG     Attempting to connect to database...
+[00:17:32.174] Server  LOG     Connecting to host: "aws-1-eu-west-1.pooler.supabase.com" "on port:" "6543"
+[00:17:32.174] Server  LOG     DATABASE_URL exists: true
+[00:17:32.174] Server  LOG     DIRECT_URL exists: false
+[00:17:32.175] Server  LOG     DATABASE_URL being used: "postgresql://postgres.obgqrgauhciixcijofkl:BeadsLi..."
+[00:17:32.189] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626453891", 1]
+[00:17:32.206] Server  ERROR   (node:6964) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[00:17:32.668] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain
+[00:17:32.691] Server  LOG     Query: select "id", "telegram_id", "username", "first_name", "last_name", "photo_url", "total_points", "games_played", "best_score", "is_admin", "btc_balance", "eth_balance", "usdt_balance", "btc_balance_sats", "btc_today_sats", "btc_today_date", "eth_balance_wei", "eth_today_wei", "eth_today_date", "usdt_today", "usdt_today_date", "referral_code", "referred_by", "direct_referrals_count", "completed_levels", "signup_bonus_received", "rating_score", "total_score", "total_wins", "current_win_streak", "best_win_streak", "total_combo_5_plus", "character_gender", "character_name", "character_energy", "character_health_state", "character_mood", "bonus_lives", "last_activity_at", "created_at", "deleted_at" from "users" where "users"."id" = $1 limit $2 -- params: ["test-user-1769626454400", 1]
+[00:17:32.939] Server  ERROR   Error in /api/auth/me: Error: self-signed certificate in certificate chain

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 6, "column": 0}, "map": {"version":3,"sources":["file:///D:/BeadsLine/pages/db-health.tsx"],"sourcesContent":["// pages/db-health.tsx\nimport DatabaseHealth from './DatabaseHealth';\n\nexport default DatabaseHealth;"],"names":[],"mappings":";;;;AAAA,sBAAsB;AACtB;;;;;;uCAEe,4HAAc"}}]
+}
