@@ -12,14 +12,35 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (databaseUrl) {
     try {
-      // Парсим URL базы данных для извлечения хоста и порта
-      // Используем регулярное выражение, так как URL может быть в формате postgresql://
-      const match = databaseUrl.match(/:\/\/[^:]+:[^@]+@([^:\/]+):(\d+)/);
-      if (match) {
-        databaseHost = match[1];
-        databasePort = match[2];
+      // Создаем вспомогательную функцию для парсинга URL базы данных
+      const parseDbUrl = (url: string) => {
+        // Для URL в формате postgresql://user:pass@host:port/database?params
+        const match = url.match(/:\/\/[^:]+:[^@]+@([^:\/]+):(\d+)/);
+        if (match) {
+          return { host: match[1], port: match[2] };
+        }
+        // Если не удалось распарсить с помощью регулярного выражения,
+        // пробуем использовать URL объект (преобразуем сначала к http://)
+        try {
+          // Заменяем postgresql:// на http:// для парсинга
+          const httpUrl = url.replace(/^([a-zA-Z]+):\/\//, 'http://');
+          const parsed = new URL(httpUrl);
+          // Извлекаем порт (если не указан, используем 5432 по умолчанию для PostgreSQL)
+          const port = parsed.port || '5432';
+          // Извлекаем хост
+          const host = parsed.hostname;
+          return { host, port };
+        } catch (urlError) {
+          console.error('URL parsing failed:', urlError);
+          return null;
+        }
+      };
+
+      const parsed = parseDbUrl(databaseUrl);
+      if (parsed) {
+        databaseHost = parsed.host;
+        databasePort = parsed.port;
       } else {
-        // Если не удалось распарсить, используем сам URL как есть
         console.log("Could not parse DATABASE_URL:", databaseUrl);
       }
     } catch (parseError) {
