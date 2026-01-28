@@ -118,8 +118,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
                 ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
                 usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
-                lastActivityAt: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
+                lastActivityAt: new Date(),
+                createdAt: new Date(),
                 deletedAt: null,
                 isAdmin: isAdminForced // Устанавливаем isAdmin в true, если forceAdmin=true
               };
@@ -159,6 +159,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
               btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
               ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
               usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+              lastActivityAt: new Date(),
+              createdAt: new Date(),
               ratingScore: 1200,
               totalScore: 5000,
               totalWins: 5,
