@@ -44,21 +44,32 @@ export default function DatabaseHealth() {
         const errorText = await response.text();
         console.error('Error response:', errorText);
 
-        // В случае ошибки, используем значения по умолчанию
-        setEnvInfo({
-          databaseHost: 'supabase.db', // Используем значение по умолчанию
-          databasePort: '6543', // Используем значение по умолчанию
-          sessionSecretStatus: 'Set', // Предполагаем, что секрет установлен
-          nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'production' : 'production'
-        });
+        // В случае ошибки, используем реальные значения из ответа, если они есть
+        try {
+          const errorData = JSON.parse(errorText);
+          setEnvInfo({
+            databaseHost: errorData.databaseHost || 'Not Available',
+            databasePort: errorData.databasePort || 'Not Available',
+            sessionSecretStatus: errorData.sessionSecretStatus || 'Not Available',
+            nodeEnv: errorData.nodeEnv || (typeof window !== 'undefined' ? process.env.NODE_ENV || 'production' : 'production')
+          });
+        } catch {
+          // Если не можем распарсить ошибку, используем значения по умолчанию
+          setEnvInfo({
+            databaseHost: 'Not Available (Check Vercel Logs)',
+            databasePort: 'Not Available (Check Vercel Logs)',
+            sessionSecretStatus: 'Not Available (Check Vercel Logs)',
+            nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'production' : 'production'
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching environment info:', error);
-      // В случае сетевой ошибки, используем значения по умолчанию
+      // В случае сетевой ошибки, используем реальные данные, если возможно
       setEnvInfo({
         databaseHost: 'supabase.db', // Используем значение по умолчанию
         databasePort: '6543', // Используем значение по умолчанию
-        sessionSecretStatus: 'Set', // Предполагаем, что секрет установлен
+        sessionSecretStatus: process.env.SESSION_SECRET ? 'Set' : 'Not Set', // Проверяем переменную на клиенте
         nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'production' : 'production'
       });
     }
