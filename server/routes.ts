@@ -918,7 +918,6 @@ export async function registerRoutes(
           totalPoints: 5000,
           gamesPlayed: 10,
           bestScore: 1500,
-          isAdmin: false,
           btcBalance: 0.001,
           ethBalance: 0.01,
           usdtBalance: 10.5,
