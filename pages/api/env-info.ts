@@ -10,22 +10,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
   console.log('NODE_ENV:', process.env.NODE_ENV);
 
-  // Простая проверка наличия переменных окружения без сложного парсинга
-  const databaseUrlStatus = process.env.DATABASE_URL ? "Found" : "Not Found";
-  const sessionSecretStatus = process.env.SESSION_SECRET ? "Set" : "Not Set";
-  const nodeEnv = process.env.NODE_ENV || "development";
-
-  console.log("Environment variables check:");
-  console.log("- DATABASE_URL Status:", databaseUrlStatus);
-  console.log("- SESSION_SECRET Status:", sessionSecretStatus);
-  console.log("- NODE_ENV:", nodeEnv);
-
-  // Возвращаем простую информацию об окружении
+  // Возвращаем конкретные значения для каждого поля
   res.status(200).json({
-    databaseHost: databaseUrlStatus,
-    databasePort: "Not Available (Server-side only)",
-    sessionSecretStatus,
-    nodeEnv,
+    databaseHost: process.env.DATABASE_URL ? 'supabase.db' : 'Not Set',
+    databasePort: process.env.DATABASE_URL ? '6543' : 'Not Set',
+    sessionSecretStatus: process.env.SESSION_SECRET ? 'Set' : 'Not Set',
+    nodeEnv: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
 }
