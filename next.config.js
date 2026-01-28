@@ -7,13 +7,9 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["pg", "drizzle-orm"],
-    webpackBuildWorker: {
-      // Настройки для стабильности сборки
-      unstable_strict: true
-    }
+    // Явно отключаем Turbopack и используем Webpack
+    turbopack: false
   },
-  // Явно указываем использовать Webpack, а не Turbopack
-  webpack5: true,
   // Указываем Next.js использовать директорию client/src как корень для исходников
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   webpack: (config, { isServer }) => {
