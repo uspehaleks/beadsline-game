@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +16,86 @@ export default function DatabaseHealth() {
     errorDetail: null as string | null,
     errorHint: null as string | null,
   });
-  
+
+  const [envInfo, setEnvInfo] = useState({
+    databaseHost: '',
+    databasePort: '',
+    sessionSecretStatus: '',
+    nodeEnv: ''
+  });
+
   const [loading, setLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+
+  const fetchEnvInfo = async () => {
+    try {
+      const response = await fetch('/api/env-info', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setEnvInfo({
+          databaseHost: data.databaseHost || '',
+          databasePort: data.databasePort || '',
+          sessionSecretStatus: data.sessionSecretStatus || '',
+          nodeEnv: data.nodeEnv || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching environment info:', error);
+    }
+  };
+
+  const refreshHealthCheck = async () => {
+    setRefreshLoading(true);
+    try {
+      const response = await fetch('/api/health-check');
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus({
+          isConnected: true,
+          isDatabaseAccessible: data.databaseConnected,
+          isTablesAccessible: data.tablesAccessible,
+          lastCheck: new Date().toLocaleString('ru-RU'),
+          error: null,
+          details: null,
+          errorCode: null,
+          errorDetail: null,
+          errorHint: null,
+        });
+      } else {
+        setStatus({
+          isConnected: false,
+          isDatabaseAccessible: false,
+          isTablesAccessible: false,
+          lastCheck: new Date().toLocaleString('ru-RU'),
+          error: data.error || 'Неизвестная ошибка',
+          details: data.stack || null,
+          errorCode: data.code || null,
+          errorDetail: data.detail || null,
+          errorHint: data.hint || null,
+        });
+      }
+    } catch (error) {
+      setStatus({
+        isConnected: false,
+        isDatabaseAccessible: false,
+        isTablesAccessible: false,
+        lastCheck: new Date().toLocaleString('ru-RU'),
+        error: error instanceof Error ? error.message : 'Ошибка при проверке подключения',
+        details: error instanceof Error ? error.stack : null,
+        errorCode: null,
+        errorDetail: null,
+        errorHint: null,
+      });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
+  // Загружаем информацию об окружении при монтировании компонента
+  useEffect(() => {
+    fetchEnvInfo();
+  }, []);
 
   const checkConnection = async () => {
     setLoading(true);
@@ -188,8 +266,20 @@ export default function DatabaseHealth() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Информация о подключении</CardTitle>
+            <Button
+              onClick={refreshHealthCheck}
+              disabled={refreshLoading}
+              className="flex items-center gap-2"
+            >
+              {refreshLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Network className="w-4 h-4" />
+              )}
+              {refreshLoading ? 'Обновление...' : 'Обновить'}
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -198,15 +288,27 @@ export default function DatabaseHealth() {
                 <span>PostgreSQL (Supabase)</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Среда выполнения:</span>
-                <span>production</span>
+                <span className="text-muted-foreground">Хост базы данных:</span>
+                <span>{envInfo.databaseHost || 'Загрузка...'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Порт базы данных:</span>
+                <span>{envInfo.databasePort || 'Загрузка...'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Статус SESSION_SECRET:</span>
+                <span>{envInfo.sessionSecretStatus || 'Загрузка...'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Среда выполнения (NODE_ENV):</span>
+                <span>{envInfo.nodeEnv || 'Загрузка...'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Серверная часть:</span>
                 <span>Vercel Serverless</span>
               </div>
             </div>
-            
+
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <h4 className="font-medium mb-2">Инструкция по устранению неполадок:</h4>
               <ul className="text-sm space-y-1 list-disc pl-5">

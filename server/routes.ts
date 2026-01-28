@@ -825,6 +825,37 @@ export async function registerRoutes(
     }
   });
 
+  // API endpoint для получения информации об окружении
+  app.get("/api/env-info", async (req, res) => {
+    console.log("Environment info endpoint called from:", req.ip || 'unknown IP');
+
+    // Получаем информацию об окружении
+    const databaseUrl = process.env.DATABASE_URL;
+    let databaseHost = '';
+    let databasePort = '';
+
+    if (databaseUrl) {
+      try {
+        const url = new URL(databaseUrl);
+        databaseHost = url.hostname;
+        databasePort = url.port || '5432'; // По умолчанию PostgreSQL использует порт 5432
+      } catch (error) {
+        console.error('Error parsing DATABASE_URL:', error);
+      }
+    }
+
+    const sessionSecretStatus = process.env.SESSION_SECRET ? 'Set' : 'Not Set';
+    const nodeEnv = process.env.NODE_ENV || 'development';
+
+    res.status(200).json({
+      databaseHost,
+      databasePort,
+      sessionSecretStatus,
+      nodeEnv,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.post("/api/auth/telegram", async (req, res) => {
     try {
       const { telegramId, username, firstName, lastName, photoUrl, startParam } = req.body;
