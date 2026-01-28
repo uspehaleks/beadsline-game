@@ -11,10 +11,28 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log('SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
     console.log('NODE_ENV:', process.env.NODE_ENV);
 
+    // Извлекаем хост из DATABASE_URL, если возможно
+    let databaseHost = 'Not Set';
+    let databasePort = 'Not Set';
+
+    if (process.env.DATABASE_URL) {
+      try {
+        // Парсим URL для получения хоста и порта
+        const url = new URL(process.env.DATABASE_URL);
+        databaseHost = url.hostname;
+        databasePort = url.port || '5432'; // по умолчанию PostgreSQL использует 5432
+      } catch (urlError) {
+        console.error('Error parsing DATABASE_URL:', urlError);
+        // Если не можем распарсить, используем общее описание
+        databaseHost = 'supabase.db';
+        databasePort = '6543'; // предполагаем pgbouncer
+      }
+    }
+
     // Возвращаем конкретные значения для каждого поля
     res.status(200).json({
-      databaseHost: process.env.DATABASE_URL ? 'supabase.db' : 'Not Set',
-      databasePort: process.env.DATABASE_URL ? '6543' : 'Not Set',
+      databaseHost,
+      databasePort,
       sessionSecretStatus: process.env.SESSION_SECRET ? 'Set' : 'Not Set',
       nodeEnv: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
