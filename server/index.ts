@@ -96,15 +96,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  try {
-    const { storage } = await import("./storage.js");
-    console.log("Attempting to initialize default base bodies...");
-    await storage.ensureDefaultBaseBodies();
-    console.log("Default base bodies initialized successfully");
-  } catch (error) {
-    console.error("Failed to initialize storage:", error);
-    // Не прерываем запуск сервера, даже если инициализация не удалась
-  }
+  // Не производим инициализацию хранилища при запуске сервера в serverless среде
+  // Инициализация будет происходить по требованию при первом обращении к базе данных
+  console.log("Server starting without pre-initializing storage (for serverless compatibility)");
 
   await registerRoutes(httpServer, app);
 
