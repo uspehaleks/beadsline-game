@@ -20,20 +20,17 @@ export const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  // Добавляем параметры для лучшей стабильности соединения
-  connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
-  idleTimeoutMillis: 30000,      // 30 секунд таймаут простоя
-  max: 10                        // Максимальное количество соединений в пуле
+  // Параметры для serverless среды Vercel
+  connectionTimeoutMillis: 2000,  // Уменьшаем таймаут подключения
+  idleTimeoutMillis: 10000,       // Уменьшаем таймаут простоя
+  max: 1,                         // Только одно соединение для serverless
+  // Дополнительные параметры для стабильности
+  keepAlive: true,                // Поддерживать соединение активным
+  keepAliveInitialDelayMillis: 5000 // Задержка перед первой проверкой keep-alive
 });
 
-// Test the connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error("Database connection error:", err);
-  } else {
-    console.log("Database connected successfully");
-    release(); // Release the client back to the pool
-  }
-});
+// В serverless среде не производим тестовое подключение при запуске
+// Соединение будет установлено при первом запросе
+console.log("Database pool configured for serverless environment");
 
 export const db = drizzle(pool, { schema });
