@@ -1,2 +1,11 @@
-server/vite.ts
-.next
+# Игнорировать старые файлы сборки
+client/
+server/
+script/
+dist/
+!.next
+!pages/**
+!public/**
+!components/**
+!lib/**
+!shared/**
