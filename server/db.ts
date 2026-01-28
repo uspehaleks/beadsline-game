@@ -67,7 +67,13 @@ export const pool = new Pool({
 // Соединение будет установлено при первом запросе
 console.log("Database pool configured for serverless environment with pgbouncer");
 
-export const db = drizzle(pool, { schema });
+// Создаем Drizzle DB с настройками для PgBouncer
+export const db = drizzle(pool, {
+  schema,
+  logger: false, // Отключаем логирование Drizzle для уменьшения нагрузки
+  // Отключаем подготовленные операторы для совместимости с PgBouncer
+  prepare: false  // КРИТИЧЕСКИ ВАЖНО: отключаем подготовленные операторы для PgBouncer
+});
 
 // Функция для создания временного соединения для миграций и инициализации
 // Использует DIRECT_URL (порт 5432) для прямого подключения
@@ -86,8 +92,8 @@ export async function createDirectDbConnection() {
     connectionTimeoutMillis: 2000,
     idleTimeoutMillis: 10000,
     max: 1,
-    // Для прямого подключения можем использовать подготовленные операторы
-    noPrepare: false
+    // Для совместимости с любым типом подключения отключаем подготовленные операторы
+    noPrepare: true
   });
 
   try {
@@ -96,7 +102,12 @@ export async function createDirectDbConnection() {
     await client.query('SELECT 1'); // Простой запрос для проверки
     client.release();
 
-    const directDb = drizzle(directPool, { schema });
+    // Создаем Drizzle DB с настройками для совместимости
+    const directDb = drizzle(directPool, {
+      schema,
+      logger: false,
+      prepare: false  // Отключаем подготовленные операторы для совместимости
+    });
     return { db: directDb, pool: directPool };
   } catch (error) {
     await directPool.end(); // Обязательно закрываем пул при ошибке
