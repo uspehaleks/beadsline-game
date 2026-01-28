@@ -32,7 +32,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       // Проверяем, есть ли параметр forceAdmin в URL
-      const urlParams = new URLSearchParams(window.location.search);
+      const urlParams = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
       const isAdminForced = urlParams.get('forceAdmin') === 'true' || urlParams.get('forceAdmin') === '1';
 
       // Если forceAdmin=true, сначала устанавливаем сессию на сервере
@@ -193,7 +195,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       // Проверяем, есть ли параметр forceAdmin в URL
-      const urlParams = new URLSearchParams(window.location.search);
+      const urlParams = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
       const isAdminForced = urlParams.get('forceAdmin') === 'true' || urlParams.get('forceAdmin') === '1';
 
       // Если forceAdmin=true и мы в режиме разработки, сначала устанавливаем сессию на сервере

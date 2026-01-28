@@ -118,10 +118,12 @@ export default function Admin() {
 
   // Временная проверка автовхода для специального параметра
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('master') === 'true' && !user?.isAdmin) {
-      // Если сессии нет, но мы передаем спец-параметр, пробуем зайти автоматически
-      refreshUser?.();
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('master') === 'true' && !user?.isAdmin) {
+        // Если сессии нет, но мы передаем спец-параметр, пробуем зайти автоматически
+        refreshUser?.();
+      }
     }
   }, [user, refreshUser]);
 
@@ -271,7 +273,9 @@ export default function Admin() {
   });
 
   // ВРЕМЕННО: Убираем условие {!user.isAdmin && <LoginForm />} и просто отрисовываем админку, если в URL есть ?master=true
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
   const showMasterView = urlParams.get('master') === 'true';
 
   if (!user?.isAdmin && !showMasterView) {
