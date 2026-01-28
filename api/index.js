@@ -1,13 +1,22 @@
 // Vercel API Handler using next-connect
 import { createRouter } from 'next-connect';
-import { storage } from '../server/storage.js';
 
-// Initialize storage when module loads
+// Отложенная инициализация хранилища для serverless среды
+let storageInstance = null;
 let storageInitialized = false;
 
-async function initializeStorage() {
+async function getStorage() {
+  if (!storageInstance) {
+    const storageModule = await import('../server/storage.js');
+    storageInstance = storageModule.storage;
+  }
+  return storageInstance;
+}
+
+async function initializeStorageIfNeeded() {
   if (!storageInitialized) {
     try {
+      const storage = await getStorage();
       await storage.ensureDefaultBaseBodies();
       storageInitialized = true;
     } catch (error) {
@@ -16,17 +25,12 @@ async function initializeStorage() {
   }
 }
 
-// Initialize on module load
-initializeStorage().catch(console.error);
-
 // Create a router
 const router = createRouter();
 
-// Add a middleware to wait for initialization
+// Add a middleware to wait for initialization if needed
 router.use(async (req, res, next) => {
-  if (!storageInitialized) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
+  // Не ждем инициализации при каждом запросе для serverless совместимости
   next();
 });
 
