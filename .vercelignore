@@ -3,7 +3,6 @@ client/vite.config.ts
 client/
 server/
 script/
-dist/
 !.next
 !pages/**
 !public/**
