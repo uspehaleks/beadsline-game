@@ -249,8 +249,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             characterHealthState: 'normal',
             characterMood: 'happy',
             bonusLives: 0,
-            lastActivityAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
+            btcTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+            ethTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+            usdtTodayDate: new Date().toISOString().split('T')[0], // Добавляем отсутствующее поле
+            lastActivityAt: new Date(),
+            createdAt: new Date(),
             deletedAt: null,
             isAdmin: true // Устанавливаем isAdmin в true, если forceAdmin=true
           };
