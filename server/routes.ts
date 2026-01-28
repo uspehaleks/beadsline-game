@@ -768,12 +768,16 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  
+
+  // Проверяем isAdmin как в сессии, так и в пользовательских данных
+  // Это важно для фейковых администраторов, которых нет в базе данных
   const user = await storage.getUser(req.session.userId);
-  if (!user?.isAdmin) {
+  const isAdmin = req.session.isAdmin || user?.isAdmin;
+
+  if (!isAdmin) {
     return res.status(403).json({ error: "Admin access required" });
   }
-  
+
   next();
 }
 
@@ -790,16 +794,33 @@ export async function registerRoutes(
   });
   
   app.get("/api/health-check", async (req, res) => {
+    console.log("Health check endpoint called from:", req.ip || 'unknown IP');
     try {
       // Выполняем самый простой запрос, чтобы проверить соединение
       await db.execute(sql`select 1`);
-      res.status(200).json({ status: 'ok', message: 'База данных успешно подключена' });
+      console.log("Database connection successful");
+
+      // Проверяем доступ к таблице пользователей
+      const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
+      const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
+      console.log("Tables accessibility check successful");
+
+      res.status(200).json({
+        status: 'healthy',
+        databaseConnected: true,
+        tablesAccessible: tablesAccessible,
+        timestamp: new Date().toISOString(),
+        message: 'База данных подключена и доступна'
+      });
     } catch (error: any) {
       console.error("Health check failed:", error);
-      res.status(500).json({ 
-        status: 'error', 
-        message: 'Ошибка подключения к базе данных', 
-        error: error.message 
+      res.status(500).json({
+        status: 'unhealthy',
+        databaseConnected: false,
+        tablesAccessible: false,
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        message: 'Ошибка подключения к базе данных'
       });
     }
   });
@@ -883,31 +904,133 @@ export async function registerRoutes(
       await req.session.save();
     }
 
-    // Применяем requireAuth только если сессия не была установлена выше
+    // Для локальной разработки создаем фейкового пользователя, если нет сессии
     if (!req.session.userId) {
-      return res.status(401).json({ error: "Authentication required" });
+      if (process.env.NODE_ENV === 'development') {
+        // Возвращаем фейкового пользователя для локальной разработки
+        const fakeUser = {
+          id: 'dev-user-12345',
+          telegramId: '123456789',
+          username: 'dev_tester',
+          firstName: 'Dev',
+          lastName: 'Tester',
+          photoUrl: null,
+          totalPoints: 5000,
+          gamesPlayed: 10,
+          bestScore: 1500,
+          isAdmin: false,
+          btcBalance: 0.001,
+          ethBalance: 0.01,
+          usdtBalance: 10.5,
+          btcBalanceSats: 100000,
+          btcTodaySats: 0,
+          ethBalanceWei: 10000000000000000,
+          ethTodayWei: 0,
+          usdtToday: "0.00",
+          referralCode: 'DEVTEST',
+          referredBy: null,
+          directReferralsCount: 0,
+          completedLevels: [1, 2, 3, 4, 5],
+          signupBonusReceived: true,
+          ratingScore: 1200,
+          totalScore: 5000,
+          totalWins: 5,
+          currentWinStreak: 2,
+          bestWinStreak: 5,
+          totalCombo5Plus: 10,
+          characterGender: 'male',
+          characterName: 'Dev Player',
+          characterEnergy: 100,
+          characterHealthState: 'normal',
+          characterMood: 'happy',
+          bonusLives: 0,
+          lastActivityAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          deletedAt: null,
+          isAdmin: false
+        };
+
+        return res.json(fakeUser);
+      } else {
+        return res.status(401).json({ error: "Authentication required" });
+      }
     }
 
     try {
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
-        req.session.destroy(() => {});
-        return res.status(401).json({ error: "User not found" });
+        // В режиме разработки, если сессия установлена как администраторская, но пользователь не найден в базе данных,
+        // возвращаем фейкового пользователя с правами администратора
+        if (process.env.NODE_ENV === 'development' && req.session.isAdmin) {
+          // Создаем фейкового пользователя с правами администратора
+          const fakeUser = {
+            id: req.session.userId!,
+            telegramId: req.session.userId!,
+            username: req.session.username || req.session.userId!,
+            firstName: 'Admin',
+            lastName: 'User',
+            photoUrl: null,
+            totalPoints: 0,
+            gamesPlayed: 0,
+            bestScore: 0,
+            btcBalance: 0,
+            ethBalance: 0,
+            usdtBalance: 0,
+            btcBalanceSats: 0,
+            btcTodaySats: 0,
+            ethBalanceWei: 0,
+            ethTodayWei: 0,
+            usdtToday: "0.00",
+            referralCode: 'ADMIN',
+            referredBy: null,
+            directReferralsCount: 0,
+            completedLevels: [],
+            signupBonusReceived: false,
+            ratingScore: 0,
+            totalScore: 0,
+            totalWins: 0,
+            currentWinStreak: 0,
+            bestWinStreak: 0,
+            totalCombo5Plus: 0,
+            characterGender: 'male',
+            characterName: 'Admin Character',
+            characterEnergy: 100,
+            characterHealthState: 'normal',
+            characterMood: 'happy',
+            bonusLives: 0,
+            lastActivityAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            deletedAt: null,
+            isAdmin: true // Устанавливаем isAdmin в true, так как сессия администраторская
+          };
+
+          // Log diagnostic info
+          await logDiagnostic("Запрос данных фейкового администратора", {
+            userId: req.session.userId,
+            sessionIsAdmin: req.session.isAdmin,
+            resultIsAdmin: true
+          });
+
+          res.json(fakeUser);
+        } else {
+          req.session.destroy(() => {});
+          return res.status(401).json({ error: "User not found" });
+        }
+      } else {
+        // Log diagnostic info
+        await logDiagnostic("Запрос данных пользователя", {
+          userId: req.session.userId,
+          sessionIsAdmin: req.session.isAdmin,
+          userIsAdmin: user.isAdmin,
+          resultIsAdmin: req.session.isAdmin || user.isAdmin || false
+        });
+
+        // Return user data with isAdmin status from session (important for admin panel access)
+        res.json({
+          ...user,
+          isAdmin: req.session.isAdmin || user.isAdmin || false
+        });
       }
-
-      // Log diagnostic info
-      await logDiagnostic("Запрос данных пользователя", {
-        userId: req.session.userId,
-        sessionIsAdmin: req.session.isAdmin,
-        userIsAdmin: user.isAdmin,
-        resultIsAdmin: req.session.isAdmin || user.isAdmin || false
-      });
-
-      // Return user data with isAdmin status from session (important for admin panel access)
-      res.json({
-        ...user,
-        isAdmin: req.session.isAdmin || user.isAdmin || false
-      });
     } catch (error) {
       console.error("Get current user error:", error);
       res.status(500).json({ error: "Failed to get user" });

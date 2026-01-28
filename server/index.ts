@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../server/env-loader.js';
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -96,9 +96,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const { storage } = await import("./storage.js");
-  await storage.ensureDefaultBaseBodies();
-  
+  try {
+    const { storage } = await import("./storage.js");
+    console.log("Attempting to initialize default base bodies...");
+    await storage.ensureDefaultBaseBodies();
+    console.log("Default base bodies initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize storage:", error);
+    // Не прерываем запуск сервера, даже если инициализация не удалась
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -121,15 +128,14 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewalled. Default to 3001 for local development if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = parseInt(process.env.PORT || "3001", 10);
   httpServer.listen(
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

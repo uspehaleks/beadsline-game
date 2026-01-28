@@ -31,6 +31,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
         initTelegramApp();
       }
 
+      // Проверяем, есть ли параметр forceAdmin в URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAdminForced = urlParams.get('forceAdmin') === 'true' || urlParams.get('forceAdmin') === '1';
+
+      // Если forceAdmin=true, сначала устанавливаем сессию на сервере
+      if (process.env.NODE_ENV === 'development' && isAdminForced) {
+        await fetch('/api/auth/me?forceAdmin=true', {
+          method: 'GET',
+          credentials: 'include'
+        });
+      }
+
       // First check if there's an existing session (e.g., admin login)
       try {
         const meResponse = await fetch('/api/auth/me', { credentials: 'include' });
@@ -66,12 +78,102 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const userData = await meResponse.json();
             setUser(userData);
           } else {
-            // Если нет сессии, оставляем пользователя как null, но не устанавливаем ошибку
-            setUser(null);
+            // Для локальной разработки создаем фейкового пользователя, если нет сессии
+            if (process.env.NODE_ENV === 'development') {
+              const fakeUser = {
+                id: 'dev-user-12345',
+                telegramId: '123456789',
+                username: 'dev_tester',
+                firstName: 'Dev',
+                lastName: 'Tester',
+                photoUrl: null,
+                totalPoints: 5000,
+                gamesPlayed: 10,
+                bestScore: 1500,
+                btcBalance: 0.001,
+                ethBalance: 0.01,
+                usdtBalance: 10.5,
+                btcBalanceSats: 100000,
+                btcTodaySats: 0,
+                ethBalanceWei: 10000000000000000,
+                ethTodayWei: 0,
+                usdtToday: "0.00",
+                referralCode: 'DEVTEST',
+                referredBy: null,
+                directReferralsCount: 0,
+                completedLevels: [1, 2, 3, 4, 5],
+                signupBonusReceived: true,
+                ratingScore: 1200,
+                totalScore: 5000,
+                totalWins: 5,
+                currentWinStreak: 2,
+                bestWinStreak: 5,
+                totalCombo5Plus: 10,
+                characterGender: 'male',
+                characterName: 'Dev Player',
+                characterEnergy: 100,
+                characterHealthState: 'normal',
+                characterMood: 'happy',
+                bonusLives: 0,
+                lastActivityAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                deletedAt: null,
+                isAdmin: isAdminForced // Устанавливаем isAdmin в true, если forceAdmin=true
+              };
+              setUser(fakeUser);
+            } else {
+              // Если не в разработке, оставляем пользователя как null, но не устанавливаем ошибку
+              setUser(null);
+            }
           }
         } catch (err) {
           console.error('Error fetching user without Telegram:', err);
-          setUser(null);
+          // Для локальной разработки создаем фейкового пользователя при ошибке
+          if (process.env.NODE_ENV === 'development') {
+            const fakeUser = {
+              id: 'dev-user-12345',
+              telegramId: '123456789',
+              username: 'dev_tester',
+              firstName: 'Dev',
+              lastName: 'Tester',
+              photoUrl: null,
+              totalPoints: 5000,
+              gamesPlayed: 10,
+              bestScore: 1500,
+              btcBalance: 0.001,
+              ethBalance: 0.01,
+              usdtBalance: 10.5,
+              btcBalanceSats: 100000,
+              btcTodaySats: 0,
+              ethBalanceWei: 10000000000000000,
+              ethTodayWei: 0,
+              usdtToday: "0.00",
+              referralCode: 'DEVTEST',
+              referredBy: null,
+              directReferralsCount: 0,
+              completedLevels: [1, 2, 3, 4, 5],
+              signupBonusReceived: true,
+              ratingScore: 1200,
+              totalScore: 5000,
+              totalWins: 5,
+              currentWinStreak: 2,
+              bestWinStreak: 5,
+              totalCombo5Plus: 10,
+              characterGender: 'male',
+              characterName: 'Dev Player',
+              characterEnergy: 100,
+              characterHealthState: 'normal',
+              characterMood: 'happy',
+              bonusLives: 0,
+              lastActivityAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              deletedAt: null,
+              isAdmin: isAdminForced // Устанавливаем isAdmin в true, если forceAdmin=true
+            };
+            setUser(fakeUser);
+          } else {
+            setUser(null);
+          }
         }
       }
     } catch (err) {
@@ -83,20 +185,70 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (!user) return;
-
     try {
+      // Проверяем, есть ли параметр forceAdmin в URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAdminForced = urlParams.get('forceAdmin') === 'true' || urlParams.get('forceAdmin') === '1';
+
+      // Если forceAdmin=true и мы в режиме разработки, сначала устанавливаем сессию на сервере
+      if (process.env.NODE_ENV === 'development' && isAdminForced) {
+        await fetch('/api/auth/me?forceAdmin=true', {
+          method: 'GET',
+          credentials: 'include'
+        });
+      }
+
       // Use /api/auth/me endpoint which checks session and returns current user data including admin status
       const response = await fetch('/api/auth/me', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setUser(data);
       } else {
-        // Fallback to /api/users/:id if /api/auth/me fails
-        const userResponse = await fetch(`/api/users/${user.id}`);
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUser(userData);
+        // Если /api/auth.me возвращает 401, это может означать, что сессия была сброшена
+        // В этом случае не пытаемся получить данные по старому user.id
+        // Вместо этого, если в режиме разработки и есть forceAdmin, создаем фейкового администратора
+        if (process.env.NODE_ENV === 'development' && isAdminForced) {
+          const fakeUser = {
+            id: 'dev-user-12345',
+            telegramId: '123456789',
+            username: 'dev_tester',
+            firstName: 'Dev',
+            lastName: 'Tester',
+            photoUrl: null,
+            totalPoints: 5000,
+            gamesPlayed: 10,
+            bestScore: 1500,
+            btcBalance: 0.001,
+            ethBalance: 0.01,
+            usdtBalance: 10.5,
+            btcBalanceSats: 100000,
+            btcTodaySats: 0,
+            ethBalanceWei: 10000000000000000,
+            ethTodayWei: 0,
+            usdtToday: "0.00",
+            referralCode: 'DEVTEST',
+            referredBy: null,
+            directReferralsCount: 0,
+            completedLevels: [1, 2, 3, 4, 5],
+            signupBonusReceived: true,
+            ratingScore: 1200,
+            totalScore: 5000,
+            totalWins: 5,
+            currentWinStreak: 2,
+            bestWinStreak: 5,
+            totalCombo5Plus: 10,
+            characterGender: 'male',
+            characterName: 'Dev Player',
+            characterEnergy: 100,
+            characterHealthState: 'normal',
+            characterMood: 'happy',
+            bonusLives: 0,
+            lastActivityAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            deletedAt: null,
+            isAdmin: true // Устанавливаем isAdmin в true, если forceAdmin=true
+          };
+          setUser(fakeUser);
         }
       }
     } catch (err) {

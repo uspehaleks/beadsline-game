@@ -230,7 +230,36 @@ export default function Admin() {
       return res.json();
     },
     onSuccess: (data) => {
-      if (data) window.location.href = '/admin';
+      if (data) {
+        // Вместо перезагрузки страницы, обновляем пользователя в контексте
+        // Используем рекурсивную функцию с повторными попытками, чтобы дождаться готовности сессии
+        const attemptRefresh = async (attempts = 0) => {
+          try {
+            // Проверяем сессию на сервере
+            const response = await fetch('/api/auth/me', { credentials: 'include' });
+            if (response.ok) {
+              // Сессия готова, обновляем пользователя
+              refreshUser();
+            } else if (attempts < 10) { // Повторяем попытку до 10 раз
+              // Ждем немного и пробуем снова
+              setTimeout(() => attemptRefresh(attempts + 1), 500);
+            } else {
+              // Если после нескольких попыток сессия не готова, используем refreshUser
+              refreshUser();
+            }
+          } catch (error) {
+            console.error('Error refreshing user after admin login:', error);
+            if (attempts < 5) {
+              setTimeout(() => attemptRefresh(attempts + 1), 200);
+            } else {
+              refreshUser();
+            }
+          }
+        };
+
+        // Начинаем попытки обновления пользователя
+        attemptRefresh();
+      }
     },
     onError: (error: Error) => {
       toast({
