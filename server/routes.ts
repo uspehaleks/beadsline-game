@@ -9,7 +9,7 @@ declare module 'express-session' {
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, IStorage, logDiagnostic } from "./storage.js";
-import { db, createTempDbConnection } from "./db.js";
+import { db } from "./db.js";
 import { sql } from "drizzle-orm";
 import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig, type GameplayConfig, type GameEconomyConfig } from "../shared/schema.js";
 import { z } from "zod";
@@ -793,46 +793,8 @@ export async function registerRoutes(
     console.error('Failed to initialize default boost packages:', err);
   });
   
-  app.get("/api/health-check", async (req, res) => {
-    console.log("Health check endpoint called from:", req.ip || 'unknown IP');
-
-    try {
-      // Используем временное соединение для проверки
-      const { db, pool } = await createTempDbConnection();
-
-      try {
-        // Выполняем самый простой запрос, чтобы проверить соединение
-        await db.execute(sql`select 1`);
-        console.log("Database connection successful");
-
-        // Проверяем доступ к таблице пользователей
-        const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
-        const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
-        console.log("Tables accessibility check successful");
-
-        res.status(200).json({
-          status: 'healthy',
-          databaseConnected: true,
-          tablesAccessible: tablesAccessible,
-          timestamp: new Date().toISOString(),
-          message: 'База данных подключена и доступна'
-        });
-      } finally {
-        // Обязательно закрываем соединение
-        await pool.end();
-      }
-    } catch (error: any) {
-      console.error("Health check failed:", error);
-      res.status(500).json({
-        status: 'unhealthy',
-        databaseConnected: false,
-        tablesAccessible: false,
-        timestamp: new Date().toISOString(),
-        error: error.message,
-        message: 'Ошибка подключения к базе данных'
-      });
-    }
-  });
+  import { healthCheckHandler } from "./health-check.js";
+  app.get("/api/health-check", healthCheckHandler);
 
 
   app.post("/api/auth/telegram", async (req, res) => {
