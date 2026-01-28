@@ -61,8 +61,7 @@ export const pool = new Pool({
   // Минимальные настройки для serverless
   connectionTimeoutMillis: 1000,
   idleTimeoutMillis: 5000,
-  max: 1, // Только одно соединение
-  noPrepare: true // Отключаем подготовленные операторы
+  max: 1 // Только одно соединение
 });
 
 // Для serverless среды Vercel используем Client вместо Pool для выполнения запросов
@@ -109,6 +108,11 @@ export const db = drizzle(pool, {
 // Использует DIRECT_URL (порт 5432) для прямого подключения
 export async function createDirectDbConnection() {
   let directUrl = process.env.DIRECT_URL || DATABASE_URL;
+
+  if (!directUrl) {
+    throw new Error("Either DIRECT_URL or DATABASE_URL must be set");
+  }
+
   directUrl = ensureSslMode(directUrl); // Добавляем sslmode=require
 
   const { host: directHost, port: directPort } = parseConnectionString(directUrl);
