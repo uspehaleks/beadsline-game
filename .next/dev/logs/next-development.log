@@ -335,3 +335,779 @@ Import trace:
   Browser:
     ./client/src/index.css
     ./pages/_app.tsx
+[00:26:29.274] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:29.274] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:30.276] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:30.276] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:31.282] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:26:31.282] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:28:29.918] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:28:30.271] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:28:44.909] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:28:45.284] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:28:59.929] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:29:00.285] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:29:22.216] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:29:22.281] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:45.465] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:45.465] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:45.569] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:45.569] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.352] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.352] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.352] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.352] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.352] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.528] Browser ERROR   uncaughtError: Error: ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+
+
+[00:30:46.707] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:46.813] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:30:47.272] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:33.328] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:33.328] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:33.328] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:33.381] Browser ERROR   uncaughtError: Error: ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+
+
+[00:32:33.518] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:33.626] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:32:34.301] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:07.278] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:07.278] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:07.278] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:07.542] Browser ERROR   uncaughtError: Error: ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+
+
+[00:34:07.649] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:07.764] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:08.282] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:43.281] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:43.281] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:43.281] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:43.858] Browser ERROR   uncaughtError: Error: ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+
+
+[00:34:43.971] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:44.076] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
+[00:34:44.274] Browser ERROR   ./client/src/index.css:3805:45
+Parsing CSS source code failed
+  3803 | }
+  3804 |
+> 3805 | .after\:border.toggle-elevate::after::before {
+       |                                             ^
+  3806 |     content: var(--tw-content);
+  3807 |     inset: -1px;
+  3808 |   }
+
+Invalid state
+
+Import trace:
+  Browser:
+    ./client/src/index.css
+    ./pages/_app.tsx
