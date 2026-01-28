@@ -96,50 +96,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Инициализация хранилища с использованием прямого подключения (порт 5432)
-  // для миграций и инициализации, если DIRECT_URL доступен
-  console.log("Server starting, initializing storage if needed");
-
-  try {
-    // Импортируем функцию для создания прямого соединения
-    const { createDirectDbConnection } = await import('./db.js');
-
-    // Функция для инициализации с повторными попытками
-    const initializeWithRetry = async (maxRetries = 3) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          // Создаем временное прямое соединение для инициализации
-          const { pool: directPool } = await createDirectDbConnection();
-          const storageModule = await import('./storage.js');
-
-          // Инициализируем хранилище с прямым соединением
-          await storageModule.storage.ensureDefaultBaseBodies();
-          console.log("Default base bodies initialized successfully");
-
-          // Закрываем прямое соединение после инициализации
-          await directPool.end();
-          return; // Успешно завершаем, если инициализация прошла
-        } catch (error) {
-          console.error(`Attempt ${attempt} to initialize storage failed:`, error);
-
-          if (attempt === maxRetries) {
-            console.error("All attempts to initialize storage failed");
-            throw error; // Бросаем ошибку, если все попытки исчерпаны
-          }
-
-          // Ждем 2 секунды перед повторной попыткой
-          console.log(`Waiting 2 seconds before retry... (attempt ${attempt}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-    };
-
-    // Запускаем инициализацию с повторными попытками
-    await initializeWithRetry();
-  } catch (error) {
-    console.error("Failed to initialize storage after retries:", error);
-    // Не прерываем запуск сервера, даже если инициализация не удалась
-  }
+  // Не производим инициализацию хранилища при запуске сервера в serverless среде
+  // Инициализация будет происходить по требованию при первом обращении к базе данных
+  console.log("Server starting without pre-initializing storage (for serverless compatibility)");
 
   await registerRoutes(httpServer, app);
 

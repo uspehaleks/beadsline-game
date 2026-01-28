@@ -5231,5 +5231,18 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Initialize default base bodies (for migrations and setup)
+  app.post("/api/admin/init-base-bodies", requireAdmin, async (req, res) => {
+    try {
+      console.log("Initializing default base bodies...");
+      await storage.ensureDefaultBaseBodies();
+      console.log("Default base bodies initialized successfully");
+      res.json({ success: true, message: "Default base bodies initialized successfully" });
+    } catch (error) {
+      console.error("Initialize base bodies error:", error);
+      res.status(500).json({ error: "Failed to initialize base bodies" });
+    }
+  });
+
   return httpServer;
 }
