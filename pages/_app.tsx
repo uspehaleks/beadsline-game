@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import App from './App';
 
 // Обертка для SSR
-export default function WrappedApp(props) {
+export default function WrappedApp(props: any) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
