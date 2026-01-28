@@ -32,15 +32,33 @@ export default function DatabaseHealth() {
       const response = await fetch('/api/env-info', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
+        console.log('Environment info received:', data);
         setEnvInfo({
-          databaseHost: data.databaseHost || '',
-          databasePort: data.databasePort || '',
-          sessionSecretStatus: data.sessionSecretStatus || '',
-          nodeEnv: data.nodeEnv || ''
+          databaseHost: data.databaseHost || 'Not Available',
+          databasePort: data.databasePort || 'Not Available',
+          sessionSecretStatus: data.sessionSecretStatus || 'Not Available',
+          nodeEnv: data.nodeEnv || 'Not Available'
+        });
+      } else {
+        console.error('Failed to fetch environment info:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+
+        setEnvInfo({
+          databaseHost: 'Error Loading',
+          databasePort: 'Error Loading',
+          sessionSecretStatus: 'Error Loading',
+          nodeEnv: 'Error Loading'
         });
       }
     } catch (error) {
       console.error('Error fetching environment info:', error);
+      setEnvInfo({
+        databaseHost: 'Network Error',
+        databasePort: 'Network Error',
+        sessionSecretStatus: 'Network Error',
+        nodeEnv: 'Network Error'
+      });
     }
   };
 
