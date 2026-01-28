@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Используем статическую экспортируемую версию
-  trailingSlash: true,
+  output: undefined, // Убираем статический экспорт для Vercel
+  trailingSlash: false,
   images: {
-    unoptimized: true // Отключаем оптимизацию изображений для статической сборки
+    unoptimized: false // Включаем оптимизацию изображений для серверного рендеринга
   },
   experimental: {
     serverComponentsExternalPackages: ["pg", "drizzle-orm"]
