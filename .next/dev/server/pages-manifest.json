@@ -2,6 +2,7 @@
   "/": "pages/index.js",
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
+  "/_error": "pages/_error.js",
   "/api/auth/me": "pages/api/auth/me.js",
   "/api/character/exists": "pages/api/character/exists.js",
   "/api/maintenance": "pages/api/maintenance.js",

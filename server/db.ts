@@ -1,7 +1,7 @@
 import { Pool, Client } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
-import * as schema from "../shared/schema.js";
+import * as schema from "../shared/schema";
 
 // Определяем URL для подключения в зависимости от назначения
 const DATABASE_URL = process.env.DATABASE_URL;

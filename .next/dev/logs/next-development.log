@@ -1,1 +1,137 @@
 [00:00:02.348] Server  LOG     ✓ Ready in 1252ms
+[00:08:07.560] Server  ERROR   ⨯ ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:08:08.148] Server  ERROR   ⨯ ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:08:08.413] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:08:08.414] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:08:08.414] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:08:22.302] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:09:07.313] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
+[00:10:07.351] Browser ERROR   ./server/db.ts:4:1
+Module not found: Can't resolve '../shared/schema.js'
+  2 | import { drizzle } from 'drizzle-orm/node-postgres';
+  3 | import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
+> 4 | import * as schema from "../shared/schema.js";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | // Определяем URL для подключения в зависимости от назначения
+  7 | const DATABASE_URL = process.env.DATABASE_URL;
+
+Import trace:
+  Route:
+    ./server/db.ts
+    ./pages/api/auth/me.ts
+
+https://nextjs.org/docs/messages/module-not-found
