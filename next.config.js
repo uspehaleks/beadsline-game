@@ -22,6 +22,7 @@ const nextConfig = {
       '@/contexts': require('path').join(__dirname, 'client/src/contexts'),
       '@/hooks': require('path').join(__dirname, 'client/src/hooks'),
       '@/lib': require('path').join(__dirname, 'client/src/lib'),
+      '@/pages': require('path').join(__dirname, 'client/src/pages'),
     };
 
     if (!isServer) {
