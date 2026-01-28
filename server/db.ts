@@ -51,7 +51,21 @@ console.log("DATABASE_URL exists:", !!DATABASE_URL);
 console.log("DIRECT_URL exists:", !!process.env.DIRECT_URL);
 console.log("DATABASE_URL being used:", DATABASE_URL ? DATABASE_URL.substring(0, 50) + "..." : "UNDEFINED");
 
-// Для serverless среды Vercel используем Client вместо Pool
+// Для совместимости с существующим кодом (например, для сессий)
+// создаем пул с минимальными настройками для serverless
+export const pool = new Pool({
+  connectionString: connectionTarget,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  // Минимальные настройки для serverless
+  connectionTimeoutMillis: 1000,
+  idleTimeoutMillis: 5000,
+  max: 1, // Только одно соединение
+  noPrepare: true // Отключаем подготовленные операторы
+});
+
+// Для serverless среды Vercel используем Client вместо Pool для выполнения запросов
 // Создаем функцию для получения соединения по требованию
 export async function getDbClient() {
   const client = new Client({
@@ -85,17 +99,8 @@ export async function withDbTransaction<T>(
   }
 }
 
-// Создаем временное соединение для совместимости с существующим кодом
-// Но рекомендуется использовать withDbTransaction для новых запросов
-const tempClient = new Client({
-  connectionString: connectionTarget,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Пытаемся подключиться, но не кэшируем соединение
-export const db = drizzle(tempClient, {
+// Создаем Drizzle DB с логированием для совместимости с существующим кодом
+export const db = drizzle(pool, {
   schema,
   logger: true,  // Включаем логирование для просмотра запросов
   prepare: false  // Отключаем подготовленные операторы для совместимости с pgbouncer
