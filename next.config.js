@@ -26,8 +26,11 @@ const nextConfig = {
       };
     }
     return config;
+  },
+  // Явно указываем пустую конфигурацию turbopack, как рекомендовано
+  experimental: {
+    turbopack: {}
   }
-  // Убираем все экспериментальные настройки, которые могут вызывать ошибки
 };
 
 export default nextConfig;
