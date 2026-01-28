@@ -1,17 +1,17 @@
 import { Switch, Route } from "wouter";
 import { useMemo } from "react";
 import { useRouter } from "next/router";
-import { queryClient } from "./lib/queryClient";
+import { queryClient } from "../lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider, useUser } from "@/contexts/UserContext";
-import Home from "@/pages/Home";
-import Admin from "@/pages/Admin";
-import LeagueLeaderboard from "@/pages/LeagueLeaderboard";
-import Withdraw from "@/pages/Withdraw";
-import DatabaseHealth from "@/pages/DatabaseHealth";
-import NotFound from "@/pages/not-found";
+import Home from "./Home";
+import Admin from "./Admin";
+import LeagueLeaderboard from "./LeagueLeaderboard";
+import Withdraw from "./Withdraw";
+import DatabaseHealth from "./DatabaseHealth";
+import NotFound from "./not-found";
 import MaintenancePage from "@/components/MaintenancePage";
 import { Loader2 } from "lucide-react";
 
