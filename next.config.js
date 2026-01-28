@@ -26,13 +26,8 @@ const nextConfig = {
       };
     }
     return config;
-  },
-  // Явно отключаем экспериментальные возможности, которые могут вызывать проблемы
-  experimental: {
-    turbo: {
-      enabled: false
-    }
   }
+  // Убираем все экспериментальные настройки, которые могут вызывать ошибки
 };
 
 export default nextConfig;
