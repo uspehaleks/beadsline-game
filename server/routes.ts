@@ -798,42 +798,30 @@ export async function registerRoutes(
   app.get("/api/health-check", async (req, res) => {
     console.log("Health check endpoint called from:", req.ip || 'unknown IP');
 
-    // Создаем временное соединение для проверки
-    const { Pool } = await import('pg');
-    const { drizzle } = await import('drizzle-orm/node-postgres');
-    const schemaModule = await import('../shared/schema.js');
-
-    const tempPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      },
-      // Настройки для краткосрочного соединения в serverless
-      connectionTimeoutMillis: 2000,
-      idleTimeoutMillis: 5000,
-      max: 1,
-    });
-
     try {
-      // Выполняем самый простой запрос, чтобы проверить соединение
-      const client = await tempPool.connect();
-      await client.query('SELECT 1');
-      client.release();
+      // Используем функцию с временным соединением
+      const { withDbTransaction } = await import('./db.js');
+      const { sql } = await import('drizzle-orm');
 
-      const tempDb = drizzle(tempPool, { schema: schemaModule });
+      const result = await withDbTransaction(async (db) => {
+        // Выполняем самый простой запрос, чтобы проверить соединение
+        await db.execute(sql`SELECT 1`);
 
-      // Проверяем доступ к таблице пользователей
-      const userCountResult = await tempDb.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
-      const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
-      console.log("Tables accessibility check successful");
+        // Проверяем доступ к таблице пользователей
+        const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
+        const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
+        console.log("Tables accessibility check successful");
 
-      res.status(200).json({
-        status: 'healthy',
-        databaseConnected: true,
-        tablesAccessible: tablesAccessible,
-        timestamp: new Date().toISOString(),
-        message: 'База данных подключена и доступна'
+        return {
+          status: 'healthy',
+          databaseConnected: true,
+          tablesAccessible: tablesAccessible,
+          timestamp: new Date().toISOString(),
+          message: 'База данных подключена и доступна'
+        };
       });
+
+      res.status(200).json(result);
     } catch (error: any) {
       console.error("Health check failed:", error);
       res.status(500).json({
@@ -844,9 +832,6 @@ export async function registerRoutes(
         error: error.message,
         message: 'Ошибка подключения к базе данных'
       });
-    } finally {
-      // Обязательно закрываем соединение
-      await tempPool.end();
     }
   });
 

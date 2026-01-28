@@ -1,5 +1,6 @@
-import { Pool } from 'pg';
+import { Pool, Client } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle as drizzleWithLogger } from 'drizzle-orm/node-postgres';
 import * as schema from "../shared/schema.js";
 
 // Определяем URL для подключения в зависимости от назначения
@@ -32,8 +33,16 @@ function parseConnectionString(connectionString: string) {
   }
 }
 
+// Добавляем sslmode=require к строке подключения, если его нет
+function ensureSslMode(connectionString: string): string {
+  if (!connectionString.includes('sslmode=')) {
+    return connectionString + (connectionString.includes('?') ? '&' : '?') + 'sslmode=require';
+  }
+  return connectionString;
+}
+
 // Определяем, какой URL использовать для основного подключения
-const connectionTarget = DATABASE_URL;
+const connectionTarget = ensureSslMode(DATABASE_URL);
 const { host, port } = parseConnectionString(connectionTarget);
 
 console.log("Attempting to connect to database...");
@@ -42,90 +51,100 @@ console.log("DATABASE_URL exists:", !!DATABASE_URL);
 console.log("DIRECT_URL exists:", !!process.env.DIRECT_URL);
 console.log("DATABASE_URL being used:", DATABASE_URL ? DATABASE_URL.substring(0, 50) + "..." : "UNDEFINED");
 
-// Оптимизированный пул соединений для serverless среды
-// Используем DATABASE_URL для рабочих нагрузок (порт 6543 с pgbouncer)
-export const pool = new Pool({
-  connectionString: DATABASE_URL,
+// Для serverless среды Vercel используем Client вместо Pool
+// Создаем функцию для получения соединения по требованию
+export async function getDbClient() {
+  const client = new Client({
+    connectionString: connectionTarget,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
+
+  await client.connect();
+  return client;
+}
+
+// Функция для выполнения запроса с временным соединением
+export async function withDbTransaction<T>(
+  callback: (db: ReturnType<typeof drizzleWithLogger>) => Promise<T>
+): Promise<T> {
+  const client = await getDbClient();
+
+  try {
+    // Создаем Drizzle DB с логированием для отладки
+    const db = drizzleWithLogger(client, {
+      schema,
+      logger: true  // Включаем логирование для просмотра запросов
+    });
+
+    const result = await callback(db);
+    return result;
+  } finally {
+    await client.end(); // Обязательно закрываем соединение
+  }
+}
+
+// Создаем временное соединение для совместимости с существующим кодом
+// Но рекомендуется использовать withDbTransaction для новых запросов
+const tempClient = new Client({
+  connectionString: connectionTarget,
   ssl: {
     rejectUnauthorized: false
-  },
-  // Настройки для pgbouncer (порт 6543)
-  connectionTimeoutMillis: 1000,  // Минимальный таймаут подключения
-  idleTimeoutMillis: 5000,        // Минимальный таймаут простоя
-  max: 1,                         // Минимальное количество соединений
-  // Дополнительные параметры для стабильности в serverless
-  maxUses: 750,                   // Количество использований соединения до пересоздания
-  statement_timeout: 3000,        // Таймаут выполнения SQL запроса
-  query_timeout: 5000,            // Таймаут выполнения запроса
-  keepAlive: true,                // Поддерживать соединение активным
-  keepAliveInitialDelayMillis: 1000, // Уменьшенная задержка keep-alive
-  // Отключаем подготовленные операторы для совместимости с pgbouncer
-  noPrepare: true                 // Отключаем подготовленные операторы
+  }
 });
 
-// В serverless среде не производим тестовое подключение при запуске
-// Соединение будет установлено при первом запросе
-console.log("Database pool configured for serverless environment with pgbouncer");
-
-// Создаем Drizzle DB с настройками для PgBouncer
-export const db = drizzle(pool, {
+// Пытаемся подключиться, но не кэшируем соединение
+export const db = drizzle(tempClient, {
   schema,
-  logger: false, // Отключаем логирование Drizzle для уменьшения нагрузки
-  // Отключаем подготовленные операторы для совместимости с PgBouncer
-  prepare: false  // КРИТИЧЕСКИ ВАЖНО: отключаем подготовленные операторы для PgBouncer
+  logger: true,  // Включаем логирование для просмотра запросов
+  prepare: false  // Отключаем подготовленные операторы для совместимости с pgbouncer
 });
 
 // Функция для создания временного соединения для миграций и инициализации
 // Использует DIRECT_URL (порт 5432) для прямого подключения
 export async function createDirectDbConnection() {
-  const directUrl = process.env.DIRECT_URL || DATABASE_URL;
+  let directUrl = process.env.DIRECT_URL || DATABASE_URL;
+  directUrl = ensureSslMode(directUrl); // Добавляем sslmode=require
+
   const { host: directHost, port: directPort } = parseConnectionString(directUrl);
 
   console.log("Creating direct connection to host:", directHost, "on port:", directPort);
 
-  const directPool = new Pool({
+  const client = new Client({
     connectionString: directUrl,
     ssl: {
       rejectUnauthorized: false
-    },
-    // Настройки для прямого подключения (порт 5432)
-    connectionTimeoutMillis: 2000,
-    idleTimeoutMillis: 10000,
-    max: 1,
-    // Для совместимости с любым типом подключения отключаем подготовленные операторы
-    noPrepare: true
+    }
   });
 
   try {
-    // Проверяем соединение
-    const client = await directPool.connect();
-    await client.query('SELECT 1'); // Простой запрос для проверки
-    client.release();
+    await client.connect();
 
-    // Создаем Drizzle DB с настройками для совместимости
-    const directDb = drizzle(directPool, {
+    // Создаем Drizzle DB с логированием для совместимости
+    const directDb = drizzleWithLogger(client, {
       schema,
-      logger: false,
+      logger: true,  // Включаем логирование
       prepare: false  // Отключаем подготовленные операторы для совместимости
     });
-    return { db: directDb, pool: directPool };
+    return { db: directDb, client };
   } catch (error) {
-    await directPool.end(); // Обязательно закрываем пул при ошибке
+    await client.end(); // Обязательно закрываем клиент при ошибке
     throw error;
   }
 }
 
 // Функция для выполнения запроса с временным соединением
 export async function withTempDbConnection<T>(
-  callback: (db: ReturnType<typeof drizzle>) => Promise<T>
+  callback: (db: ReturnType<typeof drizzleWithLogger>) => Promise<T>
 ): Promise<T> {
-  const { db, pool } = await createDirectDbConnection(); // Используем прямое соединение
+  const { db, client } = await createDirectDbConnection(); // Используем прямое соединение
 
   try {
     const result = await callback(db);
     return result;
   } finally {
-    // Всегда закрываем пул соединений после использования
-    await pool.end();
+    // Всегда закрываем клиент соединения после использования
+    await client.end();
   }
 }
