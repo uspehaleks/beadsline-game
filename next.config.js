@@ -5,11 +5,7 @@ const nextConfig = {
   images: {
     unoptimized: false // Включаем оптимизацию изображений для серверного рендеринга
   },
-  experimental: {
-    serverComponentsExternalPackages: ["pg", "drizzle-orm"],
-    // Явно отключаем Turbopack и используем Webpack
-    turbopack: false
-  },
+  serverExternalPackages: ["pg", "drizzle-orm"], // Обновленный параметр
   // Указываем Next.js использовать директорию client/src как корень для исходников
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   webpack: (config, { isServer }) => {
