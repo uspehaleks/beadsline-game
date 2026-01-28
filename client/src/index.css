@@ -231,25 +231,14 @@
    * So borders will be automatically adjusted both on toggle, and hover/active,
    * and they will be compounded.
    */
-  .toggle-elevate::before,
-  .toggle-elevate-2::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
-    border-radius: inherit;
-    z-index: -1;
-    /* sits behind content but above backdrop */
-  }
-
-  .toggle-elevate.toggle-elevated::before {
+  .toggle-elevate[data-elevated],
+  .toggle-elevate-2[data-elevated] {
     background-color: var(--elevate-2);
   }
 
   /* If there's a 1px border, adjust the inset so that it covers that parent's border */
-  .border.toggle-elevate::before {
-    inset: -1px;
+  .border.toggle-elevate[data-elevated] {
+    box-shadow: inset 0 0 0 1px var(--elevate-2);
   }
 
   /* Does not work on elements with overflow:hidden! */
