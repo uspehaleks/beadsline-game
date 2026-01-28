@@ -23,7 +23,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Возвращаем простую информацию об окружении
   res.status(200).json({
     databaseHost: databaseUrlStatus,
-    databasePort: databaseUrlStatus,
+    databasePort: "Not Available (Server-side only)",
     sessionSecretStatus,
     nodeEnv,
     timestamp: new Date().toISOString(),
