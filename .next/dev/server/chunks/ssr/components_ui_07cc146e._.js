@@ -444,7 +444,7 @@ var __turbopack_async_dependencies__ = __turbopack_handle_async_dependencies__([
 const Avatar = /*#__PURE__*/ __TURBOPACK__imported__module__$5b$externals$5d2f$react__$5b$external$5d$__$28$react$2c$__cjs$29$__["forwardRef"](({ className, ...props }, ref)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$externals$5d2f$react$2f$jsx$2d$dev$2d$runtime__$5b$external$5d$__$28$react$2f$jsx$2d$dev$2d$runtime$2c$__cjs$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$externals$5d2f40$radix$2d$ui$2f$react$2d$avatar__$5b$external$5d$__$2840$radix$2d$ui$2f$react$2d$avatar$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f40$radix$2d$ui$2f$react$2d$avatar$29$__["Root"], {
         ref: ref,
         className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$ssr$5d$__$28$ecmascript$29$__["cn"])(`
-      after:content-[''] after:block after:absolute after:inset-0 after:rounded-full after:pointer-events-none after:border after:border-black/10 dark:after:border-white/10
+      [&::after]:content-[''] [&::after]:block [&::after]:absolute [&::after]:inset-0 [&::after]:rounded-full [&::after]:pointer-events-none [&::after]:border [&::after]:border-black/10 dark:[&::after]:border-white/10
       relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full`, className),
         ...props
     }, void 0, false, {
