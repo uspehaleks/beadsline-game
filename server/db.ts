@@ -13,6 +13,8 @@ console.log("Attempting to connect to database...");
 console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
 console.log("DATABASE_URL length:", process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0);
 
+console.log("DATABASE_URL being used:", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 50) + "..." : "UNDEFINED");
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
