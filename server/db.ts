@@ -19,7 +19,11 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  // Добавляем параметры для лучшей стабильности соединения
+  connectionTimeoutMillis: 5000, // 5 секунд таймаут на подключение
+  idleTimeoutMillis: 30000,      // 30 секунд таймаут простоя
+  max: 10                        // Максимальное количество соединений в пуле
 });
 
 // Test the connection
