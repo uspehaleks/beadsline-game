@@ -3,19 +3,21 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 // App version for cache busting
 export const APP_VERSION = "1.2.3";
 
-// Check and clear cache if version changed
-const STORAGE_VERSION_KEY = "beadsline_app_version";
-const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
-if (storedVersion && storedVersion !== APP_VERSION) {
-  // Version changed - clear caches
-  localStorage.clear();
-  sessionStorage.clear();
-  if ('caches' in window) {
-    caches.keys().then(names => names.forEach(name => caches.delete(name)));
+// Check and clear cache if version changed - только в браузере
+if (typeof window !== 'undefined') {
+  const STORAGE_VERSION_KEY = "beadsline_app_version";
+  const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+  if (storedVersion && storedVersion !== APP_VERSION) {
+    // Version changed - clear caches
+    localStorage.clear();
+    sessionStorage.clear();
+    if ('caches' in window) {
+      caches.keys().then(names => names.forEach(name => caches.delete(name)));
+    }
+    console.log(`App updated: ${storedVersion} -> ${APP_VERSION}`);
   }
-  console.log(`App updated: ${storedVersion} -> ${APP_VERSION}`);
+  localStorage.setItem(STORAGE_VERSION_KEY, APP_VERSION);
 }
-localStorage.setItem(STORAGE_VERSION_KEY, APP_VERSION);
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
