@@ -1,12 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: undefined, // Убираем статический экспорт для Vercel
+  output: undefined,
   trailingSlash: false,
   images: {
-    unoptimized: false // Включаем оптимизацию изображений для серверного рендеринга
+    unoptimized: false
   },
-  serverExternalPackages: ["pg", "drizzle-orm"], // Обновленный параметр
-  // Явно отключаем Turbopack и используем Webpack
+  serverExternalPackages: ["pg", "drizzle-orm"],
   webpack: (config, { isServer }) => {
     // Добавляем алиасы для правильного импорта
     config.resolve.alias = {
@@ -21,7 +20,6 @@ const nextConfig = {
     };
 
     if (!isServer) {
-      // Конфигурация для клиентской сборки
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -29,14 +27,12 @@ const nextConfig = {
     }
     return config;
   },
-  // Указываем, где искать pages
-  // Но для этого нужно использовать другую стратегию
+  // Явно отключаем экспериментальные возможности, которые могут вызывать проблемы
   experimental: {
-    // Настройки для улучшения стабильности сборки
-    workerThreads: false,
-    cpus: 1
+    turbo: {
+      enabled: false
+    }
   }
 };
 
-// Экспортируем конфигурацию
 export default nextConfig;
