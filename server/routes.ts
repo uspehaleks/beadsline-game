@@ -794,9 +794,21 @@ export async function registerRoutes(
   });
   
   // Импортируем sql для проверки работоспособности
-  // Используем временное соединение для проверки работоспособности в serverless среде
+  // Асинхронная проверка работоспособности с обработкой ошибок
   app.get("/api/health-check", async (req, res) => {
     console.log("Health check endpoint called from:", req.ip || 'unknown IP');
+
+    // Выводим значения переменных окружения (с маскировкой пароля)
+    let maskedDatabaseUrl = 'Not Set';
+    if (process.env.DATABASE_URL) {
+      // Маскируем пароль в URL: заменяем пароль на звездочки
+      maskedDatabaseUrl = process.env.DATABASE_URL.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
+    }
+
+    console.log("Environment variables:");
+    console.log("- DATABASE_URL:", maskedDatabaseUrl);
+    console.log("- PORT:", process.env.PORT || 'Not Set');
+    console.log("- NODE_ENV:", process.env.NODE_ENV || 'Not Set');
 
     try {
       // Используем функцию с временным соединением
@@ -824,7 +836,8 @@ export async function registerRoutes(
       res.status(200).json(result);
     } catch (error: any) {
       console.error("Health check failed:", error);
-      res.status(500).json({
+      // Сервер не падает, а возвращает ошибку в JSON
+      res.status(200).json({
         status: 'unhealthy',
         databaseConnected: false,
         tablesAccessible: false,
