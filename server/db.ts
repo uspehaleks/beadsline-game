@@ -102,8 +102,7 @@ export async function withDbTransaction<T>(
 // Создаем Drizzle DB с логированием для совместимости с существующим кодом
 export const db = drizzle(pool, {
   schema,
-  logger: true,  // Включаем логирование для просмотра запросов
-  prepare: false  // Отключаем подготовленные операторы для совместимости с pgbouncer
+  logger: true  // Включаем логирование для просмотра запросов
 });
 
 // Функция для создания временного соединения для миграций и инициализации
@@ -129,8 +128,7 @@ export async function createDirectDbConnection() {
     // Создаем Drizzle DB с логированием для совместимости
     const directDb = drizzleWithLogger(client, {
       schema,
-      logger: true,  // Включаем логирование
-      prepare: false  // Отключаем подготовленные операторы для совместимости
+      logger: true  // Включаем логирование
     });
     return { db: directDb, client };
   } catch (error) {
