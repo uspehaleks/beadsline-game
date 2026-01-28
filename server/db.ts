@@ -19,7 +19,7 @@ let connectionString = process.env.DATABASE_URL;
 if (connectionString && !connectionString.includes('sslmode=')) {
   // Add sslmode=prefer to the connection string to handle self-signed certificates
   const separator = connectionString.includes('?') ? '&' : '?';
-  connectionString = `${connectionString}${separator}sslmode=prefer`;
+  connectionString = `${connectionString}${separator}sslmode=require`;
 }
 
 export const pool = new Pool({
