@@ -1,39 +1,39 @@
 // Vercel API Handler using next-connect
 import { createRouter } from 'next-connect';
 
-// Отложенная инициализация хранилища для serverless среды
-let storageInstance = null;
-let storageInitialized = false;
-
-async function getStorage() {
-  if (!storageInstance) {
-    const storageModule = await import('../server/storage.js');
-    storageInstance = storageModule.storage;
-  }
-  return storageInstance;
-}
-
 // Create a router
 const router = createRouter();
 
-// Add a middleware to wait for initialization if needed
-router.use(async (req, res, next) => {
-  // Не ждем инициализации при каждом запросе для serverless совместимости
-  next();
-});
-
 // Define specific routes
 router.get('/api/health-check', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'API is running' });
+  // Простой тест: проверяем, видит ли сервер переменные окружения
+  const databaseUrlStatus = process.env.DATABASE_URL ? "Found" : "Not Found";
+
+  console.log("Environment variables check:");
+  console.log("- DATABASE_URL Status:", databaseUrlStatus);
+  console.log("- PORT:", process.env.PORT || 'Not Set');
+  console.log("- NODE_ENV:", process.env.NODE_ENV || 'Not Set');
+
+  res.status(200).json({
+    test: "hello",
+    databaseUrlStatus: databaseUrlStatus,
+    timestamp: new Date().toISOString(),
+    message: 'Health check endpoint is working',
+    env: {
+      databaseUrlExists: !!process.env.DATABASE_URL,
+      port: process.env.PORT || 'Not Set',
+      nodeEnv: process.env.NODE_ENV || 'Not Set'
+    }
+  });
 });
 
 // Telegram webhook setup route
 router.post('/api/telegram/setup-webhook', async (req, res) => {
   // In a real implementation, you would check admin authentication here
   // For now, we'll return a placeholder response
-  res.status(200).json({ 
-    success: true, 
-    message: 'Webhook setup endpoint - requires admin authentication' 
+  res.status(200).json({
+    success: true,
+    message: 'Webhook setup endpoint - requires admin authentication'
   });
 });
 
