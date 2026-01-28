@@ -18,10 +18,10 @@ export default function DatabaseHealth() {
   });
 
   const [envInfo, setEnvInfo] = useState({
-    databaseHost: '',
-    databasePort: '',
-    sessionSecretStatus: '',
-    nodeEnv: ''
+    databaseHost: 'Not Available (Server-side only)',
+    databasePort: 'Not Available (Server-side only)',
+    sessionSecretStatus: 'Not Available (Server-side only)',
+    nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'development' : 'Not Available'
   });
 
   const [loading, setLoading] = useState(false);
@@ -44,20 +44,22 @@ export default function DatabaseHealth() {
         const errorText = await response.text();
         console.error('Error response:', errorText);
 
+        // В случае ошибки, показываем информацию, доступную на клиенте
         setEnvInfo({
-          databaseHost: 'Error Loading',
-          databasePort: 'Error Loading',
-          sessionSecretStatus: 'Error Loading',
-          nodeEnv: 'Error Loading'
+          databaseHost: 'Server Error - Check Vercel Logs',
+          databasePort: 'Server Error - Check Vercel Logs',
+          sessionSecretStatus: 'Server Error - Check Vercel Logs',
+          nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'development' : 'Not Available'
         });
       }
     } catch (error) {
       console.error('Error fetching environment info:', error);
+      // В случае сетевой ошибки, показываем информацию, доступную на клиенте
       setEnvInfo({
-        databaseHost: 'Network Error',
-        databasePort: 'Network Error',
-        sessionSecretStatus: 'Network Error',
-        nodeEnv: 'Network Error'
+        databaseHost: 'Network Error - Likely SSR only var',
+        databasePort: 'Network Error - Likely SSR only var',
+        sessionSecretStatus: 'Network Error - Likely SSR only var',
+        nodeEnv: typeof window !== 'undefined' ? process.env.NODE_ENV || 'development' : 'Not Available'
       });
     }
   };
