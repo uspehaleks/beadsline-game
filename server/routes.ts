@@ -9,7 +9,7 @@ declare module 'express-session' {
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, IStorage, logDiagnostic } from "./storage.js";
-import { db } from "./db.js";
+import { db, createTempDbConnection } from "./db.js";
 import { sql } from "drizzle-orm";
 import { insertGameScoreSchema, type BeadsBoxConfig, type BeadsBoxReward, adminUserUpdateSchema, adminUserIsAdminUpdateSchema, updateLeagueSchema, updateBeadsBoxConfigSchema, updateFundTogglesSchema, type LivesConfig, type GameplayConfig, type GameEconomyConfig } from "../shared/schema.js";
 import { z } from "zod";
@@ -795,23 +795,32 @@ export async function registerRoutes(
   
   app.get("/api/health-check", async (req, res) => {
     console.log("Health check endpoint called from:", req.ip || 'unknown IP');
+
     try {
-      // Выполняем самый простой запрос, чтобы проверить соединение
-      await db.execute(sql`select 1`);
-      console.log("Database connection successful");
+      // Используем временное соединение для проверки
+      const { db, pool } = await createTempDbConnection();
 
-      // Проверяем доступ к таблице пользователей
-      const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
-      const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
-      console.log("Tables accessibility check successful");
+      try {
+        // Выполняем самый простой запрос, чтобы проверить соединение
+        await db.execute(sql`select 1`);
+        console.log("Database connection successful");
 
-      res.status(200).json({
-        status: 'healthy',
-        databaseConnected: true,
-        tablesAccessible: tablesAccessible,
-        timestamp: new Date().toISOString(),
-        message: 'База данных подключена и доступна'
-      });
+        // Проверяем доступ к таблице пользователей
+        const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
+        const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
+        console.log("Tables accessibility check successful");
+
+        res.status(200).json({
+          status: 'healthy',
+          databaseConnected: true,
+          tablesAccessible: tablesAccessible,
+          timestamp: new Date().toISOString(),
+          message: 'База данных подключена и доступна'
+        });
+      } finally {
+        // Обязательно закрываем соединение
+        await pool.end();
+      }
     } catch (error: any) {
       console.error("Health check failed:", error);
       res.status(500).json({

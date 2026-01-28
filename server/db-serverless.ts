@@ -1,28 +1,20 @@
+// server/db-serverless.ts - Адаптер для работы с базой данных в serverless среде
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "../shared/schema.js";
 
-// В serverless среде Vercel не создаем постоянный пул соединений при запуске
-// Вместо этого будем создавать соединения по требованию
-
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not set!");
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-console.log("Database configuration loaded for serverless environment");
-console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
-
 // Функция для создания временного соединения
 export async function createTempDbConnection() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL must be set");
+  }
+
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     },
-    // Настройки для краткосрочного соединения в serverless
+    // Настройки для краткосрочного соединения
     connectionTimeoutMillis: 2000,
     idleTimeoutMillis: 5000,
     max: 1,
@@ -47,7 +39,7 @@ export async function withTempDbConnection<T>(
   callback: (db: ReturnType<typeof drizzle>) => Promise<T>
 ): Promise<T> {
   const { db, pool } = await createTempDbConnection();
-
+  
   try {
     const result = await callback(db);
     return result;
@@ -56,6 +48,3 @@ export async function withTempDbConnection<T>(
     await pool.end();
   }
 }
-
-// Для совместимости с существующим кодом, экспортируем функции
-export { drizzle };
