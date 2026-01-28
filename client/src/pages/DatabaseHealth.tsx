@@ -136,6 +136,10 @@ export default function DatabaseHealth() {
       isTablesAccessible: false,
       lastCheck: null,
       error: null,
+      details: null,
+      errorCode: null,
+      errorDetail: null,
+      errorHint: null,
     });
 
     try {
