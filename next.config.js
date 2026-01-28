@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: undefined,
-  trailingSlash: false,
+  // Убираем output: 'export' - это ломает динамические API-маршруты на Vercel
+  trailingSlash: false, // Убираем проблему с маршрутами
   images: {
     unoptimized: false
   },
