@@ -1,6 +1,8 @@
 // pages/api/auth/me.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getDbClient } from '../../../server/db';
+import { db } from '../../../server/db';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,19 +10,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Проверяем сессию пользователя
-    // В реальном приложении здесь должна быть проверка сессии
-    const session = req.cookies; // или другая логика проверки сессии
-    
-    // Возвращаем информацию о пользователе
-    // В реальном приложении здесь будет логика получения пользователя из базы данных
-    const user = {
-      id: 'mock-user-id',
-      isAdmin: false,
-      // другие поля пользователя
-    };
+    // Получаем ID пользователя из сессии или заголовков (в зависимости от вашей системы аутентификации)
+    // В данном случае предполагаем, что ID пользователя передается в заголовке или сессии
+    const userId = req.headers['x-user-id'] as string || req.cookies?.userId;
 
-    res.status(200).json(user);
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Проверяем, существует ли пользователь в базе данных
+    let user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+    if (user.length === 0) {
+      // Если пользователя нет, создаем его
+      const newUser = await db.insert(users).values({
+        id: userId,
+        username: `user_${Date.now()}`,
+        totalPoints: 0,
+        gamesPlayed: 0,
+        bestScore: 0,
+        isAdmin: false,
+        btcBalance: 0,
+        ethBalance: 0,
+        usdtBalance: 0,
+        btcBalanceSats: 0n,
+        btcTodaySats: 0n,
+        ethBalanceWei: 0n,
+        ethTodayWei: 0n,
+        usdtToday: "0",
+        referralCode: `REF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        directReferralsCount: 0,
+        completedLevels: [],
+        signupBonusReceived: false,
+        ratingScore: 0,
+        totalScore: 0,
+        totalWins: 0,
+        currentWinStreak: 0,
+        bestWinStreak: 0,
+        totalCombo5Plus: 0,
+        characterEnergy: 100,
+        bonusLives: 0,
+        lastActivityAt: new Date(),
+        createdAt: new Date(),
+      }).returning();
+
+      user = newUser;
+    } else {
+      // Обновляем время последней активности
+      await db.update(users).set({ lastActivityAt: new Date() }).where(eq(users.id, userId));
+    }
+
+    // Возвращаем данные пользователя
+    res.status(200).json(user[0]);
   } catch (error) {
     console.error('Error in /api/auth/me:', error);
     res.status(500).json({ error: 'Internal server error' });

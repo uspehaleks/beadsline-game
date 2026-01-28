@@ -104,6 +104,9 @@ export const db = drizzle(pool, {
   logger: true  // Включаем логирование для просмотра запросов
 });
 
+// Экспортируем также функции для использования в API маршрутах
+export { sql } from 'drizzle-orm';
+
 // Функция для создания временного соединения для миграций и инициализации
 // Использует DIRECT_URL (порт 5432) для прямого подключения
 export async function createDirectDbConnection() {

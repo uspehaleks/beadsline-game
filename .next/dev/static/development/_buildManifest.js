@@ -2,9 +2,6 @@ self.__BUILD_MANIFEST = {
   "/": [
     "static/chunks/pages/index.js"
   ],
-  "/_error": [
-    "static/chunks/pages/_error.js"
-  ],
   "__rewrites": {
     "afterFiles": [],
     "beforeFiles": [],
@@ -39,3 +36,9 @@ self.__BUILD_MANIFEST = {
     "/api/season/active",
     "/api/telegram/setup-webhook",
     "/api/tg-webhook",
+    "/api/user/crypto-tickets/count",
+    "/api/user/crypto-tickets/use",
+    "/api/user/league",
+    "/not-found"
+  ]
+};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()
