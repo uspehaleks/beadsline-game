@@ -825,63 +825,6 @@ export async function registerRoutes(
     }
   });
 
-  // API endpoint для получения информации об окружении
-  app.get("/api/env-info", async (req, res) => {
-    console.log("Environment info endpoint called from:", req.ip || 'unknown IP');
-
-    try {
-      // Получаем информацию об окружении
-      const databaseUrl = process.env.DATABASE_URL;
-      let databaseHost = 'Not Set';
-      let databasePort = 'Not Set';
-
-      if (databaseUrl) {
-        try {
-          // Парсим URL базы данных для извлечения хоста и порта
-          // Используем регулярное выражение, так как URL может быть в формате postgresql://
-          const match = databaseUrl.match(/:\/\/[^:]+:[^@]+@([^:\/]+):(\d+)/);
-          if (match) {
-            databaseHost = match[1];
-            databasePort = match[2];
-          } else {
-            // Если не удалось распарсить, используем сам URL как есть
-            console.log("Could not parse DATABASE_URL:", databaseUrl);
-          }
-        } catch (parseError) {
-          console.error('Error parsing DATABASE_URL:', parseError);
-          databaseHost = 'Parse Error';
-          databasePort = 'Parse Error';
-        }
-      }
-
-      const sessionSecretStatus = process.env.SESSION_SECRET ? 'Set' : 'Not Set';
-      const nodeEnv = process.env.NODE_ENV || 'development';
-
-      console.log("Environment info response:", {
-        databaseHost,
-        databasePort,
-        sessionSecretStatus,
-        nodeEnv
-      });
-
-      res.status(200).json({
-        databaseHost,
-        databasePort,
-        sessionSecretStatus,
-        nodeEnv,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Environment info endpoint error:", error);
-      res.status(500).json({
-        error: "Failed to get environment info",
-        databaseHost: 'Error',
-        databasePort: 'Error',
-        sessionSecretStatus: 'Error',
-        nodeEnv: 'Error'
-      });
-    }
-  });
 
   app.post("/api/auth/telegram", async (req, res) => {
     try {
