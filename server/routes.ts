@@ -794,58 +794,25 @@ export async function registerRoutes(
   });
   
   // Импортируем sql для проверки работоспособности
-  // Асинхронная проверка работоспособности с обработкой ошибок
+  // Простой тестовый эндпоинт для проверки
   app.get("/api/health-check", async (req, res) => {
     console.log("Health check endpoint called from:", req.ip || 'unknown IP');
 
-    // Выводим значения переменных окружения (с маскировкой пароля)
-    let maskedDatabaseUrl = 'Not Set';
-    if (process.env.DATABASE_URL) {
-      // Маскируем пароль в URL: заменяем пароль на звездочки
-      maskedDatabaseUrl = process.env.DATABASE_URL.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
-    }
+    // Простой тест: проверяем, видит ли сервер переменную DATABASE_URL
+    const databaseUrlStatus = process.env.DATABASE_URL ? "Found" : "Not Found";
 
     console.log("Environment variables:");
-    console.log("- DATABASE_URL:", maskedDatabaseUrl);
+    console.log("- DATABASE_URL Status:", databaseUrlStatus);
     console.log("- PORT:", process.env.PORT || 'Not Set');
     console.log("- NODE_ENV:", process.env.NODE_ENV || 'Not Set');
 
-    try {
-      // Используем функцию с временным соединением
-      const { withDbTransaction } = await import('./db.js');
-      const { sql } = await import('drizzle-orm');
-
-      const result = await withDbTransaction(async (db) => {
-        // Выполняем самый простой запрос, чтобы проверить соединение
-        await db.execute(sql`SELECT 1`);
-
-        // Проверяем доступ к таблице пользователей
-        const userCountResult = await db.execute(sql`SELECT COUNT(*) as count FROM users LIMIT 1`);
-        const tablesAccessible = true; // Если запрос прошел успешно, таблицы доступны
-        console.log("Tables accessibility check successful");
-
-        return {
-          status: 'healthy',
-          databaseConnected: true,
-          tablesAccessible: tablesAccessible,
-          timestamp: new Date().toISOString(),
-          message: 'База данных подключена и доступна'
-        };
-      });
-
-      res.status(200).json(result);
-    } catch (error: any) {
-      console.error("Health check failed:", error);
-      // Сервер не падает, а возвращает ошибку в JSON
-      res.status(200).json({
-        status: 'unhealthy',
-        databaseConnected: false,
-        tablesAccessible: false,
-        timestamp: new Date().toISOString(),
-        error: error.message,
-        message: 'Ошибка подключения к базе данных'
-      });
-    }
+    // Возвращаем простой ответ
+    res.status(200).json({
+      test: "hello",
+      databaseUrlStatus: databaseUrlStatus,
+      timestamp: new Date().toISOString(),
+      message: 'Health check endpoint is working'
+    });
   });
 
 
