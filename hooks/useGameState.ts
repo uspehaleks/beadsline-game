@@ -548,7 +548,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           sendDebugLog(`[SPAWN_FORCE] No balls in game, forcing spawn!`);
 
           // Получаем координаты начала спирали
-          const startPosition = prev.levelConfig.getPathPoint(0);
+          const startPosition = prev.levelConfig.path[0]; // Use path array directly instead of getPathPoint method
 
           // Создаем тестовый шар напрямую
           const forcedBall = {
@@ -590,7 +590,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           const rawBall = createRandomBall(); // createRandomBall doesn't accept arguments in current implementation
 
           // Получаем координаты начала спирали
-          const startPosition = prev.levelConfig.getPathPoint(0);
+          const startPosition = prev.levelConfig.path[0]; // Use path array directly instead of getPathPoint method
 
           // Создаем новый шар с правильными координатами начала спирали
           const newBall = {
