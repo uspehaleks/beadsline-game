@@ -1230,7 +1230,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
       updateBoostTimers();
       
       setGameState(prev => {
-        if (!prev.isPlaying || gameEndedRef.current) return prev;
+        if (gameEndedRef.current) return prev; // isPlaying not available in current GameState schema
 
         // ОГРАНИЧЕНИЕ ШАГА: В gameEngine.ts добавь лимит для deltaTime.
         // Пусть он никогда не будет больше 0.016 (эквивалент 60 FPS).
