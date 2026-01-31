@@ -469,10 +469,6 @@ export function GameScreen({ level, isLevelCompleted, onGameEnd, onViewLeaderboa
         <div className="flex-1 overflow-y-auto">
           <ul className="space-y-2 text-xs">
             <li className="flex justify-between">
-              <span>FPS:</span>
-              <span>{gameState.fps?.toFixed(1) || 'N/A'}</span>
-            </li>
-            <li className="flex justify-between">
               <span>Balls:</span>
               <span>{gameState.balls?.length || 0}</span>
             </li>
