@@ -810,7 +810,12 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     setGameState(prev => {
       if (gameEndedRef.current) return prev; // isPlaying not available in current GameState schema
       
-      const collision = checkPathCollision(projectile.x, projectile.y, prev.balls, prev.levelConfig); // Pass levelConfig instead of just path array
+      const levelPath: any = { // Create LevelPath-compatible object
+        ...prev.levelConfig,
+        type: 'linear', // Add required type property
+        segments: []    // Add required segments property
+      };
+      const collision = checkPathCollision(projectile.x, projectile.y, prev.balls, levelPath); // Pass properly structured LevelPath object
       
       if (collision) {
         const insertIndex = collision.insertBefore ? collision.index : collision.index + 1;
