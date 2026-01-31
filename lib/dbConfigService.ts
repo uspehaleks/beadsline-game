@@ -1,5 +1,4 @@
-import { storage } from '../server/storage';
-import { logDiagnostic } from '../server/storage';
+import { storage, logDiagnostic } from '../server/storage/index';
 import { Boost } from '../shared/schema';
 import { withDbTransaction } from '../server/db';
 import { gameConfig } from '../shared/schema';
