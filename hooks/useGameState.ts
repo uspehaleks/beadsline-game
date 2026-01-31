@@ -967,7 +967,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             }
             
             // Find matching balls starting from left
-            const chainMatches = findMatchingBalls(); // findMatchingBalls doesn't accept arguments in current implementation
+            const chainMatches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
             
             if (chainMatches.length < 3 || !chainMatches.includes(leftIdx) || !chainMatches.includes(rightIdx)) {
               sendDebugLog(`[CHAIN-SHORT] found:${chainMatches.length} hasLeft:${chainMatches.includes(leftIdx)} hasRight:${chainMatches.includes(rightIdx)}`);
