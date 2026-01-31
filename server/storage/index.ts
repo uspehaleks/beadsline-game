@@ -5,4 +5,4 @@ export const storage = new DatabaseStorage();
 
 export { IStorage } from "./IStorage.js";
 export { storage };
-export { logDiagnostic } from "./utils.js";
+export { logDiagnostic } from "../storage.js";
