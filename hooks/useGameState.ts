@@ -1472,7 +1472,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
   const applyRewind = useCallback(() => {
     setGameState(prev => {
-      const rewindedBalls = applyRewindEffect(prev.balls, 0.2);
+      const rewindedBalls = applyRewindEffect(); // applyRewindEffect doesn't accept arguments in current implementation
       const updatedBalls = updateBallPositions(rewindedBalls, gameState.levelConfig);
       return { ...prev, balls: updatedBalls };
     });
