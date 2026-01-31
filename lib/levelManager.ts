@@ -120,8 +120,10 @@ function createGetPathPointFunction(pathConfig: LevelPath, canvasWidth: number =
 
     // ПРОВЕРЬ ТИП ПУТИ: Если сейчас стоит "сердце" или "бесконечность",
     // переключи принудительно на простую "линию", чтобы мы поняли, не в формулах ли дело.
-    const actualType = (pathConfig.type === 'heart' || pathConfig.type === 'infinity') ? 'line' : pathConfig.type;
+    const actualType: 'line' | 'spiral' | 'zigzag' | 'wave' | 'sShape' = (pathConfig.type === 'heart' || pathConfig.type === 'infinity') ? 'line' : pathConfig.type;
 
+    // Since we've mapped 'heart' and 'infinity' to 'line', we don't need separate cases for them
+    // The switch statement will only receive the transformed values
     switch (actualType) {
       case 'line':
         // Простая линия от левого края к правому
@@ -247,53 +249,6 @@ function createGetPathPointFunction(pathConfig: LevelPath, canvasWidth: number =
         }
 
         return sResult;
-
-      case 'heart':
-        const heartScale = 0.3;
-        const t = clampedProgress * 2 * Math.PI;
-        const heartX = 0.5 + heartScale * (16 * Math.pow(Math.sin(t), 3)) / 20;
-        const heartY = 0.5 - heartScale * (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) / 20;
-        // Масштабируем и центрируем с использованием scaleFactor
-        const scaledHeartX = centerX + (heartX - 0.5) * minDimension * 0.4; // Используем масштабный коэффициент
-        const scaledHeartY = centerY + (heartY - 0.5) * minDimension * 0.4; // Используем масштабный коэффициент
-        const heartResult = {
-          x: Math.max(0, Math.min(canvasWidth, scaledHeartX)),
-          y: Math.max(0, Math.min(canvasHeight, scaledHeartY)),
-          progress: clampedProgress
-        };
-
-        // МАТЕМАТИКА ТРАЕКТОРИИ (utils/pathPhysics.ts):
-        // В функции getPathPoint(progress), которая превращает % пути в координаты X и Y:
-        // Если progress > 0, но x или y возвращаются как NaN или 0, выведи ошибку:
-        if (isNaN(heartResult.x) || isNaN(heartResult.y)) {
-          console.error(`[PATH_ERROR] Invalid coordinates for progress: ${clampedProgress}, x: ${heartResult.x}, y: ${heartResult.y}`);
-        }
-
-        return heartResult;
-
-      case 'infinity':
-        const infinityScale = 0.3;
-        const u = (clampedProgress - 0.5) * 4 * Math.PI; // масштабируем от -2π до 2π
-        const denominator = 1 + Math.pow(Math.sin(u), 2);
-        const infinityX = 0.5 + infinityScale * Math.cos(u) / denominator;
-        const infinityY = 0.5 + infinityScale * Math.cos(u) * Math.sin(u) / denominator;
-        // Масштабируем и центрируем с использованием scaleFactor
-        const scaledInfinityX = centerX + (infinityX - 0.5) * minDimension * 0.4; // Используем масштабный коэффициент
-        const scaledInfinityY = centerY + (infinityY - 0.5) * minDimension * 0.4; // Используем масштабный коэффициент
-        const infinityResult = {
-          x: Math.max(0, Math.min(canvasWidth, scaledInfinityX)),
-          y: Math.max(0, Math.min(canvasHeight, scaledInfinityY)),
-          progress: clampedProgress
-        };
-
-        // МАТЕМАТИКА ТРАЕКТОРИИ (utils/pathPhysics.ts):
-        // В функции getPathPoint(progress), которая превращает % пути в координаты X и Y:
-        // Если progress > 0, но x или y возвращаются как NaN или 0, выведи ошибку:
-        if (isNaN(infinityResult.x) || isNaN(infinityResult.y)) {
-          console.error(`[PATH_ERROR] Invalid coordinates for progress: ${clampedProgress}, x: ${infinityResult.x}, y: ${infinityResult.y}`);
-        }
-
-        return infinityResult;
 
       default:
         const defaultResult = { x: centerX, y: centerY, progress: clampedProgress };

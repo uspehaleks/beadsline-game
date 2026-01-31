@@ -37,7 +37,7 @@ export function checkCollision(
 /**
  * Finds the closest progress value on a path for a given position
  */
-export function findClosestProgressOnPath(x: number, y: number, path: LevelPath): number {
+export function findClosestProgressOnPath(x: number, y: number, path: Array<{ x: number; y: number; progress: number }>): number {
   let closestDistance = Infinity;
   let closestProgress = 0;
 
@@ -62,7 +62,7 @@ export function calculateTrajectoryIntersection(
   startY: number,
   velocityX: number,
   velocityY: number,
-  path: LevelPath
+  path: Array<{ x: number; y: number; progress: number }>
 ): { x: number; y: number; progress: number } | null {
   // Simplified calculation - in a real implementation, this would be more complex
   const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
@@ -136,7 +136,7 @@ export function checkPathCollision(
   projectileX: number,
   projectileY: number,
   balls: Ball[],
-  path: LevelPath
+  path: Array<{ x: number; y: number; progress: number }>
 ): { index: number; insertBefore: boolean } | null {
   const collisionDistance = BALL_RADIUS * COLLISION_RADIUS_MULTIPLIER;
 

@@ -236,6 +236,9 @@ export type Ball = {
   isCrypto: boolean;
   crypto?: 'btc' | 'eth' | 'usdt';
   isUsdtFund: boolean;
+  isSpecial?: boolean;
+  speedMultiplier?: number;
+  effects?: any[];
 };
 
 export type GameState = {
@@ -244,19 +247,45 @@ export type GameState = {
   score: number;
   combo: number;
   cryptoCollected: { btc: number; eth: number; usdt: number };
+  usdtFundCollected: number;
   lives: number;
+  gameOver: boolean;
   levelId: number;
   chainSpeed: number;
   aiming: boolean;
-  shooter: { x: number; y: number };
+  shooter: { x: number; y: number; angle: number };
   aimAngle: number;
   lastUpdateTime: number;
   levelConfig: {
     path: Array<{ x: number; y: number; progress: number }>;
     targetScore: number;
+    cryptoSpawnChance?: number;
   };
   username: string;
   totalPoints: number;
+  lastShotTime: number;
+  lastSpawnTime: number;
+  chainProgress: number;
+  chainLength: number;
+  maxChainLength: number;
+  nextBallColor: BallColor;
+  queuedBalls: Ball[];
+  activeEffects: any[];
+  powerups: any[];
+  achievements: any[];
+  gameStartTime: number;
+  paused: boolean;
+  boostState: any;
+  stats: {
+    ballsShot: number;
+    ballsMatched: number;
+    highestCombo: number;
+    accuracy: number;
+    timePlayed: number;
+    cryptoCollected: { btc: number; eth: number; usdt: number };
+    totalDistance: number;
+    shotsAccuracy: number;
+  };
 };
 
 export type PathPoint = {
@@ -264,6 +293,8 @@ export type PathPoint = {
   y: number;
   progress: number;
 };
+
+export type BallColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange' | 'pink' | 'cyan' | 'magenta' | 'amber' | 'lime' | 'violet';
 
 export type CryptoType = 'btc' | 'eth' | 'usdt';
 

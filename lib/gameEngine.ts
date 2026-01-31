@@ -50,6 +50,10 @@ const ALL_BALL_COLORS: BallColor[] = ['red', 'blue', 'green', 'yellow', 'purple'
 const CRYPTO_TYPES: CryptoType[] = ['btc', 'eth', 'usdt'];
 
 const DEFAULT_GAMEPLAY: GameplayConfig = {
+  levelUpThreshold: 1000,
+  comboMultiplier: 1.5,
+  baseScoreMultiplier: 1.0,
+  energyDrainRate: 0.1,
   balls: { initialCount: 5, targetCount: 50, maxTotalBalls: 60 },
   spawn: { period: 1800, resumeThreshold: 35 },
   speed: { base: 0.010, max: 0.016, accelerationStart: 0.8 },
@@ -61,6 +65,10 @@ let currentGameplay: GameplayConfig = DEFAULT_GAMEPLAY;
 export function setGameplayConfig(config: Partial<GameplayConfig>) {
   const defaults = DEFAULT_GAMEPLAY;
   currentGameplay = {
+    levelUpThreshold: config.levelUpThreshold ?? defaults.levelUpThreshold,
+    comboMultiplier: config.comboMultiplier ?? defaults.comboMultiplier,
+    baseScoreMultiplier: config.baseScoreMultiplier ?? defaults.baseScoreMultiplier,
+    energyDrainRate: config.energyDrainRate ?? defaults.energyDrainRate,
     balls: {
       initialCount: config.balls?.initialCount ?? defaults.balls.initialCount,
       targetCount: config.balls?.targetCount ?? defaults.balls.targetCount,
@@ -100,6 +108,11 @@ function getActiveBallColors(): BallColor[] {
 }
 
 const DEFAULT_ECONOMY: GameEconomyConfig = {
+  baseBtcReward: 0.00000005,
+  baseEthReward: 0.0000001,
+  baseUsdtReward: 0.01,
+  levelMultiplier: 1.0,
+  comboRewardMultiplier: 1.5,
   points: { normal: 5, btc: 500, eth: 300, usdt: 200 },
   combo: { multiplier: 1.5, maxChain: 10 },
   crypto: { spawnChance: 0.08 },
@@ -114,6 +127,11 @@ let currentEconomy: GameEconomyConfig = DEFAULT_ECONOMY;
 export function setEconomyConfig(config: Partial<GameEconomyConfig>) {
   const defaults = DEFAULT_ECONOMY;
   currentEconomy = {
+    baseBtcReward: toNumber(config.baseBtcReward, defaults.baseBtcReward),
+    baseEthReward: toNumber(config.baseEthReward, defaults.baseEthReward),
+    baseUsdtReward: toNumber(config.baseUsdtReward, defaults.baseUsdtReward),
+    levelMultiplier: toNumber(config.levelMultiplier, defaults.levelMultiplier),
+    comboRewardMultiplier: toNumber(config.comboRewardMultiplier, defaults.comboRewardMultiplier),
     points: {
       normal: toNumber(config.points?.normal, defaults.points.normal),
       btc: toNumber(config.points?.btc, defaults.points.btc),
@@ -546,7 +564,7 @@ export function moveBallsForward(balls: Ball[], deltaTime: number, chainSpeed: n
   const updatedBalls = balls.map((ball, index) => {
     if (ball.pathProgress !== undefined && ball.pathProgress >= 0) {
       // Увеличиваем pathProgress на основе скорости и времени
-      const newProgress = ball.pathProgress + normalSpeed * deltaTimeSec * (ball.speedMultiplier || 1);
+      const newProgress = ball.pathProgress + normalSpeed * deltaTimeSec * 1;
       
       // Добавляем лог для отладки первых нескольких шаров
       if (index < 3) {
@@ -775,7 +793,7 @@ export function processShot(gameState: GameState, projectileX: number, projectil
     projectileX,
     projectileY,
     gameState.balls,
-    gameState.levelConfig.getPathPoint ? [] : gameState.levelConfig.path // Fallback to empty array if no path
+    gameState.levelConfig.path || [] // Use the path array from levelConfig
   );
 
   if (!collision) {
@@ -990,6 +1008,7 @@ export function initializeGameState(levelConfig: LevelConfig, canvasWidth: numbe
   };
 
   const gameState: GameState = {
+    id: `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
     balls: [],
     shooter: { x: canvasWidth/2, y: canvasHeight - 50, angle: 0 },
     combo: 0,
@@ -999,13 +1018,16 @@ export function initializeGameState(levelConfig: LevelConfig, canvasWidth: numbe
     lives: 3, // Устанавливаем 3 жизни
     gameOver: false,
     levelId: newLevelConfig.id,
-    levelConfig: newLevelConfig,
+    levelConfig: {
+      path: spiralPath, // Use the generated spiral path
+      targetScore: newLevelConfig.targetBalls || 1000 // Use targetBalls from levelConfig or default
+    },
     lastShotTime: 0,
     lastSpawnTime: 0,
     chainSpeed: 1.0 / (30 * 1000), // Фиксированная скорость для 30-секундного прохода от начала до центра
     chainProgress: 0,
     chainLength: 0,
-    maxChainLength: newLevelConfig.maxChainLength || 50,
+    maxChainLength: 50, // Default value
     nextBallColor: getRandomElement(getActiveBallColors()),
     queuedBalls: [],
     activeEffects: [],
@@ -1021,7 +1043,14 @@ export function initializeGameState(levelConfig: LevelConfig, canvasWidth: numbe
       highestCombo: 0,
       accuracy: 0,
       timePlayed: 0,
+      cryptoCollected: { btc: 0, eth: 0, usdt: 0 },
+      totalDistance: 0,
+      shotsAccuracy: 0,
     },
+    aiming: true,
+    aimAngle: 0,
+    username: "Player",
+    totalPoints: 0,
   };
 
   // НЕ создаем начальные шары - они будут спавниться по таймеру
@@ -1070,14 +1099,24 @@ export function updateGameState(gameState: GameState, deltaTime: number): GameSt
     if (ball.pathProgress >= 0) {
       const newPathProgress = ball.pathProgress + speed * (fixedDelta / 1000); // Преобразуем deltaTime в секунды
 
-      // Update ball position based on path
-      const pathPoint = gameState.levelConfig.getPathPoint(newPathProgress);
-      if (pathPoint) {
+      // Find the closest path point in the array
+      let closestPoint = null;
+      let minDistance = Infinity;
+
+      for (const point of gameState.levelConfig.path) {
+        const distance = Math.abs(point.progress - newPathProgress);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = point;
+        }
+      }
+
+      if (closestPoint) {
         return {
           ...ball,
           pathProgress: newPathProgress,
-          x: pathPoint.x,
-          y: pathPoint.y
+          x: closestPoint.x,
+          y: closestPoint.y
         };
       } else {
         return {
@@ -1095,7 +1134,7 @@ export function updateGameState(gameState: GameState, deltaTime: number): GameSt
   // но оставшаяся змейка продолжает путь с тех же позиций.
   // Это означает, что мы не удаляем шары, а просто уменьшаем жизни.
   let updatedLives = gameState.lives;
-  let gameOver = gameState.gameOver;
+  let gameOver: boolean = gameState.gameOver;
 
   for (const ball of updatedBalls) {
     if (ball.pathProgress >= 1.0) {
@@ -1150,14 +1189,26 @@ function spawnRandomBall(gameState: GameState) {
   const cryptoType = isCrypto ? getRandomElement(CRYPTO_TYPES) : undefined;
 
   // Add ball at the beginning of the path
-  const pathPoint = gameState.levelConfig.getPathPoint(0);
-  console.log(`Spawning new ball at pathPoint: (${pathPoint.x}, ${pathPoint.y})`);
+  // Find the first point in the path array (with progress closest to 0)
+  const startPoint = gameState.levelConfig.path.find(point => point.progress === 0) ||
+                    gameState.levelConfig.path.reduce((prev, curr) =>
+                      Math.abs(prev.progress) < Math.abs(curr.progress) ? prev : curr);
+
+  if (!startPoint) {
+    console.error('No starting point found in level config path');
+    return null; // or return a default ball
+  }
+
+  console.log(`Spawning new ball at pathPoint: (${startPoint.x}, ${startPoint.y})`);
   const newBall: Ball = {
     id: `ball-${Date.now()}-${gameState.balls.length}`,
-    x: pathPoint.x,
-    y: pathPoint.y,
+    x: startPoint.x,
+    y: startPoint.y,
     color,
+    radius: BALL_RADIUS,
+    onPath: true,
     pathProgress: 0,
+    velocity: { x: 0, y: 0 },
     isCrypto,
     crypto: cryptoType,
     isUsdtFund: false,
