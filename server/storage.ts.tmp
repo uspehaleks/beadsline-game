@@ -1,0 +1,3179 @@
+﻿import {
+  users,
+  gameScores,
+  gameConfig,
+  prizePool,
+  usdtFundSettings,
+  realRewards,
+  referralRewards,
+  beadsTransactions,
+  boosts,
+  userBoostInventory,
+  characters,
+  accessoryCategories,
+  baseBodies,
+  accessories,
+  userAccessories,
+  gameSkins,
+  userSkins,
+  boostPackages,
+  boostPackagePurchases,
+  cryptoPayments,
+  teamMembers,
+  revenueShares,
+  systemLogs,
+  type User,
+  type InsertUser,
+  type GameScore,
+  type InsertGameScore,
+  type GameConfig,
+  type InsertGameConfig,
+  type PrizePool,
+  type InsertPrizePool,
+  type LeaderboardEntry,
+  type AdminCryptoBalances,
+  type UserUpdate,
+  type UsdtFundSettings,
+  type InsertUsdtFundSettings,
+  type RealReward,
+  type InsertRealReward,
+  type ReferralReward,
+  type InsertReferralReward,
+  type UsdtFundStats,
+  type RewardResult,
+  type GameEconomyConfig,
+  type ReferralConfig,
+  type ReferralInfo,
+  type ReferralUserStats,
+  type BeadsTransaction,
+  type InsertBeadsTransaction,
+  type HouseAccountConfig,
+  type LivesConfig,
+  type TransactionType,
+  type GameplayConfig,
+  type Boost,
+  type InsertBoost,
+  type UserBoostInventory,
+  type InsertUserBoostInventory,
+  type Character,
+  type InsertCharacter,
+  type AccessoryCategory,
+  type InsertAccessoryCategory,
+  type BaseBody,
+  type InsertBaseBody,
+  type Accessory,
+  type InsertAccessory,
+  type UserAccessory,
+  type InsertUserAccessory,
+  type CharacterWithAccessories,
+  type GameSkin,
+  type InsertGameSkin,
+  type UserSkin,
+  type InsertUserSkin,
+  type BoostPackage,
+  type InsertBoostPackage,
+  type BoostPackagePurchase,
+  type InsertBoostPackagePurchase,
+  type CryptoPayment,
+  type InsertCryptoPayment,
+  type TeamMember,
+  type InsertTeamMember,
+  type RevenueShare,
+  type InsertRevenueShare,
+  type RevenueSummary,
+  leagues,
+  type League,
+  type InsertLeague,
+  withdrawalRequests,
+  type WithdrawalRequest,
+  type InsertWithdrawalRequest,
+  type WithdrawalConfig,
+  seasons,
+  seasonResults,
+  type Season,
+  type InsertSeason,
+  type SeasonResult,
+  type InsertSeasonResult,
+  beadsBoxSessions,
+  cryptoGameTickets,
+  type BeadsBoxSession,
+  type InsertBeadsBoxSession,
+  type CryptoGameTicket,
+  type InsertCryptoGameTicket,
+  type BeadsBoxReward,
+  type BeadsBoxConfig,
+} from "../shared/schema";
+import { withDbTransaction } from "./db";
+import { eq, desc, sql, isNull, and, or, gte, sum, ilike, count, inArray } from "drizzle-orm";
+import { UserRepository } from "./repositories/userRepository";
+import { CharacterRepository } from "./repositories/CharacterRepository";
+import { GameRepository } from "./repositories/GameRepository";
+
+export interface IStorage {
+  getUser(id: string): Promise<User | undefined>;
+  getUserByTelegramId(telegramId: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUserStats(userId: string, score: number): Promise<User | undefined>;
+  updateUser(userId: string, updates: UserUpdate): Promise<User | undefined>;
+  setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
+  softDeleteUser(userId: string): Promise<User | undefined>;
+  hardDeleteUser(userId: string): Promise<boolean>;
+  restoreUser(userId: string): Promise<User | undefined>;
+  getAllUsers(limit?: number, offset?: number, includeDeleted?: boolean): Promise<User[]>;
+  getActiveUsers(limit?: number, offset?: number): Promise<User[]>;
+  getUserCount(includeDeleted?: boolean): Promise<number>;
+  getAdmins(): Promise<User[]>;
+
+  createGameScore(score: InsertGameScore): Promise<GameScore>;
+  getUserScores(userId: string, limit?: number): Promise<GameScore[]>;
+  getAllScores(limit?: number, offset?: number): Promise<GameScore[]>;
+  getScoreCount(): Promise<number>;
+
+  getLeaderboard(limit?: number, period?: 'all' | 'week' | 'today'): Promise<LeaderboardEntry[]>;
+  getFriendsLeaderboardGlobal(userId: string, limit?: number): Promise<LeaderboardEntry[]>;
+
+  getGameConfig(key: string): Promise<GameConfig | undefined>;
+  getAllGameConfigs(): Promise<GameConfig[]>;
+  setGameConfig(config: InsertGameConfig): Promise<GameConfig>;
+  deleteGameConfig(key: string): Promise<void>;
+
+  getAdminCryptoBalances(): Promise<AdminCryptoBalances>;
+  setAdminCryptoBalances(balances: AdminCryptoBalances): Promise<AdminCryptoBalances>;
+
+  getPrizePool(id: string): Promise<PrizePool | undefined>;
+  getActivePrizePool(): Promise<PrizePool | undefined>;
+  getAllPrizePools(): Promise<PrizePool[]>;
+  createPrizePool(pool: InsertPrizePool): Promise<PrizePool>;
+  updatePrizePool(id: string, pool: Partial<InsertPrizePool>): Promise<PrizePool | undefined>;
+  deletePrizePool(id: string): Promise<void>;
+
+  getUsdtFundSettings(): Promise<UsdtFundSettings>;
+  updateUsdtFundSettings(updates: Partial<InsertUsdtFundSettings>): Promise<UsdtFundSettings>;
+  getUsdtFundStats(): Promise<UsdtFundStats>;
+
+  createRealReward(reward: InsertRealReward): Promise<RealReward>;
+  getUserRewardsToday(userId: string): Promise<number>;
+  getTotalDistributed(): Promise<number>;
+  getDistributedToday(): Promise<number>;
+  processUsdtReward(userId: string, usdtBallsCollected: number, gameScoreId: string): Promise<RewardResult>;
+  isUsdtFundAvailable(): Promise<boolean>;
+
+  getGameEconomyConfig(): Promise<GameEconomyConfig>;
+  updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig>;
+  processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number, gameScoreId?: string): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }>;
+
+  getUserByReferralCode(referralCode: string): Promise<User | undefined>;
+  generateReferralCode(): string;
+  ensureUserHasReferralCode(userId: string): Promise<string>;
+  processReferral(newUserId: string, referrerCode: string): Promise<boolean>;
+  getReferralConfig(): Promise<ReferralConfig>;
+  updateReferralConfig(config: Partial<ReferralConfig>): Promise<ReferralConfig>;
+  getReferralInfo(userId: string, botUsername: string): Promise<ReferralInfo>;
+  createReferralReward(reward: InsertReferralReward): Promise<ReferralReward>;
+  processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void>;
+  getUserReferralRewards(userId: string): Promise<ReferralReward[]>;
+  getTotalReferralBeads(userId: string): Promise<number>;
+
+  getFundToggles(): Promise<{ cryptoFundEnabled: boolean; usdtFundEnabled: boolean }>;
+
+  getHouseAccount(): Promise<HouseAccountConfig>;
+  updateHouseAccount(updates: Partial<HouseAccountConfig>): Promise<HouseAccountConfig>;
+  getLivesConfig(): Promise<LivesConfig>;
+  updateLivesConfig(config: Partial<LivesConfig>): Promise<LivesConfig>;
+  createBeadsTransaction(tx: InsertBeadsTransaction): Promise<BeadsTransaction>;
+  getBeadsTransactions(limit?: number, offset?: number): Promise<BeadsTransaction[]>;
+  getBeadsTransactionsCount(): Promise<number>;
+  getBeadsTransactionsWithUsers(options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+    search?: string;
+  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }>;
+  awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }>;
+  chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }>;
+  awardSignupBonus(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }>;
+  recordGameAndCompleteLevel(
+    userId: string,
+    score: number,
+    levelId: number,
+    isVictory: boolean,
+    maxCombo?: number,
+    previousLeagueSlug?: string,
+    previousLeagueSortOrder?: number
+  ): Promise<{
+    leaguePromotion?: {
+      previousLeague: string;
+      newLeague: string;
+      newLeagueNameRu: string;
+      playerName: string;
+      telegramId: string;
+    }
+  }>;
+
+  getBoosts(): Promise<Boost[]>;
+  getBoost(id: string): Promise<Boost | undefined>;
+  getBoostByType(type: string): Promise<Boost | undefined>;
+  createBoost(boost: InsertBoost): Promise<Boost>;
+  updateBoost(id: string, updates: Partial<InsertBoost>): Promise<Boost | undefined>;
+  deleteBoost(id: string): Promise<void>;
+
+  getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>>;
+  buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }>;
+  useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }>;
+  setUserBoostQuantity(userId: string, boostId: string, quantity: number): Promise<{ success: boolean; error?: string }>;
+
+  // Character System
+  getCharacter(userId: string): Promise<Character | undefined>;
+  createCharacter(character: InsertCharacter): Promise<Character>;
+  updateCharacter(userId: string, updates: Partial<InsertCharacter>): Promise<Character | undefined>;
+  getCharacterWithAccessories(userId: string): Promise<CharacterWithAccessories | null>;
+
+  // Base Bodies
+  getBaseBodies(gender?: string): Promise<BaseBody[]>;
+  getDefaultBaseBody(gender: string): Promise<BaseBody | undefined>;
+  ensureDefaultBaseBodies(): Promise<void>;
+  createBaseBody(body: InsertBaseBody): Promise<BaseBody>;
+  updateBaseBody(id: string, updates: Partial<InsertBaseBody>): Promise<BaseBody | undefined>;
+  deleteBaseBody(id: string): Promise<void>;
+
+  // Accessory Categories
+  getAccessoryCategories(): Promise<AccessoryCategory[]>;
+  createAccessoryCategory(category: InsertAccessoryCategory): Promise<AccessoryCategory>;
+  updateAccessoryCategory(id: string, updates: Partial<InsertAccessoryCategory>): Promise<AccessoryCategory | undefined>;
+  deleteAccessoryCategory(id: string): Promise<void>;
+
+  // Accessories
+  getAccessories(categoryId?: string, gender?: string): Promise<Accessory[]>;
+  getAccessory(id: string): Promise<Accessory | undefined>;
+  createAccessory(accessory: InsertAccessory): Promise<Accessory>;
+  updateAccessory(id: string, updates: Partial<InsertAccessory>): Promise<Accessory | undefined>;
+  deleteAccessory(id: string): Promise<void>;
+
+  // User Accessories
+  getUserAccessories(userId: string): Promise<Array<UserAccessory & { accessory: Accessory }>>;
+  purchaseAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string; userAccessory?: UserAccessory }>;
+  equipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
+  unequipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }>;
+
+  // Boost Packages
+  getBoostPackages(activeOnly?: boolean): Promise<BoostPackage[]>;
+  getBoostPackage(id: string): Promise<BoostPackage | undefined>;
+  createBoostPackage(pkg: InsertBoostPackage): Promise<BoostPackage>;
+  updateBoostPackage(id: string, updates: Partial<InsertBoostPackage>): Promise<BoostPackage | undefined>;
+  deleteBoostPackage(id: string): Promise<void>;
+  purchaseBoostPackage(userId: string, packageId: string, telegramPaymentId?: string): Promise<{ success: boolean; error?: string; purchase?: BoostPackagePurchase }>;
+  getUserBoostPackagePurchases(userId: string): Promise<BoostPackagePurchase[]>;
+
+  // Game Skins
+  getGameSkins(activeOnly?: boolean): Promise<GameSkin[]>;
+  getGameSkin(id: string): Promise<GameSkin | undefined>;
+  getGameSkinByName(name: string): Promise<GameSkin | undefined>;
+  createGameSkin(skin: InsertGameSkin): Promise<GameSkin>;
+  updateGameSkin(id: string, updates: Partial<InsertGameSkin>): Promise<GameSkin | undefined>;
+  deleteGameSkin(id: string): Promise<void>;
+
+  // User Skins
+  getUserSkins(userId: string): Promise<Array<UserSkin & { skin: GameSkin }>>;
+  grantUserSkin(userId: string, skinId: string): Promise<UserSkin>;
+  setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }>;
+
+  // Manual Crypto Payments (semi-automatic)
+  createCryptoPaymentRequest(userId: string, packageId: string, network: string, priceUsd: number): Promise<CryptoPayment>;
+  getPendingCryptoPayments(): Promise<Array<CryptoPayment & { user: User; package: BoostPackage }>>;
+  getUserCryptoPayments(userId: string): Promise<CryptoPayment[]>;
+  confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string; userId?: string; packageId?: string }>;
+  rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }>;
+
+  // Team Members & Revenue
+  getTeamMembers(activeOnly?: boolean): Promise<TeamMember[]>;
+  getTeamMember(id: string): Promise<TeamMember | undefined>;
+  createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
+  deleteTeamMember(id: string): Promise<void>;
+  createRevenueShare(share: InsertRevenueShare): Promise<RevenueShare>;
+  getRevenueSummary(): Promise<RevenueSummary>;
+  recordRevenueFromPurchase(purchaseId: string, priceStars: number, priceUsd: number, paymentType: 'stars' | 'crypto'): Promise<void>;
+
+  // Leagues
+  getLeagues(): Promise<League[]>;
+  getLeague(slug: string): Promise<League | undefined>;
+  getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined>;
+  getUserRank(userId: string): Promise<number>;
+  getLeagueLeaderboard(leagueSlug: string, limit?: number, period?: 'all' | 'week' | 'today'): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    ratingScore: number;
+    beadsBalance: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>>;
+  getLeaguePlayerCount(leagueSlug: string): Promise<number>;
+  getFriendsLeaderboard(userId: string, leagueSlug: string, limit?: number): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    ratingScore: number;
+    beadsBalance: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>>;
+
+  // User Notifications
+  getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>>;
+
+  // Transaction Management
+  deleteTransaction(transactionId: string): Promise<boolean>;
+
+  // User Level Management
+  resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }>;
+
+  // Withdrawal Requests
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  getWithdrawalRequests(status?: string): Promise<Array<WithdrawalRequest & { username?: string }>>;
+  getUserWithdrawalRequests(userId: string): Promise<WithdrawalRequest[]>;
+  updateWithdrawalRequest(id: string, updates: { status?: string; adminNote?: string; txHash?: string; processedBy?: string; processedAt?: Date }): Promise<WithdrawalRequest | undefined>;
+  getWithdrawalConfig(): Promise<WithdrawalConfig>;
+  updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig>;
+
+  // Seasons
+  getActiveSeason(): Promise<Season | undefined>;
+  getAllSeasons(): Promise<Season[]>;
+  getSeasonByNumber(seasonNumber: number): Promise<Season | undefined>;
+  endCurrentSeason(): Promise<{ success: boolean; season?: Season; resultsCount?: number; error?: string }>;
+  startNewSeason(): Promise<{ success: boolean; season?: Season; error?: string }>;
+  getSeasonResults(seasonId: string): Promise<SeasonResult[]>;
+  getUserSeasonResults(userId: string): Promise<Array<SeasonResult & { season: Season }>>;
+
+  // BEADS BOX System
+  getBeadsBoxConfig(): Promise<BeadsBoxConfig>;
+  updateBeadsBoxConfig(config: Partial<BeadsBoxConfig>): Promise<BeadsBoxConfig>;
+  getUserDailyBoxSession(userId: string, date: string): Promise<BeadsBoxSession | undefined>;
+  createDailyBoxSession(userId: string, date: string, boxes: BeadsBoxReward[]): Promise<BeadsBoxSession>;
+  deleteBeadsBoxSession(userId: string, date: string): Promise<void>;
+  selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }>;
+  getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]>;
+  useCryptoTicket(ticketId: string, gameScoreId?: string | null): Promise<{ success: boolean; error?: string }>;
+  createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket>;
+  getGameConfigsForLevel(levelId: number): Promise<{ gameplayConfig: GameplayConfig; gameEconomyConfig: GameEconomyConfig; livesConfig: LivesConfig }>;
+}
+
+// Function to log diagnostic information to the database
+export async function logDiagnostic(message: string, data?: any) {
+  return await withDbTransaction(async (db) => {
+    try {
+      await db.insert(systemLogs).values({
+        message,
+        data: data || null,
+      });
+    } catch (error) {
+    }
+  });
+}
+
+export class DatabaseStorage implements IStorage {
+  private userRepository: UserRepository;
+  private characterRepository: CharacterRepository;
+  private gameRepository: GameRepository;
+
+  constructor() {
+    this.userRepository = new UserRepository();
+    this.characterRepository = new CharacterRepository();
+    this.gameRepository = new GameRepository();
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.userRepository.getUser(id);
+    return result;
+  }
+
+  async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
+    const result = await this.userRepository.getUserByTelegramId(telegramId);
+    return result;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.userRepository.getUserByUsername(username);
+    return result;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.userRepository.createUser(insertUser);
+    return result;
+  }
+
+  async updateUserStats(userId: string, score: number): Promise<User | undefined> {
+    const result = await this.userRepository.updateUserStats(userId, score);
+    return result;
+  }
+
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const result = await this.userRepository.setUserAdmin(userId, isAdmin);
+    return result;
+  }
+
+  async updateUser(userId: string, updates: UserUpdate): Promise<User | undefined> {
+    const result = await this.userRepository.updateUser(userId, updates);
+    return result;
+  }
+
+  async softDeleteUser(userId: string): Promise<User | undefined> {
+    const result = await this.userRepository.softDeleteUser(userId);
+    return result;
+  }
+
+  async hardDeleteUser(userId: string): Promise<boolean> {
+    const result = await this.userRepository.hardDeleteUser(userId);
+    return result;
+  }
+
+  async restoreUser(userId: string): Promise<User | undefined> {
+    const result = await this.userRepository.restoreUser(userId);
+    return result;
+  }
+
+  async getAllUsers(limit: number = 50, offset: number = 0, includeDeleted: boolean = true): Promise<User[]> {
+    const result = await this.userRepository.getAllUsers(limit, offset, includeDeleted);
+    return result;
+  }
+
+  async getActiveUsers(limit: number = 50, offset: number = 0): Promise<User[]> {
+    const result = await this.userRepository.getActiveUsers(limit, offset);
+    return result;
+  }
+
+  async getUserCount(includeDeleted: boolean = false): Promise<number> {
+    const result = await this.userRepository.getUserCount(includeDeleted);
+    return result;
+  }
+
+  async getAdmins(): Promise<User[]> {
+    const result = await this.userRepository.getAdmins();
+    return result;
+  }
+
+  async createGameScore(insertScore: InsertGameScore): Promise<GameScore> {
+    return await this.gameRepository.createGameScore(insertScore);
+  }
+
+  async getUserScores(userId: string, limit: number = 10): Promise<GameScore[]> {
+    return await this.gameRepository.getUserScores(userId, limit);
+  }
+
+  async getAllScores(limit: number = 50, offset: number = 0): Promise<GameScore[]> {
+    return await this.gameRepository.getAllScores(limit, offset);
+  }
+
+  async getScoreCount(): Promise<number> {
+    return await this.gameRepository.getScoreCount();
+  }
+
+  async getLeaderboard(limit: number = 50, period: 'all' | 'week' | 'today' = 'all'): Promise<LeaderboardEntry[]> {
+    // РћРіСЂР°РЅРёС‡РёРІР°РµРј РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РґРѕ 100
+    const maxLimit = Math.min(limit, 100);
+    return await this.gameRepository.getLeaderboard(maxLimit, period);
+  }
+
+  async getFriendsLeaderboardGlobal(userId: string, limit: number = 50): Promise<LeaderboardEntry[]> {
+    // РћРіСЂР°РЅРёС‡РёРІР°РµРј РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РґРѕ 100
+    const maxLimit = Math.min(limit, 100);
+
+    return await withDbTransaction(async (db) => {
+      // Get the user's current league to determine which friends to include
+      const userResult = await db
+        .select({
+          id: users.id,
+          leagueSlug: users.ratingScore, // Using rating score to determine league indirectly
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .leftJoin(seasonResults, eq(users.id, seasonResults.userId)); // Join with season results to get league info
+
+      if (!userResult[0]) {
+        return [];
+      }
+
+      // For friend leaderboard, we'll get users that the current user has interacted with
+      // This is a simplified implementation - in a real app you might have a friends table
+      const result = await db.execute(sql`
+        SELECT
+          u.id,
+          u.username,
+          u.photo_url,
+          u.rating_score,
+          u.total_points,
+          u.games_played,
+          u.best_score,
+          c.name as character_name,
+          (SELECT bb.image_url FROM base_bodies bb WHERE bb.gender = c.gender LIMIT 1) as character_image_url
+        FROM users u
+        LEFT JOIN characters c ON c.user_id = u.id
+        WHERE u.deleted_at IS NULL
+          AND u.id != ${userId}
+          AND u.rating_score > 0
+        ORDER BY u.rating_score DESC
+        LIMIT ${maxLimit}
+      `);
+
+      return result.rows.map((row: any, index: number) => ({
+        rank: index + 1,
+        userId: row.id,
+        username: row.username,
+        photoUrl: row.photo_url,
+        totalPoints: Number(row.total_points),
+        ratingScore: Number(row.rating_score),
+        gamesPlayed: row.games_played,
+        bestScore: row.best_score,
+        characterName: row.character_name || null,
+        characterImageUrl: row.character_image_url || null,
+      }));
+    });
+  }
+
+  async getGameConfig(key: string): Promise<GameConfig | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, key));
+      return config || undefined;
+    });
+  }
+
+  async getAllGameConfigs(): Promise<GameConfig[]> {
+    return await withDbTransaction(async (db) => {
+      return db.select().from(gameConfig);
+    });
+  }
+
+  async setGameConfig(config: InsertGameConfig): Promise<GameConfig> {
+    return await withDbTransaction(async (db) => {
+      const [existing] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, config.key));
+
+      if (existing) {
+        const [updated] = await db
+          .update(gameConfig)
+          .set(config)
+          .where(eq(gameConfig.key, config.key))
+          .returning();
+        return updated;
+      } else {
+        const [newConfig] = await db
+          .insert(gameConfig)
+          .values(config)
+          .returning();
+        return newConfig;
+      }
+    });
+  }
+
+  async deleteGameConfig(key: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(gameConfig).where(eq(gameConfig.key, key));
+    });
+  }
+
+  async getAdminCryptoBalances(): Promise<AdminCryptoBalances> {
+    return await withDbTransaction(async (db) => {
+      const settings = await this.getUsdtFundSettings();
+      const [userResult] = await db
+        .select({
+          totalBtc: sql<number>`sum(${users.btcBalanceSats})::integer`,
+          totalEth: sql<number>`sum(${users.ethBalanceWei})::integer`,
+          totalUsdt: sql<number>`sum(${users.usdtBalance})`,
+        })
+        .from(users);
+
+      return {
+        totalBtcSats: userResult?.totalBtc || 0,
+        totalEthWei: userResult?.totalEth || 0,
+        totalUsdt: userResult?.totalUsdt || 0,
+        availableBtcSats: settings.btcBalanceSats,
+        availableEthWei: settings.ethBalanceWei,
+        availableUsdt: settings.usdtBalance,
+      };
+    });
+  }
+
+  async setAdminCryptoBalances(balances: AdminCryptoBalances): Promise<AdminCryptoBalances> {
+    return await withDbTransaction(async (db) => {
+      const settings = await this.getUsdtFundSettings();
+      
+      // Update USDT fund settings
+      await db
+        .update(usdtFundSettings)
+        .set({
+          btcBalanceSats: balances.availableBtcSats,
+          ethBalanceWei: balances.availableEthWei,
+          usdtBalance: balances.availableUsdt,
+        })
+        .where(eq(usdtFundSettings.id, settings.id));
+
+      return balances;
+    });
+  }
+
+  async getPrizePool(id: string): Promise<PrizePool | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [pool] = await db
+        .select()
+        .from(prizePool)
+        .where(eq(prizePool.id, id));
+      return pool || undefined;
+    });
+  }
+
+  async getActivePrizePool(): Promise<PrizePool | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [pool] = await db
+        .select()
+        .from(prizePool)
+        .where(eq(prizePool.isActive, true));
+      return pool || undefined;
+    });
+  }
+
+  async getAllPrizePools(): Promise<PrizePool[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(prizePool)
+        .orderBy(desc(prizePool.createdAt));
+    });
+  }
+
+  async createPrizePool(pool: InsertPrizePool): Promise<PrizePool> {
+    return await withDbTransaction(async (db) => {
+      const [newPool] = await db
+        .insert(prizePool)
+        .values(pool)
+        .returning();
+      return newPool;
+    });
+  }
+
+  async updatePrizePool(id: string, pool: Partial<InsertPrizePool>): Promise<PrizePool | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedPool] = await db
+        .update(prizePool)
+        .set(pool)
+        .where(eq(prizePool.id, id))
+        .returning();
+      return updatedPool || undefined;
+    });
+  }
+
+  async deletePrizePool(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(prizePool).where(eq(prizePool.id, id));
+    });
+  }
+
+  async getUsdtFundSettings(): Promise<UsdtFundSettings> {
+    return await withDbTransaction(async (db) => {
+      const [settings] = await db
+        .select()
+        .from(usdtFundSettings)
+        .orderBy(desc(usdtFundSettings.updatedAt))
+        .limit(1);
+      
+      if (!settings) {
+        // If no settings exist, create default ones
+        const [defaultSettings] = await db
+          .insert(usdtFundSettings)
+          .values({
+            usdtTotalFund: 50,
+            usdtAvailable: 50,
+            usdtDailyLimit: 1.0,
+            usdtPerDrop: 0.02,
+            usdtMaxPerUserPerDay: 0.1,
+            usdtDistributedToday: 0,
+          })
+          .returning();
+        return defaultSettings;
+      }
+      
+      return settings;
+    });
+  }
+
+  async updateUsdtFundSettings(updates: Partial<InsertUsdtFundSettings>): Promise<UsdtFundSettings> {
+    return await withDbTransaction(async (db) => {
+      const currentSettings = await this.getUsdtFundSettings();
+      
+      const [updatedSettings] = await db
+        .update(usdtFundSettings)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(usdtFundSettings.id, currentSettings.id))
+        .returning();
+        
+      return updatedSettings;
+    });
+  }
+
+  async getUsdtFundStats(): Promise<UsdtFundStats> {
+    return await withDbTransaction(async (db) => {
+      const settings = await this.getUsdtFundSettings();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Calculate total distributed today
+      const [dailyTotalResult] = await db
+        .select({ total: sql<number>`sum(${realRewards.amount})` })
+        .from(realRewards)
+        .where(sql`${realRewards.createdAt}::date = ${today}::date`);
+
+      return {
+        totalFund: settings.usdtTotalFund,
+        available: settings.usdtAvailable,
+        dailyLimit: settings.usdtDailyLimit,
+        perDrop: settings.usdtPerDrop,
+        maxPerUserPerDay: settings.usdtMaxPerUserPerDay,
+        distributedToday: settings.usdtDistributedToday,
+        dailyTotalDistributed: Number(dailyTotalResult?.total || 0),
+      };
+    });
+  }
+
+  async createRealReward(reward: InsertRealReward): Promise<RealReward> {
+    return await withDbTransaction(async (db) => {
+      const [newReward] = await db
+        .insert(realRewards)
+        .values(reward)
+        .returning();
+      return newReward;
+    });
+  }
+
+  async getUserRewardsToday(userId: string): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [result] = await db
+        .select({ total: sql<number>`sum(${realRewards.amount})` })
+        .from(realRewards)
+        .where(
+          and(
+            eq(realRewards.userId, userId),
+            sql`${realRewards.createdAt}::date = ${today}::date`
+          )
+        );
+
+      return Number(result?.total || 0);
+    });
+  }
+
+  async getTotalDistributed(): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const [result] = await db
+        .select({ total: sql<number>`sum(${realRewards.amount})` })
+        .from(realRewards);
+
+      return Number(result?.total || 0);
+    });
+  }
+
+  async getDistributedToday(): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [result] = await db
+        .select({ total: sql<number>`sum(${realRewards.amount})` })
+        .from(realRewards)
+        .where(sql`${realRewards.createdAt}::date = ${today}::date`);
+
+      return Number(result?.total || 0);
+    });
+  }
+
+  async processUsdtReward(userId: string, usdtBallsCollected: number, gameScoreId: string): Promise<RewardResult> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const settings = await this.getUsdtFundSettings();
+      const userDailyRewards = await this.getUserRewardsToday(userId);
+
+      // Calculate potential reward
+      const potentialReward = usdtBallsCollected * settings.usdtPerDrop;
+      const maxPossibleReward = settings.usdtMaxPerUserPerDay - userDailyRewards;
+      const actualReward = Math.min(potentialReward, maxPossibleReward, settings.usdtAvailable);
+
+      if (actualReward <= 0) {
+        return {
+          success: false,
+          error: 'No USDT reward available (daily limit reached or insufficient funds)',
+          amount: 0,
+          newBalance: user.usdtBalance,
+        };
+      }
+
+      // Update user balance
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          usdtBalance: user.usdtBalance + actualReward,
+          usdtToday: user.usdtToday + actualReward,
+          usdtTodayDate: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Update fund settings
+      await this.updateUsdtFundSettings({
+        usdtAvailable: settings.usdtAvailable - actualReward,
+        usdtDistributedToday: settings.usdtDistributedToday + actualReward,
+      });
+
+      // Create reward record
+      await this.createRealReward({
+        userId,
+        cryptoType: 'USDT',
+        amount: actualReward,
+        balanceBefore: user.usdtBalance,
+        balanceAfter: updatedUser.usdtBalance,
+        description: `USDT reward from ${usdtBallsCollected} balls collected`,
+        gameScoreId,
+      });
+
+      return {
+        success: true,
+        amount: actualReward,
+        newBalance: updatedUser.usdtBalance,
+      };
+    });
+  }
+
+  async isUsdtFundAvailable(): Promise<boolean> {
+    return await withDbTransaction(async (db) => {
+      const settings = await this.getUsdtFundSettings();
+      return settings.usdtAvailable > 0;
+    });
+  }
+
+  async getGameEconomyConfig(): Promise<GameEconomyConfig> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, 'game_economy'));
+
+      if (!config) {
+        // Return default values if no config exists
+        return {
+          cryptoRewards: {
+            enabled: true,
+            minBtcReward: 0.00000001,
+            maxBtcReward: 0.00001,
+            minEthReward: 0.000000000000000001,
+            maxEthReward: 0.00000000000001,
+            minUsdtReward: 0.00000001,
+            maxUsdtReward: 0.1,
+          },
+          dailyLimits: {
+            maxBtcPerUser: 0.0001,
+            maxEthPerUser: 0.0000000000001,
+            maxUsdtPerUser: 1,
+          },
+          perGameLimits: {
+            maxBtcPerGame: 0.00001,
+            maxEthPerGame: 0.00000000000001,
+            maxUsdtPerGame: 0.1,
+          },
+          pools: {
+            btcBalanceSats: 1000000, // 0.01 BTC
+            ethBalanceWei: 10000000000000000000n, // 10 ETH
+            usdtBalance: 1000, // 1000 USDT
+          },
+          fundToggles: {
+            cryptoFundEnabled: true,
+            usdtFundEnabled: true,
+          },
+          livesConfig: {
+            baseLives: 3,
+            maxLives: 5,
+            liveCost: 100, // beads cost to buy extra life
+            livesRefillTime: 30 * 60 * 1000, // 30 minutes in ms
+          },
+          gameplayConfig: {
+            baseScoreMultiplier: 1,
+            comboMultiplier: 1.1,
+            maxComboMultiplier: 5,
+            levelThreshold: 1000,
+          },
+          referralConfig: {
+            enabled: true,
+            directReferralReward: 100, // beads
+            indirectReferralReward: 50, // beads
+            maxLevels: 3, // max referral levels
+          },
+        };
+      }
+
+      return config.value as GameEconomyConfig;
+    });
+  }
+
+  async updateGameEconomyConfig(config: Partial<GameEconomyConfig>): Promise<GameEconomyConfig> {
+    return await withDbTransaction(async (db) => {
+      const existing = await this.getGameEconomyConfig();
+      const updatedConfig = { ...existing, ...config };
+
+      await db
+        .insert(gameConfig)
+        .values({
+          key: 'game_economy',
+          value: updatedConfig,
+          description: 'Game economy configuration',
+        })
+        .onConflictDoUpdate({
+          target: [gameConfig.key],
+          set: {
+            value: updatedConfig,
+            updatedAt: new Date(),
+          },
+        });
+
+      return updatedConfig;
+    });
+  }
+
+  async processCryptoRewards(userId: string, cryptoBtc: number, cryptoEth: number, cryptoUsdt: number, gameScoreId?: string): Promise<{ btcAwarded: number; ethAwarded: number; usdtAwarded: number; btcSatsAwarded: number; ethWeiAwarded: number }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const config = await this.getGameEconomyConfig();
+
+      // Calculate rewards respecting limits
+      let btcReward = Math.min(cryptoBtc, config.cryptoRewards.maxBtcReward);
+      let ethReward = Math.min(cryptoEth, config.cryptoRewards.maxEthReward);
+      let usdtReward = Math.min(cryptoUsdt, config.cryptoRewards.maxUsdtReward);
+
+      // Check pool availability
+      if (config.fundToggles.cryptoFundEnabled) {
+        if (btcReward > 0 && config.pools.btcBalanceSats < btcReward) {
+          btcReward = Math.min(btcReward, config.pools.btcBalanceSats);
+        }
+        if (ethReward > 0 && config.pools.ethBalanceWei < ethReward) {
+          ethReward = Math.min(ethReward, config.pools.ethBalanceWei);
+        }
+      }
+
+      if (config.fundToggles.usdtFundEnabled) {
+        if (usdtReward > 0 && config.pools.usdtBalance < usdtReward) {
+          usdtReward = Math.min(usdtReward, config.pools.usdtBalance);
+        }
+      }
+
+      // Update user balances
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          btcBalanceSats: user.btcBalanceSats + Math.floor(btcReward),
+          ethBalanceWei: user.ethBalanceWei + Math.floor(ethReward),
+          usdtBalance: user.usdtBalance + usdtReward,
+          // Update today's amounts if it's a new day
+          ...(user.btcTodayDate?.toDateString() !== new Date().toDateString() && {
+            btcTodaySats: Math.floor(btcReward),
+            btcTodayDate: new Date(),
+          }),
+          ...(user.ethTodayDate?.toDateString() !== new Date().toDateString() && {
+            ethTodayWei: Math.floor(ethReward),
+            ethTodayDate: new Date(),
+          }),
+          ...(user.usdtTodayDate?.toDateString() !== new Date().toDateString() && {
+            usdtToday: usdtReward,
+            usdtTodayDate: new Date(),
+          }),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Update pools if funds are enabled
+      if (config.fundToggles.cryptoFundEnabled || config.fundToggles.usdtFundEnabled) {
+        const updatedPools = {
+          ...config.pools,
+        };
+
+        if (config.fundToggles.cryptoFundEnabled) {
+          updatedPools.btcBalanceSats = Math.max(0, config.pools.btcBalanceSats - Math.floor(btcReward));
+          updatedPools.ethBalanceWei = Math.max(0, config.pools.ethBalanceWei - Math.floor(ethReward));
+        }
+
+        if (config.fundToggles.usdtFundEnabled) {
+          updatedPools.usdtBalance = Math.max(0, config.pools.usdtBalance - usdtReward);
+        }
+
+        await this.updateGameEconomyConfig({
+          pools: updatedPools,
+        });
+      }
+
+      // Create reward records if rewards were given
+      if (btcReward > 0) {
+        await this.createRealReward({
+          userId,
+          cryptoType: 'BTC',
+          amount: btcReward,
+          balanceBefore: user.btcBalance,
+          balanceAfter: updatedUser.btcBalance,
+          description: 'BTC reward from game',
+          gameScoreId: gameScoreId || null,
+        });
+      }
+
+      if (ethReward > 0) {
+        await this.createRealReward({
+          userId,
+          cryptoType: 'ETH',
+          amount: ethReward,
+          balanceBefore: user.ethBalance,
+          balanceAfter: updatedUser.ethBalance,
+          description: 'ETH reward from game',
+          gameScoreId: gameScoreId || null,
+        });
+      }
+
+      if (usdtReward > 0) {
+        await this.createRealReward({
+          userId,
+          cryptoType: 'USDT',
+          amount: usdtReward,
+          balanceBefore: user.usdtBalance,
+          balanceAfter: updatedUser.usdtBalance,
+          description: 'USDT reward from game',
+          gameScoreId: gameScoreId || null,
+        });
+      }
+
+      return {
+        btcAwarded: btcReward,
+        ethAwarded: ethReward,
+        usdtAwarded: usdtReward,
+        btcSatsAwarded: Math.floor(btcReward),
+        ethWeiAwarded: Math.floor(ethReward),
+      };
+    });
+  }
+
+  async getUserByReferralCode(referralCode: string): Promise<User | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.referralCode, referralCode));
+      return user || undefined;
+    });
+  }
+
+  generateReferralCode(): string {
+    // Generate a random referral code
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  async ensureUserHasReferralCode(userId: string): Promise<string> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (user.referralCode) {
+        return user.referralCode;
+      }
+
+      // Generate unique referral code
+      let referralCode: string;
+      let isUnique = false;
+      let attempts = 0;
+
+      while (!isUnique && attempts < 10) {
+        referralCode = this.generateReferralCode();
+        const existingUser = await this.getUserByReferralCode(referralCode);
+        if (!existingUser) {
+          isUnique = true;
+        }
+        attempts++;
+      }
+
+      if (!isUnique) {
+        throw new Error('Could not generate unique referral code');
+      }
+
+      // Update user with referral code
+      await db
+        .update(users)
+        .set({ referralCode })
+        .where(eq(users.id, userId));
+
+      return referralCode;
+    });
+  }
+
+  async processReferral(newUserId: string, referrerCode: string): Promise<boolean> {
+    return await withDbTransaction(async (db) => {
+      const referrer = await this.getUserByReferralCode(referrerCode);
+      if (!referrer) {
+        return false;
+      }
+
+      // Update referrer's direct referrals count
+      await db
+        .update(users)
+        .set({
+          directReferralsCount: referrer.directReferralsCount + 1,
+        })
+        .where(eq(users.id, referrer.id));
+
+      // Link the new user to the referrer
+      await db
+        .update(users)
+        .set({
+          referredBy: referrer.id,
+        })
+        .where(eq(users.id, newUserId));
+
+      return true;
+    });
+  }
+
+  async getReferralConfig(): Promise<ReferralConfig> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, 'referral_config'));
+
+      if (!config) {
+        return {
+          enabled: true,
+          directReferralReward: 100,
+          indirectReferralReward: 50,
+          maxLevels: 3,
+        };
+      }
+
+      return config.value as ReferralConfig;
+    });
+  }
+
+  async updateReferralConfig(config: Partial<ReferralConfig>): Promise<ReferralConfig> {
+    return await withDbTransaction(async (db) => {
+      const existing = await this.getReferralConfig();
+      const updatedConfig = { ...existing, ...config };
+
+      await db
+        .insert(gameConfig)
+        .values({
+          key: 'referral_config',
+          value: updatedConfig,
+          description: 'Referral system configuration',
+        })
+        .onConflictDoUpdate({
+          target: [gameConfig.key],
+          set: {
+            value: updatedConfig,
+            updatedAt: new Date(),
+          },
+        });
+
+      return updatedConfig;
+    });
+  }
+
+  async getReferralInfo(userId: string, botUsername: string): Promise<ReferralInfo> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const referralCode = await this.ensureUserHasReferralCode(userId);
+
+      // Get referral stats
+      const [statsResult] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(eq(users.referredBy, userId));
+
+      const directReferralsCount = Number(statsResult?.count || 0);
+
+      // Get total referral beads earned
+      const [totalBeadsResult] = await db
+        .select({ total: sql<number>`sum(${referralRewards.beadsAmount})` })
+        .from(referralRewards)
+        .where(eq(referralRewards.userId, userId));
+
+      const totalReferralBeads = Number(totalBeadsResult?.total || 0);
+
+      return {
+        referralLink: `https://t.me/${botUsername}?start=${referralCode}`,
+        referralCode,
+        directReferralsCount,
+        totalReferralBeads,
+      };
+    });
+  }
+
+  async createReferralReward(reward: InsertReferralReward): Promise<ReferralReward> {
+    return await withDbTransaction(async (db) => {
+      const [newReward] = await db
+        .insert(referralRewards)
+        .values(reward)
+        .returning();
+      return newReward;
+    });
+  }
+
+  async processReferralRewards(gameScoreId: string, playerId: string, beadsEarned: number): Promise<void> {
+    await withDbTransaction(async (db) => {
+      // Get the game score to access player info
+      const [gameScore] = await db
+        .select()
+        .from(gameScores)
+        .where(eq(gameScores.id, gameScoreId));
+
+      if (!gameScore) {
+        throw new Error('Game score not found');
+      }
+
+      const config = await this.getReferralConfig();
+      if (!config.enabled) {
+        return;
+      }
+
+      // Find the referral chain (limited to maxLevels)
+      let currentUserId = playerId;
+      let level = 1;
+
+      while (currentUserId && level <= config.maxLevels) {
+        const user = await this.getUser(currentUserId);
+        if (!user || !user.referredBy) {
+          break;
+        }
+
+        // Calculate reward for this level
+        const rewardAmount = level === 1 
+          ? config.directReferralReward 
+          : Math.floor(config.indirectReferralReward / level);
+
+        if (rewardAmount > 0) {
+          // Award beads to the referrer
+          await this.awardBeadsWithHouse(
+            user.referredBy,
+            rewardAmount,
+            'referral_reward',
+            `Referral reward (level ${level}) for user ${playerId}'s game`
+          );
+
+          // Record the referral reward
+          await this.createReferralReward({
+            userId: user.referredBy,
+            refUserId: currentUserId,
+            level,
+            beadsAmount: rewardAmount,
+            gameScoreId,
+          });
+        }
+
+        // Move up the referral chain
+        currentUserId = user.referredBy;
+        level++;
+      }
+    });
+  }
+
+  async getUserReferralRewards(userId: string): Promise<ReferralReward[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(referralRewards)
+        .where(eq(referralRewards.userId, userId))
+        .orderBy(desc(referralRewards.createdAt));
+    });
+  }
+
+  async getTotalReferralBeads(userId: string): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const [result] = await db
+        .select({ total: sql<number>`sum(${referralRewards.beadsAmount})` })
+        .from(referralRewards)
+        .where(eq(referralRewards.userId, userId));
+
+      return Number(result?.total || 0);
+    });
+  }
+
+  async getFundToggles(): Promise<{ cryptoFundEnabled: boolean; usdtFundEnabled: boolean }> {
+    return await withDbTransaction(async (db) => {
+      const config = await this.getGameEconomyConfig();
+      return {
+        cryptoFundEnabled: config.fundToggles.cryptoFundEnabled,
+        usdtFundEnabled: config.fundToggles.usdtFundEnabled,
+      };
+    });
+  }
+
+  async getHouseAccount(): Promise<HouseAccountConfig> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, 'house_account'));
+
+      if (!config) {
+        return {
+          beadsBalance: 1000000,
+          totalEarned: 0,
+          totalPaidOut: 0,
+        };
+      }
+
+      return config.value as HouseAccountConfig;
+    });
+  }
+
+  async updateHouseAccount(updates: Partial<HouseAccountConfig>): Promise<HouseAccountConfig> {
+    return await withDbTransaction(async (db) => {
+      const existing = await this.getHouseAccount();
+      const updatedConfig = { ...existing, ...updates };
+
+      await db
+        .insert(gameConfig)
+        .values({
+          key: 'house_account',
+          value: updatedConfig,
+          description: 'House account configuration',
+        })
+        .onConflictDoUpdate({
+          target: [gameConfig.key],
+          set: {
+            value: updatedConfig,
+            updatedAt: new Date(),
+          },
+        });
+
+      return updatedConfig;
+    });
+  }
+
+  async getLivesConfig(): Promise<LivesConfig> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, 'lives_config'));
+
+      if (!config) {
+        return {
+          baseLives: 3,
+          maxLives: 5,
+          liveCost: 100,
+          livesRefillTime: 30 * 60 * 1000, // 30 minutes
+        };
+      }
+
+      return config.value as LivesConfig;
+    });
+  }
+
+  async updateLivesConfig(config: Partial<LivesConfig>): Promise<LivesConfig> {
+    return await withDbTransaction(async (db) => {
+      const existing = await this.getLivesConfig();
+      const updatedConfig = { ...existing, ...config };
+
+      await db
+        .insert(gameConfig)
+        .values({
+          key: 'lives_config',
+          value: updatedConfig,
+          description: 'Lives configuration',
+        })
+        .onConflictDoUpdate({
+          target: [gameConfig.key],
+          set: {
+            value: updatedConfig,
+            updatedAt: new Date(),
+          },
+        });
+
+      return updatedConfig;
+    });
+  }
+
+  async createBeadsTransaction(tx: InsertBeadsTransaction): Promise<BeadsTransaction> {
+    return await withDbTransaction(async (db) => {
+      const [transaction] = await db
+        .insert(beadsTransactions)
+        .values(tx)
+        .returning();
+      return transaction;
+    });
+  }
+
+  async getBeadsTransactions(limit?: number, offset?: number): Promise<BeadsTransaction[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select()
+        .from(beadsTransactions)
+        .where(isNull(beadsTransactions.deletedAt))
+        .orderBy(desc(beadsTransactions.createdAt));
+
+      if (limit !== undefined) {
+        query = query.limit(limit);
+      }
+      if (offset !== undefined) {
+        query = query.offset(offset);
+      }
+
+      return query;
+    });
+  }
+
+  async getBeadsTransactionsCount(): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const [result] = await db
+        .select({ count: count() })
+        .from(beadsTransactions)
+        .where(isNull(beadsTransactions.deletedAt));
+
+      return Number(result?.count || 0);
+    });
+  }
+
+  async getBeadsTransactionsWithUsers(options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+    search?: string;
+  }): Promise<{ transactions: Array<BeadsTransaction & { username?: string }>; total: number }> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select({
+          transaction: sql<BeadsTransaction>`beads_transactions.*`,
+          username: users.username,
+        })
+        .from(beadsTransactions)
+        .leftJoin(users, eq(beadsTransactions.userId, users.id))
+        .where(isNull(beadsTransactions.deletedAt))
+        .orderBy(desc(beadsTransactions.createdAt));
+
+      // Apply filters
+      if (options.type) {
+        query = query.where(eq(beadsTransactions.type, options.type));
+      }
+
+      if (options.search) {
+        query = query.where(ilike(users.username, `%${options.search}%`));
+      }
+
+      // Get total count
+      const countQuery = db
+        .select({ count: count() })
+        .from(beadsTransactions)
+        .leftJoin(users, eq(beadsTransactions.userId, users.id))
+        .where(isNull(beadsTransactions.deletedAt));
+
+      if (options.type) {
+        countQuery.where(eq(beadsTransactions.type, options.type));
+      }
+
+      if (options.search) {
+        countQuery.where(ilike(users.username, `%${options.search}%`));
+      }
+
+      const [totalCountResult] = await countQuery;
+      const total = Number(totalCountResult?.count || 0);
+
+      // Apply pagination
+      if (options.limit !== undefined) {
+        query = query.limit(options.limit);
+      }
+      if (options.offset !== undefined) {
+        query = query.offset(options.offset);
+      }
+
+      const result = await query;
+      const transactions = result.map(item => ({
+        ...item.transaction,
+        username: item.username || undefined,
+      }));
+
+      return { transactions, total };
+    });
+  }
+
+  async awardBeadsWithHouse(userId: string, amount: number, type: TransactionType, description: string, gameScoreId?: string): Promise<{ success: boolean; newBalance: number }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        return { success: false, newBalance: 0 };
+      }
+
+      // Update user balance
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints + amount,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type,
+        amount,
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description,
+        gameScoreId: gameScoreId || null,
+      });
+
+      return { success: true, newBalance: updatedUser.totalPoints };
+    });
+  }
+
+  async chargeBeadsToHouse(userId: string, amount: number, type: TransactionType, description: string): Promise<{ success: boolean; newBalance: number }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user || user.totalPoints < amount) {
+        return { success: false, newBalance: user?.totalPoints || 0 };
+      }
+
+      // Update user balance
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints - amount,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type,
+        amount: -amount, // Negative amount for charges
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description,
+      });
+
+      return { success: true, newBalance: updatedUser.totalPoints };
+    });
+  }
+
+  async awardSignupBonus(userId: string, amount: number): Promise<{ success: boolean; newBalance: number }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        return { success: false, newBalance: 0 };
+      }
+
+      // Check if signup bonus was already received
+      if (user.signupBonusReceived) {
+        return { success: false, newBalance: user.totalPoints };
+      }
+
+      // Update user balance and mark bonus as received
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints + amount,
+          signupBonusReceived: true,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type: 'signup_bonus',
+        amount,
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description: 'Sign-up bonus',
+      });
+
+      return { success: true, newBalance: updatedUser.totalPoints };
+    });
+  }
+
+  async recordGameAndCompleteLevel(
+    userId: string,
+    score: number,
+    levelId: number,
+    isVictory: boolean,
+    maxCombo?: number,
+    previousLeagueSlug?: string,
+    previousLeagueSortOrder?: number
+  ): Promise<{
+    leaguePromotion?: {
+      previousLeague: string;
+      newLeague: string;
+      newLeagueNameRu: string;
+      playerName: string;
+      telegramId: string;
+    }
+  }> {
+    return await this.gameRepository.recordGameAndCompleteLevel(
+      userId,
+      score,
+      levelId,
+      isVictory,
+      maxCombo,
+      previousLeagueSlug,
+      previousLeagueSortOrder
+    );
+  }
+
+  async getBoosts(): Promise<Boost[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(boosts)
+        .where(eq(boosts.isActive, true))
+        .orderBy(boosts.sortOrder);
+    });
+  }
+
+  async getBoost(id: string): Promise<Boost | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [boost] = await db
+        .select()
+        .from(boosts)
+        .where(eq(boosts.id, id));
+      return boost || undefined;
+    });
+  }
+
+  async getBoostByType(type: string): Promise<Boost | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [boost] = await db
+        .select()
+        .from(boosts)
+        .where(eq(boosts.type, type));
+      return boost || undefined;
+    });
+  }
+
+  async createBoost(boost: InsertBoost): Promise<Boost> {
+    return await withDbTransaction(async (db) => {
+      const [newBoost] = await db
+        .insert(boosts)
+        .values(boost)
+        .returning();
+      return newBoost;
+    });
+  }
+
+  async updateBoost(id: string, updates: Partial<InsertBoost>): Promise<Boost | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedBoost] = await db
+        .update(boosts)
+        .set(updates)
+        .where(eq(boosts.id, id))
+        .returning();
+      return updatedBoost || undefined;
+    });
+  }
+
+  async deleteBoost(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(boosts).where(eq(boosts.id, id));
+    });
+  }
+
+  async getUserBoostInventory(userId: string): Promise<Array<UserBoostInventory & { boost: Boost }>> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(userBoostInventory)
+        .innerJoin(boosts, eq(userBoostInventory.boostId, boosts.id))
+        .where(eq(userBoostInventory.userId, userId));
+    });
+  }
+
+  async buyBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; newBalance?: number }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      const boost = await this.getBoost(boostId);
+
+      if (!user || !boost) {
+        return { success: false, error: 'User or boost not found' };
+      }
+
+      if (user.totalPoints < boost.price) {
+        return { success: false, error: 'Insufficient beads' };
+      }
+
+      // Charge user
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints - boost.price,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Add boost to inventory or increase quantity
+      const [inventoryItem] = await db
+        .insert(userBoostInventory)
+        .values({
+          userId,
+          boostId,
+          quantity: 1,
+        })
+        .onConflictDoUpdate({
+          target: [userBoostInventory.userId, userBoostInventory.boostId],
+          set: {
+            quantity: sql`${userBoostInventory.quantity} + 1`,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type: 'boost_purchase',
+        amount: -boost.price,
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description: `Purchase of ${boost.nameEn} boost`,
+      });
+
+      return { success: true, newBalance: updatedUser.totalPoints };
+    });
+  }
+
+  async useBoost(userId: string, boostId: string): Promise<{ success: boolean; error?: string; boost?: Boost }> {
+    return await withDbTransaction(async (db) => {
+      const inventoryItem = await db
+        .select()
+        .from(userBoostInventory)
+        .where(and(
+          eq(userBoostInventory.userId, userId),
+          eq(userBoostInventory.boostId, boostId),
+          gte(userBoostInventory.quantity, 1)
+        ))
+        .limit(1);
+
+      if (inventoryItem.length === 0) {
+        return { success: false, error: 'Boost not available in inventory' };
+      }
+
+      const boost = await this.getBoost(boostId);
+      if (!boost) {
+        return { success: false, error: 'Boost not found' };
+      }
+
+      // Decrease quantity
+      await db
+        .update(userBoostInventory)
+        .set({
+          quantity: sql`${userBoostInventory.quantity} - 1`,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(userBoostInventory.userId, userId),
+          eq(userBoostInventory.boostId, boostId)
+        ));
+
+      return { success: true, boost };
+    });
+  }
+
+  async setUserBoostQuantity(userId: string, boostId: string, quantity: number): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const [inventoryItem] = await db
+        .insert(userBoostInventory)
+        .values({
+          userId,
+          boostId,
+          quantity,
+        })
+        .onConflictDoUpdate({
+          target: [userBoostInventory.userId, userBoostInventory.boostId],
+          set: {
+            quantity,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+
+      if (!inventoryItem) {
+        return { success: false, error: 'Failed to update boost quantity' };
+      }
+
+      return { success: true };
+    });
+  }
+
+  // Character System Methods
+  async getCharacter(userId: string): Promise<Character | undefined> {
+    return await this.characterRepository.findByUserId(userId);
+  }
+
+  async createCharacter(character: InsertCharacter): Promise<Character> {
+    return await this.characterRepository.createCharacter(character);
+  }
+
+  async updateCharacter(userId: string, updates: Partial<InsertCharacter>): Promise<Character | undefined> {
+    const character = await this.characterRepository.findByUserId(userId);
+    if (!character) {
+      return undefined;
+    }
+    return await this.characterRepository.update(character.id, updates);
+  }
+
+  async getCharacterWithAccessories(userId: string): Promise<CharacterWithAccessories | null> {
+    const character = await this.characterRepository.findByUserId(userId);
+    if (!character) {
+      return null;
+    }
+
+    // Р”Р»СЏ РїРѕР»СѓС‡РµРЅРёСЏ Р°РєСЃРµСЃСЃСѓР°СЂРѕРІ РІСЃРµ СЂР°РІРЅРѕ РїСЂРёРґРµС‚СЃСЏ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ С‚СЂР°РЅР·Р°РєС†РёСЋ,
+    // С‚Р°Рє РєР°Рє СЌС‚Рѕ СЃР»РѕР¶РЅР°СЏ РѕРїРµСЂР°С†РёСЏ, РІС‹С…РѕРґСЏС‰Р°СЏ Р·Р° СЂР°РјРєРё РїСЂРѕСЃС‚РѕРіРѕ СЂРµРїРѕР·РёС‚РѕСЂРёСЏ
+    return await withDbTransaction(async (db) => {
+      const equippedAccessories = await db
+        .select()
+        .from(userAccessories)
+        .innerJoin(accessories, eq(userAccessories.accessoryId, accessories.id))
+        .where(and(
+          eq(userAccessories.userId, userId),
+          eq(userAccessories.isEquipped, true)
+        ));
+
+      return {
+        ...character,
+        equippedAccessories: equippedAccessories.map(item => ({
+          ...item.accessories,
+          isEquipped: item.user_accessories.isEquipped
+        }))
+      };
+    });
+  }
+
+  // Base Bodies Methods
+  async getBaseBodies(gender?: string): Promise<BaseBody[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select()
+        .from(baseBodies);
+
+      if (gender) {
+        query = query.where(eq(baseBodies.gender, gender));
+      }
+
+      return query;
+    });
+  }
+
+  async getDefaultBaseBody(gender: string): Promise<BaseBody | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [body] = await db
+        .select()
+        .from(baseBodies)
+        .where(and(
+          eq(baseBodies.gender, gender),
+          eq(baseBodies.isDefault, true)
+        ));
+      return body || undefined;
+    });
+  }
+
+  async ensureDefaultBaseBodies(): Promise<void> {
+    await withDbTransaction(async (db) => {
+      const maleExists = await this.getDefaultBaseBody('male');
+      const femaleExists = await this.getDefaultBaseBody('female');
+
+      if (!maleExists) {
+        await db.insert(baseBodies).values({
+          gender: 'male',
+          imageUrl: '/images/default_male_body.webp',
+          isDefault: true,
+        });
+      }
+
+      if (!femaleExists) {
+        await db.insert(baseBodies).values({
+          gender: 'female',
+          imageUrl: '/images/default_female_body.webp',
+          isDefault: true,
+        });
+      }
+    });
+  }
+
+  async createBaseBody(body: InsertBaseBody): Promise<BaseBody> {
+    return await withDbTransaction(async (db) => {
+      const [newBody] = await db
+        .insert(baseBodies)
+        .values(body)
+        .returning();
+      return newBody;
+    });
+  }
+
+  async updateBaseBody(id: string, updates: Partial<InsertBaseBody>): Promise<BaseBody | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedBody] = await db
+        .update(baseBodies)
+        .set(updates)
+        .where(eq(baseBodies.id, id))
+        .returning();
+      return updatedBody || undefined;
+    });
+  }
+
+  async deleteBaseBody(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(baseBodies).where(eq(baseBodies.id, id));
+    });
+  }
+
+  // Accessory Categories Methods
+  async getAccessoryCategories(): Promise<AccessoryCategory[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(accessoryCategories)
+        .orderBy(accessoryCategories.sortOrder);
+    });
+  }
+
+  async createAccessoryCategory(category: InsertAccessoryCategory): Promise<AccessoryCategory> {
+    return await withDbTransaction(async (db) => {
+      const [newCategory] = await db
+        .insert(accessoryCategories)
+        .values(category)
+        .returning();
+      return newCategory;
+    });
+  }
+
+  async updateAccessoryCategory(id: string, updates: Partial<InsertAccessoryCategory>): Promise<AccessoryCategory | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedCategory] = await db
+        .update(accessoryCategories)
+        .set(updates)
+        .where(eq(accessoryCategories.id, id))
+        .returning();
+      return updatedCategory || undefined;
+    });
+  }
+
+  async deleteAccessoryCategory(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(accessoryCategories).where(eq(accessoryCategories.id, id));
+    });
+  }
+
+  // Accessories Methods
+  async getAccessories(categoryId?: string, gender?: string): Promise<Accessory[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select()
+        .from(accessories)
+        .where(eq(accessories.isActive, true));
+
+      if (categoryId) {
+        query = query.where(eq(accessories.categoryId, categoryId));
+      }
+
+      if (gender) {
+        query = query.where(eq(accessories.gender, gender));
+      }
+
+      return query.orderBy(accessories.createdAt);
+    });
+  }
+
+  async getAccessory(id: string): Promise<Accessory | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [accessory] = await db
+        .select()
+        .from(accessories)
+        .where(eq(accessories.id, id));
+      return accessory || undefined;
+    });
+  }
+
+  async createAccessory(accessory: InsertAccessory): Promise<Accessory> {
+    return await withDbTransaction(async (db) => {
+      const [newAccessory] = await db
+        .insert(accessories)
+        .values(accessory)
+        .returning();
+      return newAccessory;
+    });
+  }
+
+  async updateAccessory(id: string, updates: Partial<InsertAccessory>): Promise<Accessory | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedAccessory] = await db
+        .update(accessories)
+        .set(updates)
+        .where(eq(accessories.id, id))
+        .returning();
+      return updatedAccessory || undefined;
+    });
+  }
+
+  async deleteAccessory(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(accessories).where(eq(accessories.id, id));
+    });
+  }
+
+  // User Accessories Methods
+  async getUserAccessories(userId: string): Promise<Array<UserAccessory & { accessory: Accessory }>> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(userAccessories)
+        .innerJoin(accessories, eq(userAccessories.accessoryId, accessories.id))
+        .where(eq(userAccessories.userId, userId));
+    });
+  }
+
+  async purchaseAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string; userAccessory?: UserAccessory }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      const accessory = await this.getAccessory(accessoryId);
+
+      if (!user || !accessory) {
+        return { success: false, error: 'User or accessory not found' };
+      }
+
+      if (user.totalPoints < accessory.price) {
+        return { success: false, error: 'Insufficient beads' };
+      }
+
+      // Charge user
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints - accessory.price,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Create user accessory record
+      const [userAccessory] = await db
+        .insert(userAccessories)
+        .values({
+          userId,
+          accessoryId,
+        })
+        .returning();
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type: 'accessory_purchase',
+        amount: -accessory.price,
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description: `Purchase of ${accessory.name} accessory`,
+      });
+
+      return { success: true, userAccessory };
+    });
+  }
+
+  async equipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const userAccessory = await db
+        .select()
+        .from(userAccessories)
+        .where(and(
+          eq(userAccessories.userId, userId),
+          eq(userAccessories.accessoryId, accessoryId)
+        ))
+        .limit(1);
+
+      if (userAccessory.length === 0) {
+        return { success: false, error: 'Accessory not in user inventory' };
+      }
+
+      // Unequip any currently equipped accessory in the same category
+      const accessory = await this.getAccessory(accessoryId);
+      if (!accessory) {
+        return { success: false, error: 'Accessory not found' };
+      }
+
+      const category = await this.getAccessoryCategory(accessory.categoryId);
+      if (!category) {
+        return { success: false, error: 'Accessory category not found' };
+      }
+
+      await db
+        .update(userAccessories)
+        .set({ isEquipped: false })
+        .where(and(
+          eq(userAccessories.userId, userId),
+          eq(userAccessories.isEquipped, true)
+        ));
+
+      // Equip the selected accessory
+      await db
+        .update(userAccessories)
+        .set({ isEquipped: true })
+        .where(eq(userAccessories.id, userAccessory[0].id));
+
+      return { success: true };
+    });
+  }
+
+  async unequipAccessory(userId: string, accessoryId: string): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const result = await db
+        .update(userAccessories)
+        .set({ isEquipped: false })
+        .where(and(
+          eq(userAccessories.userId, userId),
+          eq(userAccessories.accessoryId, accessoryId),
+          eq(userAccessories.isEquipped, true)
+        ));
+
+      if (result.rowCount === 0) {
+        return { success: false, error: 'Accessory not equipped or not found' };
+      }
+
+      return { success: true };
+    });
+  }
+
+  // Helper method to get accessory category
+  private async getAccessoryCategory(categoryId: string) {
+    return await withDbTransaction(async (db) => {
+      const [category] = await db
+        .select()
+        .from(accessoryCategories)
+        .where(eq(accessoryCategories.id, categoryId));
+      return category || null;
+    });
+  }
+
+  // Boost Packages Methods
+  async getBoostPackages(activeOnly: boolean = true): Promise<BoostPackage[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db.select().from(boostPackages);
+
+      if (activeOnly) {
+        query = query.where(eq(boostPackages.isActive, true));
+      }
+
+      return query.orderBy(boostPackages.sortOrder);
+    });
+  }
+
+  async getBoostPackage(id: string): Promise<BoostPackage | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [pkg] = await db
+        .select()
+        .from(boostPackages)
+        .where(eq(boostPackages.id, id));
+      return pkg || undefined;
+    });
+  }
+
+  async createBoostPackage(pkg: InsertBoostPackage): Promise<BoostPackage> {
+    return await withDbTransaction(async (db) => {
+      const [newPkg] = await db
+        .insert(boostPackages)
+        .values(pkg)
+        .returning();
+      return newPkg;
+    });
+  }
+
+  async updateBoostPackage(id: string, updates: Partial<InsertBoostPackage>): Promise<BoostPackage | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedPkg] = await db
+        .update(boostPackages)
+        .set(updates)
+        .where(eq(boostPackages.id, id))
+        .returning();
+      return updatedPkg || undefined;
+    });
+  }
+
+  async deleteBoostPackage(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(boostPackages).where(eq(boostPackages.id, id));
+    });
+  }
+
+  async purchaseBoostPackage(userId: string, packageId: string, telegramPaymentId?: string): Promise<{ success: boolean; error?: string; purchase?: BoostPackagePurchase }> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      const pkg = await this.getBoostPackage(packageId);
+
+      if (!user || !pkg) {
+        return { success: false, error: 'User or package not found' };
+      }
+
+      // For now, assuming stars payment
+      // In a real implementation, you'd check if the user has enough stars or process payment
+      if (user.totalPoints < pkg.priceStars) {
+        return { success: false, error: 'Insufficient beads' };
+      }
+
+      // Charge user
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          totalPoints: user.totalPoints - pkg.priceStars,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      // Create purchase record
+      const [purchase] = await db
+        .insert(boostPackagePurchases)
+        .values({
+          userId,
+          packageId,
+          telegramPaymentId,
+          priceStars: pkg.priceStars,
+          boostsPerType: pkg.boostsPerType,
+          bonusLives: pkg.bonusLives,
+          status: 'completed',
+        })
+        .returning();
+
+      // Add boosts to user inventory
+      const boosts = await this.getBoosts();
+      for (const boost of boosts) {
+        await this.setUserBoostQuantity(userId, boost.id, pkg.boostsPerType);
+      }
+
+      // Add bonus lives if applicable
+      if (pkg.bonusLives > 0) {
+        await db
+          .update(users)
+          .set({
+            bonusLives: sql`${users.bonusLives} + ${pkg.bonusLives}`,
+          })
+          .where(eq(users.id, userId));
+      }
+
+      // Grant bonus skin if applicable
+      if (pkg.bonusSkinId) {
+        await this.grantUserSkin(userId, pkg.bonusSkinId);
+      }
+
+      // Create transaction record
+      await this.createBeadsTransaction({
+        userId,
+        type: 'boost_package_purchase',
+        amount: -pkg.priceStars,
+        balanceBefore: user.totalPoints,
+        balanceAfter: updatedUser.totalPoints,
+        description: `Purchase of ${pkg.name} boost package`,
+      });
+
+      return { success: true, purchase };
+    });
+  }
+
+  async getUserBoostPackagePurchases(userId: string): Promise<BoostPackagePurchase[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(boostPackagePurchases)
+        .where(eq(boostPackagePurchases.userId, userId))
+        .orderBy(desc(boostPackagePurchases.createdAt));
+    });
+  }
+
+  // Game Skins Methods
+  async getGameSkins(activeOnly: boolean = true): Promise<GameSkin[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db.select().from(gameSkins);
+
+      if (activeOnly) {
+        query = query.where(eq(gameSkins.isActive, true));
+      }
+
+      return query;
+    });
+  }
+
+  async getGameSkin(id: string): Promise<GameSkin | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [skin] = await db
+        .select()
+        .from(gameSkins)
+        .where(eq(gameSkins.id, id));
+      return skin || undefined;
+    });
+  }
+
+  async getGameSkinByName(name: string): Promise<GameSkin | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [skin] = await db
+        .select()
+        .from(gameSkins)
+        .where(eq(gameSkins.name, name));
+      return skin || undefined;
+    });
+  }
+
+  async createGameSkin(skin: InsertGameSkin): Promise<GameSkin> {
+    return await withDbTransaction(async (db) => {
+      const [newSkin] = await db
+        .insert(gameSkins)
+        .values(skin)
+        .returning();
+      return newSkin;
+    });
+  }
+
+  async updateGameSkin(id: string, updates: Partial<InsertGameSkin>): Promise<GameSkin | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedSkin] = await db
+        .update(gameSkins)
+        .set(updates)
+        .where(eq(gameSkins.id, id))
+        .returning();
+      return updatedSkin || undefined;
+    });
+  }
+
+  async deleteGameSkin(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(gameSkins).where(eq(gameSkins.id, id));
+    });
+  }
+
+  // User Skins Methods
+  async getUserSkins(userId: string): Promise<Array<UserSkin & { skin: GameSkin }>> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(userSkins)
+        .innerJoin(gameSkins, eq(userSkins.skinId, gameSkins.id))
+        .where(eq(userSkins.userId, userId));
+    });
+  }
+
+  async grantUserSkin(userId: string, skinId: string): Promise<UserSkin> {
+    return await withDbTransaction(async (db) => {
+      const [userSkin] = await db
+        .insert(userSkins)
+        .values({
+          userId,
+          skinId,
+          isActive: false, // Not active by default
+        })
+        .onConflictDoNothing() // Don't error if already owned
+        .returning();
+      return userSkin;
+    });
+  }
+
+  async setActiveSkin(userId: string, skinId: string): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      // Check if user owns the skin
+      const [userSkin] = await db
+        .select()
+        .from(userSkins)
+        .where(and(
+          eq(userSkins.userId, userId),
+          eq(userSkins.skinId, skinId)
+        ));
+
+      if (!userSkin) {
+        return { success: false, error: 'User does not own this skin' };
+      }
+
+      // Deactivate all other skins
+      await db
+        .update(userSkins)
+        .set({ isActive: false })
+        .where(eq(userSkins.userId, userId));
+
+      // Activate the selected skin
+      await db
+        .update(userSkins)
+        .set({ isActive: true })
+        .where(eq(userSkins.id, userSkin.id));
+
+      return { success: true };
+    });
+  }
+
+  // Manual Crypto Payments (semi-automatic)
+  async createCryptoPaymentRequest(userId: string, packageId: string, network: string, priceUsd: number): Promise<CryptoPayment> {
+    return await withDbTransaction(async (db) => {
+      const [payment] = await db
+        .insert(cryptoPayments)
+        .values({
+          userId,
+          packageId,
+          network,
+          priceUsd,
+          status: 'pending',
+        })
+        .returning();
+      return payment;
+    });
+  }
+
+  async getPendingCryptoPayments(): Promise<Array<CryptoPayment & { user: User; package: BoostPackage }>> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(cryptoPayments)
+        .innerJoin(users, eq(cryptoPayments.userId, users.id))
+        .innerJoin(boostPackages, eq(cryptoPayments.packageId, boostPackages.id))
+        .where(eq(cryptoPayments.status, 'pending'));
+    });
+  }
+
+  async getUserCryptoPayments(userId: string): Promise<CryptoPayment[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(cryptoPayments)
+        .where(eq(cryptoPayments.userId, userId))
+        .orderBy(desc(cryptoPayments.createdAt));
+    });
+  }
+
+  async confirmCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string; userId?: string; packageId?: string }> {
+    return await withDbTransaction(async (db) => {
+      const [payment] = await db
+        .select()
+        .from(cryptoPayments)
+        .where(eq(cryptoPayments.id, paymentId));
+
+      if (!payment || payment.status !== 'pending') {
+        return { success: false, error: 'Payment not found or already processed' };
+      }
+
+      // Update payment status
+      await db
+        .update(cryptoPayments)
+        .set({
+          status: 'confirmed',
+          adminNote: note,
+          confirmedBy: adminId,
+          updatedAt: new Date(),
+        })
+        .where(eq(cryptoPayments.id, paymentId));
+
+      // Process the package purchase for the user
+      await this.purchaseBoostPackage(payment.userId, payment.packageId);
+
+      return { success: true, userId: payment.userId, packageId: payment.packageId };
+    });
+  }
+
+  async rejectCryptoPayment(paymentId: string, adminId: string, note?: string): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const [payment] = await db
+        .select()
+        .from(cryptoPayments)
+        .where(eq(cryptoPayments.id, paymentId));
+
+      if (!payment || payment.status !== 'pending') {
+        return { success: false, error: 'Payment not found or already processed' };
+      }
+
+      // Update payment status
+      await db
+        .update(cryptoPayments)
+        .set({
+          status: 'rejected',
+          adminNote: note,
+          confirmedBy: adminId,
+          updatedAt: new Date(),
+        })
+        .where(eq(cryptoPayments.id, paymentId));
+
+      return { success: true };
+    });
+  }
+
+  // Team Members & Revenue
+  async getTeamMembers(activeOnly: boolean = true): Promise<TeamMember[]> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select()
+        .from(teamMembers);
+
+      if (activeOnly) {
+        query = query.where(eq(teamMembers.isActive, true));
+      }
+
+      return query.orderBy(teamMembers.sortOrder);
+    });
+  }
+
+  async getTeamMember(id: string): Promise<TeamMember | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [member] = await db
+        .select()
+        .from(teamMembers)
+        .where(eq(teamMembers.id, id));
+      return member || undefined;
+    });
+  }
+
+  async createTeamMember(member: InsertTeamMember): Promise<TeamMember> {
+    return await withDbTransaction(async (db) => {
+      const [newMember] = await db
+        .insert(teamMembers)
+        .values(member)
+        .returning();
+      return newMember;
+    });
+  }
+
+  async updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedMember] = await db
+        .update(teamMembers)
+        .set(updates)
+        .where(eq(teamMembers.id, id))
+        .returning();
+      return updatedMember || undefined;
+    });
+  }
+
+  async deleteTeamMember(id: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db.delete(teamMembers).where(eq(teamMembers.id, id));
+    });
+  }
+
+  async createRevenueShare(share: InsertRevenueShare): Promise<RevenueShare> {
+    return await withDbTransaction(async (db) => {
+      const [newShare] = await db
+        .insert(revenueShares)
+        .values(share)
+        .returning();
+      return newShare;
+    });
+  }
+
+  async getRevenueSummary(): Promise<RevenueSummary> {
+    return await withDbTransaction(async (db) => {
+      // Calculate total revenue from boost package purchases
+      const [totalStarsResult] = await db
+        .select({ total: sql<number>`sum(${boostPackagePurchases.priceStars})` })
+        .from(boostPackagePurchases)
+        .where(eq(boostPackagePurchases.status, 'completed'));
+
+      const totalStarsRevenue = Number(totalStarsResult?.total || 0);
+
+      // Calculate revenue by team member based on their share percentage
+      const teamMembers = await this.getTeamMembers();
+      const teamRevenue = teamMembers.map(member => ({
+        id: member.id,
+        name: member.name,
+        sharePercent: member.sharePercent,
+        revenue: Math.floor(totalStarsRevenue * (member.sharePercent / 100)),
+      }));
+
+      return {
+        totalRevenue: totalStarsRevenue,
+        teamRevenue,
+        totalTeamShare: teamRevenue.reduce((sum, member) => sum + member.revenue, 0),
+      };
+    });
+  }
+
+  async recordRevenueFromPurchase(purchaseId: string, priceStars: number, priceUsd: number, paymentType: 'stars' | 'crypto'): Promise<void> {
+    await withDbTransaction(async (db) => {
+      // This would typically record revenue details
+      // For now, we'll just log the transaction
+      console.log(`Recording revenue from purchase ${purchaseId}: ${priceStars} stars, $${priceUsd}, type: ${paymentType}`);
+    });
+  }
+
+  // Leagues
+  async getLeagues(): Promise<League[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(leagues)
+        .where(eq(leagues.isActive, true))
+        .orderBy(leagues.sortOrder);
+    });
+  }
+
+  async getLeague(slug: string): Promise<League | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [league] = await db
+        .select()
+        .from(leagues)
+        .where(eq(leagues.slug, slug));
+      return league || undefined;
+    });
+  }
+
+  async getUserLeague(userId: string): Promise<{ league: League; rank: number } | undefined> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        return undefined;
+      }
+
+      // Get all active leagues ordered by minBeads
+      const leaguesList = await this.getLeagues();
+
+      // Find the highest league the user qualifies for
+      const userLeague = [...leaguesList]
+        .reverse()
+        .find(league => user.ratingScore >= league.minBeads);
+
+      if (!userLeague) {
+        return undefined;
+      }
+
+      // Calculate user's rank in their league
+      const leagueUsers = await db
+        .select({ id: users.id, ratingScore: users.ratingScore })
+        .from(users)
+        .where(and(
+          gte(users.ratingScore, userLeague.minBeads),
+          isNull(users.deletedAt)
+        ));
+
+      const sortedUsers = leagueUsers
+        .sort((a, b) => b.ratingScore - a.ratingScore);
+      const rank = sortedUsers.findIndex(u => u.id === userId) + 1;
+
+      return { league: userLeague, rank };
+    });
+  }
+
+  async getUserRank(userId: string): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const user = await this.getUser(userId);
+      if (!user) {
+        return 0;
+      }
+
+      const allUsers = await db
+        .select({ id: users.id, ratingScore: users.ratingScore })
+        .from(users)
+        .where(isNull(users.deletedAt))
+        .orderBy(desc(users.ratingScore));
+
+      return allUsers.findIndex(u => u.id === userId) + 1;
+    });
+  }
+
+  async getLeagueLeaderboard(leagueSlug: string, limit: number = 50, period: 'all' | 'week' | 'today' = 'all'): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    ratingScore: number;
+    beadsBalance: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>> {
+    // РћРіСЂР°РЅРёС‡РёРІР°РµРј РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РґРѕ 100
+    const maxLimit = Math.min(limit, 100);
+
+    return await withDbTransaction(async (db) => {
+      const league = await this.getLeague(leagueSlug);
+      if (!league) {
+        return [];
+      }
+
+      // Get users in this league
+      const usersInLeague = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          ratingScore: users.ratingScore,
+          totalPoints: users.totalPoints,
+          photoUrl: users.photoUrl,
+          characterName: characters.name,
+          characterGender: characters.gender,
+        })
+        .from(users)
+        .leftJoin(characters, eq(users.id, characters.userId))
+        .where(and(
+          gte(users.ratingScore, league.minBeads),
+          isNull(users.deletedAt)
+        ))
+        .orderBy(desc(users.ratingScore))
+        .limit(maxLimit);
+
+      return usersInLeague.map((user, index) => ({
+        rank: index + 1,
+        odoserId: user.id,
+        name: user.username,
+        ratingScore: user.ratingScore,
+        beadsBalance: user.totalPoints,
+        photoUrl: user.photoUrl,
+        characterType: user.characterName,
+        characterImageUrl: null, // Would need to fetch character image separately
+      }));
+    });
+  }
+
+  async getLeaguePlayerCount(leagueSlug: string): Promise<number> {
+    return await withDbTransaction(async (db) => {
+      const league = await this.getLeague(leagueSlug);
+      if (!league) {
+        return 0;
+      }
+
+      const [result] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(and(
+          gte(users.ratingScore, league.minBeads),
+          isNull(users.deletedAt)
+        ));
+
+      return Number(result?.count || 0);
+    });
+  }
+
+  async getFriendsLeaderboard(userId: string, leagueSlug: string, limit: number = 50): Promise<Array<{
+    rank: number;
+    odoserId: string;
+    name: string;
+    ratingScore: number;
+    beadsBalance: number;
+    photoUrl: string | null;
+    characterType: string | null;
+    characterImageUrl: string | null;
+  }>> {
+    // РћРіСЂР°РЅРёС‡РёРІР°РµРј РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РґРѕ 100
+    const maxLimit = Math.min(limit, 100);
+
+    return await withDbTransaction(async (db) => {
+      // This is a simplified implementation - in a real app you might have a friends table
+      const league = await this.getLeague(leagueSlug);
+      if (!league) {
+        return [];
+      }
+
+      // For friend leaderboard, we'll get users in the same league as the current user
+      const usersInLeague = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          ratingScore: users.ratingScore,
+          totalPoints: users.totalPoints,
+          photoUrl: users.photoUrl,
+          characterName: characters.name,
+        })
+        .from(users)
+        .leftJoin(characters, eq(users.id, characters.userId))
+        .where(and(
+          gte(users.ratingScore, league.minBeads),
+          isNull(users.deletedAt),
+          sql`${users.id} != ${userId}` // Exclude the current user
+        ))
+        .orderBy(desc(users.ratingScore))
+        .limit(maxLimit);
+
+      // Add the current user to the list and sort
+      const currentUser = await this.getUser(userId);
+      if (currentUser) {
+        usersInLeague.push({
+          id: currentUser.id,
+          username: currentUser.username,
+          ratingScore: currentUser.ratingScore,
+          totalPoints: currentUser.totalPoints,
+          photoUrl: currentUser.photoUrl,
+          characterName: (await this.getCharacter(userId))?.name || null,
+        });
+      }
+
+      // Sort and assign ranks
+      const sortedUsers = usersInLeague
+        .sort((a, b) => b.ratingScore - a.ratingScore);
+
+      return sortedUsers.map((user, index) => ({
+        rank: index + 1,
+        odoserId: user.id,
+        name: user.username,
+        ratingScore: user.ratingScore,
+        beadsBalance: user.totalPoints,
+        photoUrl: user.photoUrl,
+        characterType: user.characterName,
+        characterImageUrl: null, // Would need to fetch character image separately
+      })).slice(0, maxLimit);
+    });
+  }
+
+  // User Notifications
+  async getUsersWithoutCharacters(): Promise<Array<{ id: string; telegramId: string; firstName: string | null; username: string }>> {
+    return await withDbTransaction(async (db) => {
+      return db.execute(sql`
+        SELECT 
+          u.id,
+          u.telegram_id as telegramId,
+          u.first_name as firstName,
+          u.username
+        FROM users u
+        LEFT JOIN characters c ON u.id = c.user_id
+        WHERE c.id IS NULL
+          AND u.deleted_at IS NULL
+      `).then(result => result.rows as any[]);
+    });
+  }
+
+  // Transaction Management
+  async deleteTransaction(transactionId: string): Promise<boolean> {
+    return await withDbTransaction(async (db) => {
+      const [transaction] = await db
+        .update(beadsTransactions)
+        .set({
+          deletedAt: new Date(),
+          deletedBy: 'system', // In a real implementation, you'd pass the admin ID
+          deleteReason: 'Manually deleted',
+        })
+        .where(eq(beadsTransactions.id, transactionId))
+        .returning();
+
+      return !!transaction;
+    });
+  }
+
+  // User Level Management
+  async resetUserLevels(userId: string): Promise<{ success: boolean; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const [user] = await db
+        .update(users)
+        .set({
+          completedLevels: [],
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!user) {
+        return { success: false, error: 'User not found' };
+      }
+
+      return { success: true };
+    });
+  }
+
+  // Withdrawal Requests
+  async createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    return await withDbTransaction(async (db) => {
+      const [newRequest] = await db
+        .insert(withdrawalRequests)
+        .values(request)
+        .returning();
+      return newRequest;
+    });
+  }
+
+  async getWithdrawalRequests(status?: string): Promise<Array<WithdrawalRequest & { username?: string }>> {
+    return await withDbTransaction(async (db) => {
+      let query = db
+        .select({
+          request: sql<WithdrawalRequest>`withdrawal_requests.*`,
+          username: users.username,
+        })
+        .from(withdrawalRequests)
+        .leftJoin(users, eq(withdrawalRequests.userId, users.id))
+        .orderBy(desc(withdrawalRequests.createdAt));
+
+      if (status) {
+        query = query.where(eq(withdrawalRequests.status, status));
+      }
+
+      const result = await query;
+      return result.map(item => ({
+        ...item.request,
+        username: item.username || undefined,
+      }));
+    });
+  }
+
+  async getUserWithdrawalRequests(userId: string): Promise<WithdrawalRequest[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(withdrawalRequests)
+        .where(eq(withdrawalRequests.userId, userId))
+        .orderBy(desc(withdrawalRequests.createdAt));
+    });
+  }
+
+  async updateWithdrawalRequest(id: string, updates: { status?: string; adminNote?: string; txHash?: string; processedBy?: string; processedAt?: Date }): Promise<WithdrawalRequest | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [updatedRequest] = await db
+        .update(withdrawalRequests)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(withdrawalRequests.id, id))
+        .returning();
+      return updatedRequest || undefined;
+    });
+  }
+
+  async getWithdrawalConfig(): Promise<WithdrawalConfig> {
+    return await withDbTransaction(async (db) => {
+      const [config] = await db
+        .select()
+        .from(gameConfig)
+        .where(eq(gameConfig.key, 'withdrawal_config'));
+
+      if (!config) {
+        return {
+          minWithdrawalAmount: 1,
+          maxWithdrawalAmount: 100,
+          feePercent: 2,
+          enabled: true,
+        };
+      }
+
+      return config.value as WithdrawalConfig;
+    });
+  }
+
+  async updateWithdrawalConfig(config: Partial<WithdrawalConfig>): Promise<WithdrawalConfig> {
+    return await withDbTransaction(async (db) => {
+      const existing = await this.getWithdrawalConfig();
+      const updatedConfig = { ...existing, ...config };
+
+      await db
+        .insert(gameConfig)
+        .values({
+          key: 'withdrawal_config',
+          value: updatedConfig,
+          description: 'Withdrawal configuration',
+        })
+        .onConflictDoUpdate({
+          target: [gameConfig.key],
+          set: {
+            value: updatedConfig,
+            updatedAt: new Date(),
+          },
+        });
+
+      return updatedConfig;
+    });
+  }
+
+  // Seasons
+  async getActiveSeason(): Promise<Season | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [season] = await db
+        .select()
+        .from(seasons)
+        .where(eq(seasons.isActive, true));
+      return season || undefined;
+    });
+  }
+
+  async getAllSeasons(): Promise<Season[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(seasons)
+        .orderBy(desc(seasons.startDate));
+    });
+  }
+
+  async getSeasonByNumber(seasonNumber: number): Promise<Season | undefined> {
+    return await withDbTransaction(async (db) => {
+      const [season] = await db
+        .select()
+        .from(seasons)
+        .where(eq(seasons.seasonNumber, seasonNumber));
+      return season || undefined;
+    });
+  }
+
+  async endCurrentSeason(): Promise<{ success: boolean; season?: Season; resultsCount?: number; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const currentSeason = await this.getActiveSeason();
+      if (!currentSeason) {
+        return { success: false, error: 'No active season found' };
+      }
+
+      // End the current season
+      const [updatedSeason] = await db
+        .update(seasons)
+        .set({
+          isActive: false,
+          endDate: new Date(),
+        })
+        .where(eq(seasons.id, currentSeason.id))
+        .returning();
+
+      // Generate season results
+      const topUsers = await db
+        .select({
+          id: users.id,
+          ratingScore: users.ratingScore,
+          totalWins: users.totalWins,
+          gamesPlayed: users.gamesPlayed,
+        })
+        .from(users)
+        .where(isNull(users.deletedAt))
+        .orderBy(desc(users.ratingScore))
+        .limit(100); // Top 100 players
+
+      // Save season results
+      const results = await Promise.all(topUsers.map(async (user, index) => {
+        const [result] = await db
+          .insert(seasonResults)
+          .values({
+            seasonId: currentSeason.id,
+            userId: user.id,
+            leagueSlug: 'top_players', // Simplified - in reality you'd calculate proper leagues
+            finalRatingScore: user.ratingScore,
+            finalRank: index + 1,
+            totalWins: user.totalWins,
+            totalGames: user.gamesPlayed,
+            bestWinStreak: 0, // Would need to calculate
+          })
+          .returning();
+        return result;
+      }));
+
+      return {
+        success: true,
+        season: updatedSeason,
+        resultsCount: results.length,
+      };
+    });
+  }
+
+  async startNewSeason(): Promise<{ success: boolean; season?: Season; error?: string }> {
+    return await withDbTransaction(async (db) => {
+      const currentSeason = await this.getActiveSeason();
+      if (currentSeason) {
+        // End the current season first
+        await this.endCurrentSeason();
+      }
+
+      // Get the next season number
+      const [latestSeason] = await db
+        .select({ maxNumber: sql<number>`MAX(${seasons.seasonNumber})` })
+        .from(seasons);
+
+      const nextSeasonNumber = (latestSeason?.maxNumber || 0) + 1;
+
+      // Create new season
+      const [newSeason] = await db
+        .insert(seasons)
+        .values({
+          seasonNumber: nextSeasonNumber,
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear(),
+          startDate: new Date(),
+          isActive: true,
+        })
+        .returning();
+
+      return {
+        success: true,
+        season: newSeason,
+      };
+    });
+  }
+
+  async getSeasonResults(seasonId: string): Promise<SeasonResult[]> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(seasonResults)
+        .where(eq(seasonResults.seasonId, seasonId))
+        .orderBy(seasonResults.finalRank);
+    });
+  }
+
+  async getUserSeasonResults(userId: string): Promise<Array<SeasonResult & { season: Season }>> {
+    return await withDbTransaction(async (db) => {
+      return db
+        .select()
+        .from(seasonResults)
+        .innerJoin(seasons, eq(seasonResults.seasonId, seasons.id))
+        .where(eq(seasonResults.userId, userId))
+        .orderBy(desc(seasons.seasonNumber));
+    });
+  }
+
+  // BEADS BOX System
+  async getBeadsBoxConfig(): Promise<BeadsBoxConfig> {
+    return await this.gameRepository.getBeadsBoxConfig();
+  }
+
+  async updateBeadsBoxConfig(config: Partial<BeadsBoxConfig>): Promise<BeadsBoxConfig> {
+    return await this.gameRepository.updateBeadsBoxConfig(config);
+  }
+
+  async getUserDailyBoxSession(userId: string, date: string): Promise<BeadsBoxSession | undefined> {
+    return await this.gameRepository.getUserDailyBoxSession(userId, date);
+  }
+
+  async createDailyBoxSession(userId: string, date: string, boxes: BeadsBoxReward[]): Promise<BeadsBoxSession> {
+    return await this.gameRepository.createDailyBoxSession(userId, date, boxes);
+  }
+
+  async deleteBeadsBoxSession(userId: string, date: string): Promise<void> {
+    await withDbTransaction(async (db) => {
+      await db
+        .delete(beadsBoxSessions)
+        .where(and(
+          eq(beadsBoxSessions.userId, userId),
+          eq(beadsBoxSessions.date, date)
+        ));
+    });
+  }
+
+  async selectBox(sessionId: string, boxIndex: number): Promise<{ success: boolean; reward?: BeadsBoxReward; error?: string }> {
+    return await this.gameRepository.selectBox(sessionId, boxIndex);
+  }
+
+  async getUserCryptoTickets(userId: string): Promise<CryptoGameTicket[]> {
+    return await this.gameRepository.getUserCryptoTickets(userId);
+  }
+
+  async useCryptoTicket(ticketId: string, gameScoreId: string | null = null): Promise<{ success: boolean; error?: string }> {
+    return await this.gameRepository.useCryptoTicket(ticketId, gameScoreId);
+  }
+
+  async createCryptoTicket(userId: string, sessionId: string): Promise<CryptoGameTicket> {
+    return await this.gameRepository.createCryptoTicket(userId, sessionId);
+  }
+
+  async getGameConfigsForLevel(levelId: number): Promise<{ gameplayConfig: GameplayConfig; gameEconomyConfig: GameEconomyConfig; livesConfig: LivesConfig }> {
+    return await this.gameRepository.getGameConfigsForLevel(levelId);
+  }
+}
+
+export const storage = new DatabaseStorage(); 

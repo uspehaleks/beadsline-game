@@ -2,11 +2,11 @@ export const GAME_CONFIG = {
   path: {
     type: 'spiral' as const,
     segments: 600,
-    spiralTurns: 3.0,
+    spiralTurns: 3.5, // 3.5 витков спирали
     outerRadius: 0.42,
     innerRadius: 0.15,
   },
-  
+
   balls: {
     radius: 14,
     spacing: 0.024,
@@ -15,25 +15,25 @@ export const GAME_CONFIG = {
     shooterSpeed: 18,
     collisionRadius: 2.2,
   },
-  
+
   spawn: {
     period: 1800,
     buffer: 0.012,
     resumeThreshold: 35,
   },
-  
+
   speed: {
-    base: 0.010,
-    max: 0.016,
-    accelerationStart: 0.8,
+    base: 0.0005, // Жесткая константа SPEED = 0.0005
+    max: 0.0005,  // Максимальная скорость также 0.0005 для постоянной скорости
+    accelerationStart: 1.0, // Отключаем ускорение (начинается при 100% прогрессе)
   },
-  
+
   gameplay: {
     maxTotalBalls: 60,
     addBallsInterval: 4000,
     addBallsCount: 3,
   },
-  
+
   crypto: {
     dropRate: 0.08,
     points: {
@@ -42,7 +42,7 @@ export const GAME_CONFIG = {
       usdt: 200,
     },
   },
-  
+
   scoring: {
     basePoints: 100,
     comboMultiplier: 1.5,

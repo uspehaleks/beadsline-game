@@ -435,12 +435,12 @@ export async function seedDatabase() {
     const baseBodiesData = [
       {
         gender: 'male',
-        imageUrl: '/images/avatars/male_default.png',
+        imageUrl: '/images/avatars/male_default.webp',
         isDefault: true
       },
       {
         gender: 'female',
-        imageUrl: '/images/avatars/female_default.png',
+        imageUrl: '/images/avatars/female_default.webp',
         isDefault: true
       }
     ];

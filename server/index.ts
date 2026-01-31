@@ -1,14 +1,36 @@
 import '../server/env-loader.js';
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { registerRoutes } from "./routes.js";
+import { registerRoutes } from "./routes/index.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
 import { pool } from "./db.js";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Add security headers using helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net"],
+      imgSrc: ["'self'", "data:", "blob:", "*", "cdn.jsdelivr.net"],
+      scriptSrc: ["'self'", "cdn.jsdelivr.net"],
+      frameAncestors: ["'self'"],
+      objectSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Отключаем, т.к. могут быть проблемы с Next.js
+  hsts: {
+    maxAge: 31536000, // 1 год
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
 app.set('trust proxy', 1);
 

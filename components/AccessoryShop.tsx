@@ -61,12 +61,12 @@ export function AccessoryShop({ onBack }: AccessoryShopProps) {
   });
 
   const ownedIds = new Set(ownedAccessories.map(ua => ua.accessoryId));
-  const userGender = characterData?.character?.gender;
+  const userGender = characterData?.gender;
 
   const filteredAccessories = accessories.filter(acc => {
     if (!acc.isActive) return false;
     if (selectedCategory && acc.categoryId !== selectedCategory) return false;
-    if (userGender && acc.gender !== 'both' && acc.gender !== userGender) return false;
+    if (userGender && acc.gender !== null && acc.gender !== userGender) return false;
     return true;
   });
 
@@ -113,7 +113,7 @@ export function AccessoryShop({ onBack }: AccessoryShopProps) {
               className="flex-shrink-0"
               data-testid={`button-category-${cat.id}`}
             >
-              {cat.nameRu}
+              {cat.name}
             </Button>
           ))}
         </div>
@@ -142,7 +142,7 @@ export function AccessoryShop({ onBack }: AccessoryShopProps) {
             <AnimatePresence mode="popLayout">
               {filteredAccessories.map((acc) => {
                 const isOwned = ownedIds.has(acc.id);
-                const isSoldOut = acc.maxQuantity !== null && acc.soldCount >= acc.maxQuantity;
+                const isSoldOut = false; // maxQuantity and soldCount not available in current schema
                 const canAfford = (user?.totalPoints ?? 0) >= acc.price;
 
                 return (
@@ -158,7 +158,7 @@ export function AccessoryShop({ onBack }: AccessoryShopProps) {
                         <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                           <img
                             src={acc.imageUrl}
-                            alt={acc.nameRu}
+                            alt={acc.name}
                             className="w-full h-full object-contain"
                           />
                           {isOwned && (
@@ -173,21 +173,12 @@ export function AccessoryShop({ onBack }: AccessoryShopProps) {
                               <Badge variant="destructive">Распродано</Badge>
                             </div>
                           )}
-                          {acc.maxQuantity && !isSoldOut && (
-                            <Badge 
-                              variant="secondary" 
-                              className="absolute top-2 right-2"
-                            >
-                              {acc.maxQuantity - acc.soldCount} шт
-                            </Badge>
-                          )}
+                          {/* maxQuantity and soldCount not available in current schema */}
                         </div>
 
                         <div>
-                          <h3 className="font-medium text-sm truncate">{acc.nameRu}</h3>
-                          {acc.descriptionRu && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{acc.descriptionRu}</p>
-                          )}
+                          <h3 className="font-medium text-sm truncate">{acc.name}</h3>
+                          {/* description not available in current schema */}
                         </div>
 
                         {isOwned ? (

@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Возвращаем информацию о реферальных наградах
     // В реальном приложении здесь будет логика получения наград из базы данных
-    const rewards = [];
+    const rewards: Array<any> = [];
 
     res.status(200).json(rewards);
   } catch (error) {

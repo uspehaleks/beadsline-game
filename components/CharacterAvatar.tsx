@@ -22,11 +22,11 @@ function PlaceholderAvatar({ gender, size }: PlaceholderAvatarProps) {
       style={{ width: size, height: size }}
       data-testid="character-avatar-placeholder"
     >
-      <svg 
+      <svg
         className={iconColor}
-        width={size * 0.6} 
-        height={size * 0.6} 
-        viewBox="0 0 24 24" 
+        width={size * 0.6}
+        height={size * 0.6}
+        viewBox="0 0 24 24"
         fill="currentColor"
       >
         <circle cx="12" cy="8" r="4" />
@@ -49,11 +49,17 @@ export function CharacterAvatar({
     return null;
   }
 
-  const { character, baseBody, equippedAccessories } = characterData;
+  // characterData is CharacterWithAccessories which includes Character properties and equippedAccessories
+  const equippedAccessories = characterData.equippedAccessories;
+  // baseBody is not part of CharacterWithAccessories in current schema
+  // For now, we'll set it to null and handle the case in the JSX
+  const baseBody: { imageUrl: string } | null = null;
+  // Get character properties directly from characterData
+  const gender = characterData.gender;
   
   const sortedAccessories = [...equippedAccessories]
-    .filter(ua => ua.accessory)
-    .sort((a, b) => (a.accessory?.zIndex || 0) - (b.accessory?.zIndex || 0));
+    .filter(ua => ua.imageUrl) // Filter items that have an image URL
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); // Use sortOrder instead of zIndex
 
   // Editor uses 300x400 canvas. For square avatar containers with object-contain,
   // the 4:3 aspect ratio image is limited by height, creating horizontal letterbox.
@@ -68,46 +74,28 @@ export function CharacterAvatar({
       style={{ width: size, height: size }}
       data-testid="character-avatar"
     >
-      {baseBody && (
-        <img
-          src={baseBody.imageUrl}
-          alt="Базовое тело"
-          className="absolute inset-0 w-full h-full object-contain"
-          style={{ zIndex: 0 }}
-          data-testid="character-base-body"
-        />
-      )}
+      <PlaceholderAvatar
+        gender={gender as 'male' | 'female'}
+        size={size}
+      />
       
-      {!baseBody && (
-        <PlaceholderAvatar 
-          gender={character.gender as 'male' | 'female'} 
-          size={size} 
-        />
-      )}
-      
-      {sortedAccessories.map((userAccessory) => {
-        const accessory = userAccessory.accessory;
-        if (!accessory) return null;
-        
-        // Scale positions from 300x400 canvas to fit in square container with letterbox offset
-        const posX = accessory.positionX * scaleRatio + offsetX;
-        const posY = accessory.positionY * scaleRatio;
-        const accScale = parseFloat(String(accessory.scale || '1'));
-        // Accessory images in editor are 80px base size * scale
-        const imgSize = 80 * accScale * scaleRatio;
-        
+      {sortedAccessories.map((accessory) => {
+        // In current schema, accessory properties are directly on the object
+        // positionX, positionY, scale, zIndex are not available in current schema
+        // For now, we'll skip positioning and scaling
+
         return (
           <img
-            key={userAccessory.id}
+            key={accessory.id}
             src={accessory.imageUrl}
-            alt={accessory.nameRu}
+            alt={accessory.name}
             className="absolute object-contain"
             style={{
-              zIndex: accessory.zIndex,
-              left: posX,
-              top: posY,
-              width: imgSize,
-              height: imgSize,
+              zIndex: accessory.sortOrder, // Using sortOrder as zIndex approximation
+              left: 0, // Positioning not available in current schema
+              top: 0,
+              width: '100%',
+              height: '100%',
             }}
             data-testid={`character-accessory-${accessory.id}`}
           />
@@ -130,7 +118,7 @@ export function CharacterAvatarPreview({
   size = 120,
   className = "",
 }: CharacterAvatarPreviewProps) {
-  const sortedAccessories = [...accessories].sort((a, b) => a.zIndex - b.zIndex);
+  const sortedAccessories = [...accessories].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   
   // Editor uses 300x400 canvas. For square avatar containers with object-contain,
   // the 4:3 aspect ratio image is limited by height, creating horizontal letterbox.
@@ -155,25 +143,21 @@ export function CharacterAvatarPreview({
       )}
       
       {sortedAccessories.map((accessory) => {
-        // Scale positions from 300x400 canvas to fit in square container with letterbox offset
-        const posX = accessory.positionX * scaleRatio + offsetX;
-        const posY = accessory.positionY * scaleRatio;
-        const accScale = parseFloat(String(accessory.scale || '1'));
-        // Accessory images in editor are 80px base size * scale
-        const imgSize = 80 * accScale * scaleRatio;
-        
+        // In current schema, positionX, positionY, scale, zIndex are not available
+        // For now, we'll use default positioning and sizing
+
         return (
           <img
             key={accessory.id}
             src={accessory.imageUrl}
-            alt={accessory.nameRu}
+            alt={accessory.name}
             className="absolute object-contain"
             style={{
-              zIndex: accessory.zIndex,
-              left: posX,
-              top: posY,
-              width: imgSize,
-              height: imgSize,
+              zIndex: accessory.sortOrder || 0, // Using sortOrder as zIndex approximation
+              left: 0, // Positioning not available in current schema
+              top: 0,
+              width: '100%',
+              height: '100%',
             }}
             data-testid={`preview-accessory-${accessory.id}`}
           />

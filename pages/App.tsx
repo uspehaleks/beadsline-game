@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import Home from "./index";
-import Admin from "./Admin";
+import Admin from "./admin";
 import LeagueLeaderboard from "./LeagueLeaderboard";
 import Withdraw from "./Withdraw";
 import DatabaseHealth from "./DatabaseHealth";
@@ -110,6 +110,25 @@ function MaintenanceWrapper() {
   // 3. СТАНДАРТНЫЕ ПРОВЕРКИ ДЛЯ ИГРОКОВ
   if (maintenanceLoading || userLoading) {
     return <LoadingScreen />;
+  }
+
+  // Проверяем, есть ли критическая ошибка подключения к базе данных
+  if (error && error.includes('Database service temporarily unavailable')) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">⚠️</div>
+        <h1 className="text-2xl font-bold mb-2 text-foreground">Сервис временно недоступен</h1>
+        <p className="text-muted-foreground mb-6">
+          Мы испытываем технические трудности с базой данных. Пожалуйста, повторите попытку позже.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover-elevate"
+        >
+          Повторить попытку
+        </button>
+      </div>
+    );
   }
 
   // Показываем экран Telegram только для определенных случаев, не для всех пользователей

@@ -54,7 +54,8 @@ export function GameHUD({
   onTogglePause,
   onStepFrame,
 }: GameHUDProps) {
-  const { score, combo, cryptoCollected, lives, extraLivesBought } = gameState;
+  const { score, combo, cryptoCollected, lives } = gameState;
+  const extraLivesBought = 0; // extraLivesBought not available in current GameState schema
   const canBuyLife = userBeads >= lifeCost && extraLivesBought < maxExtraLives;
   const boostState = getBoostState();
   
@@ -62,9 +63,9 @@ export function GameHUD({
   const SATS_PER_BTC = 100_000_000;
   const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18
   
-  const btcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
-  const ethWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
-  const usdtAmount = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
+  const btcSats = Math.round(cryptoCollected.btc * economy.baseBtcReward * SATS_PER_BTC);
+  const ethWei = Math.round(cryptoCollected.eth * economy.baseEthReward * WEI_PER_ETH);
+  const usdtAmount = cryptoCollected.usdt * economy.baseUsdtReward;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -74,8 +75,8 @@ export function GameHUD({
 
   return (
     <>
-      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3">
-        <div className="flex items-center justify-between gap-4 backdrop-blur-md bg-background/80 rounded-lg px-4 py-3 border border-border/50">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-3 border-none shadow-none">
+        <div className="flex items-center justify-between gap-4 backdrop-blur-md bg-background/80 rounded-lg px-4 py-3 border-none shadow-none">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -86,9 +87,9 @@ export function GameHUD({
               </div>
               {/* Crypto ticket indicator */}
               {useCryptoTicket && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/40">
-                  <Ticket className="w-3 h-3 text-green-400" />
-                  <span className="text-xs font-medium text-green-400">КРИПТО</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-700/50 border border-slate-600/40">
+                  <Ticket className="w-3 h-3 text-slate-300" />
+                  <span className="text-xs font-medium text-slate-300">КРИПТО</span>
                 </div>
               )}
               <div className="flex items-center gap-1" data-testid="lives-display">
@@ -99,15 +100,15 @@ export function GameHUD({
                     className={`w-4 h-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground/30'}`}
                   />
                 ))}
-                {/* Бонусные жизни из BEADS BOX - изумрудные сердца */}
+                {/* Бонусные жизни из BEADS BOX - светло-синие сердца */}
                 {bonusLives > 0 && [...Array(bonusLives)].map((_, i) => (
                   <Heart
                     key={`bonus-${i}`}
-                    className="w-4 h-4 text-emerald-400 fill-emerald-400"
+                    className="w-4 h-4 text-cyan-300 fill-cyan-300"
                   />
                 ))}
                 {extraLivesBought > 0 && (
-                  <span className="text-xs text-green-500 font-bold">+{extraLivesBought}</span>
+                  <span className="text-xs text-cyan-400 font-bold">+{extraLivesBought}</span>
                 )}
                 <Button
                   size="sm"
@@ -243,7 +244,7 @@ const BOOST_CONFIG: Record<BoostType, { icon: typeof Timer; color: string; bgCol
   slowdown: { icon: Timer, color: 'text-blue-400', bgColor: 'bg-blue-500/20', label: 'Замедление' },
   bomb: { icon: Bomb, color: 'text-red-400', bgColor: 'bg-red-500/20', label: 'Бомба' },
   rainbow: { icon: Sparkles, color: 'text-purple-400', bgColor: 'bg-purple-500/20', label: 'Радуга' },
-  rewind: { icon: RotateCcw, color: 'text-green-400', bgColor: 'bg-green-500/20', label: 'Откат' },
+  rewind: { icon: RotateCcw, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Откат' },
   shield: { icon: Shield, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', label: 'Щит' },
   magnet: { icon: Magnet, color: 'text-orange-400', bgColor: 'bg-orange-500/20', label: 'Магнит' },
   laser: { icon: Crosshair, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', label: 'Лазер' },

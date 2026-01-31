@@ -13,6 +13,7 @@ import { apiRequest, queryClient, APP_VERSION } from '@/lib/queryClient';
 import { CharacterAvatar } from '@/components/CharacterAvatar';
 import { CharacterSetup } from '@/components/CharacterSetup';
 import { LeagueBadge } from '@/components/LeagueBadge';
+import { UserProfileSkeleton } from '@/components/UserProfileSkeleton';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { isSoundEnabled, setSoundEnabled, initSounds } from '@/lib/sounds';
@@ -680,66 +681,65 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
           transition={{ delay: 0.1 }}
           className="w-full max-w-sm mb-4"
         >
-          <Card className="p-4 border-primary/20" style={{ boxShadow: '0 0 30px hsl(155 100% 50% / 0.1)' }}>
-            <div className="flex items-center gap-3">
-              <div 
-                className="cursor-pointer rounded-full overflow-hidden border-2 hover-elevate"
-                style={{ borderColor: '#00ff88' }}
-                onClick={onCustomize}
-                data-testid="button-character-avatar"
-              >
-                {isCharacterLoading ? (
-                  <div className="w-14 h-14 rounded-full bg-muted animate-pulse" />
-                ) : characterData ? (
-                  <CharacterAvatar 
-                    characterData={characterData} 
-                    size={56}
-                    showPlaceholder={true}
-                  />
-                ) : (
-                  <Avatar className="w-14 h-14">
-                    <AvatarImage src={user.photoUrl || undefined} alt={user.username} />
-                    <AvatarFallback 
-                      className="font-display text-lg font-bold"
-                      style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}
-                    >
-                      {user.username?.substring(0, 2).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-display font-semibold text-lg truncate" data-testid="text-username">
-                  {isCharacterLoading ? (
-                    <span className="text-muted-foreground">Загрузка...</span>
-                  ) : characterData?.character?.name || user.firstName || user.username}
-                </h3>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <LeagueBadge size="sm" showRank={false} />
-                  {activeSeason && (
-                    <span 
-                      className="text-xs text-muted-foreground"
-                      data-testid="text-current-season"
-                    >
-                      Сезон {activeSeason.seasonNumber}
-                    </span>
+          {isCharacterLoading ? (
+            <UserProfileSkeleton />
+          ) : (
+            <Card className="p-4 border-primary/20" style={{ boxShadow: '0 0 30px hsl(155 100% 50% / 0.1)' }}>
+              <div className="flex items-center gap-3">
+                <div
+                  className="cursor-pointer rounded-full overflow-hidden border-2 hover-elevate"
+                  style={{ borderColor: '#00ff88' }}
+                  onClick={onCustomize}
+                  data-testid="button-character-avatar"
+                >
+                  {characterData ? (
+                    <CharacterAvatar
+                      characterData={characterData}
+                      size={56}
+                      showPlaceholder={true}
+                    />
+                  ) : (
+                    <Avatar className="w-14 h-14">
+                      <AvatarImage src={user.photoUrl || undefined} alt={user.username} />
+                      <AvatarFallback
+                        className="font-display text-lg font-bold"
+                        style={{ backgroundColor: 'hsl(155 100% 50% / 0.2)', color: '#00ff88' }}
+                      >
+                        {user.username?.substring(0, 2).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
                   )}
                 </div>
-              </div>
-              <div className="text-right">
-                <div 
-                  className="flex items-center gap-1.5 font-bold tabular-nums"
-                  style={{ color: '#00ff88' }}
-                  data-testid="text-total-points"
-                >
-                  <MiniBeadsLogo size={22} />
-                  <span className="text-lg">{user.totalPoints.toLocaleString()}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-semibold text-lg truncate" data-testid="text-username">
+                    {characterData?.name || user.firstName || user.username}
+                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <LeagueBadge size="sm" showRank={false} />
+                    {activeSeason && (
+                      <span
+                        className="text-xs text-muted-foreground"
+                        data-testid="text-current-season"
+                      >
+                        Сезон {activeSeason.seasonNumber}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className="flex items-center gap-1.5 font-bold tabular-nums"
+                    style={{ color: '#00ff88' }}
+                    data-testid="text-total-points"
+                  >
+                    <MiniBeadsLogo size={22} />
+                    <span className="text-lg">{user.totalPoints.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {characterStatus?.isSetup && (
-              <div className="mt-3 pt-3 border-t border-primary/10">
+
+              {characterStatus?.isSetup && (
+                <div className="mt-3 pt-3 border-t border-primary/10">
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground mb-1">
@@ -1011,7 +1011,8 @@ export function MainMenu({ user, onPlay, onLeaderboard, onShop, onAccessoryShop,
               </div>
             )}
           </Card>
-        </motion.div>
+        )}
+      </motion.div>
       )}
 
       {user && referralInfo && !user.username?.startsWith('guest_') && (

@@ -79,7 +79,7 @@ export function Leaderboard({ entries, currentUserId, isLoading, isFetching, onB
             <div className="mt-6 space-y-2">
               {rest.map((entry, index) => (
                 <LeaderboardRow
-                  key={entry.userId}
+                  key={`${entry.userId}-${entry.rank}`}
                   entry={entry}
                   isCurrentUser={entry.userId === currentUserId}
                   delay={index * 0.05}

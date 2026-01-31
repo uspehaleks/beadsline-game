@@ -81,7 +81,7 @@ export function CharacterCustomize({ onBack }: CharacterCustomizeProps) {
   });
 
   const equippedIds = new Set(
-    characterData?.equippedAccessories?.map(ua => ua.accessoryId) || []
+    characterData?.equippedAccessories?.map(ua => ua.id) || []
   );
 
   const accessoryMap = new Map<string, Accessory>();
@@ -128,10 +128,10 @@ export function CharacterCustomize({ onBack }: CharacterCustomizeProps) {
               className="rounded-full"
             />
           </div>
-          {characterData?.character && (
+          {characterData && (
             <div className="text-center mt-2">
               <p className="font-medium" data-testid="text-character-name">
-                {characterData.character.name}
+                {characterData.name}
               </p>
             </div>
           )}
@@ -157,7 +157,7 @@ export function CharacterCustomize({ onBack }: CharacterCustomizeProps) {
               className="flex-shrink-0"
               data-testid={`button-category-${cat.id}`}
             >
-              {cat.nameRu}
+              {cat.name}
             </Button>
           ))}
         </div>
@@ -217,7 +217,7 @@ export function CharacterCustomize({ onBack }: CharacterCustomizeProps) {
                         <div className="relative aspect-square mb-2 bg-muted/50 rounded-lg overflow-hidden">
                           <img
                             src={accessory.imageUrl}
-                            alt={accessory.nameRu}
+                            alt={accessory.name}
                             className="w-full h-full object-contain p-2"
                             data-testid={`img-accessory-${accessory.id}`}
                           />
@@ -228,17 +228,11 @@ export function CharacterCustomize({ onBack }: CharacterCustomizeProps) {
                               </Badge>
                             </div>
                           )}
-                          {accessory.maxQuantity !== null && accessory.maxQuantity > 0 && (
-                            <div className="absolute top-1 left-1">
-                              <Badge variant="secondary" className="text-xs px-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">
-                                <Sparkles className="w-3 h-3" />
-                              </Badge>
-                            </div>
-                          )}
+                          {/* maxQuantity not available in current schema */}
                         </div>
                         
                         <p className="font-medium text-sm truncate mb-2" data-testid={`text-accessory-name-${accessory.id}`}>
-                          {accessory.nameRu}
+                          {accessory.name}
                         </p>
                         
                         <Button

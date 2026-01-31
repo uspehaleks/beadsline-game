@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { GameState, LeaderboardEntry } from '@shared/schema';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainMenu } from '@/components/MainMenu';
 import { GameScreen } from '@/components/GameScreen';
 import { Leaderboard } from '@/components/Leaderboard';
@@ -12,7 +12,7 @@ import { CommunityInviteDialog } from '@/components/CommunityInviteDialog';
 import { BeadsBox } from '@/components/BeadsBox';
 import CharacterCreation from './CharacterCreation';
 import { useUser } from '@/contexts/UserContext';
-import { queryClient, apiRequest } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type LevelConfig, LEVELS } from '@/lib/levelConfig';
 import { useToast } from '@/hooks/use-toast';
@@ -27,9 +27,12 @@ export default function Home() {
   const [showBeadsBox, setShowBeadsBox] = useState(false);
   const [leaderboardFilter, setLeaderboardFilter] = useState<LeaderboardFilter>('all');
   const [useCryptoTicket, setUseCryptoTicket] = useState(false);
-  const { user, isLoading: isUserLoading, refreshUser } = useUser();
-  const { toast } = useToast();
+  const [showBeadsBoxModal, setShowBeadsBoxModal] = useState(false);
   
+  const { user, isLoading: isUserLoading, refetch: refreshUser } = useUser();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   // Fetch crypto tickets
   const { data: cryptoTicketsData } = useQuery<{ count: number }>({
     queryKey: ['/api/user/crypto-tickets/count'],
@@ -59,27 +62,27 @@ export default function Home() {
   const submitScoreMutation = useMutation({
     mutationFn: async ({ gameState, levelId }: { gameState: GameState; levelId: number }) => {
       if (!user) return;
-      
+
       const response = await apiRequest('POST', '/api/scores', {
         score: gameState.score,
         cryptoBtc: gameState.cryptoCollected.btc,
         cryptoEth: gameState.cryptoCollected.eth,
         cryptoUsdt: gameState.cryptoCollected.usdt,
         maxCombo: gameState.maxCombo,
-        accuracy: gameState.shotsTotal > 0 
-          ? Math.round((gameState.shotsHit / gameState.shotsTotal) * 100) 
+        accuracy: gameState.shotsTotal > 0
+          ? Math.round((gameState.shotsHit / gameState.shotsTotal) * 100)
           : 0,
         duration: 45 - gameState.timeLeft,
         won: gameState.won,
         levelId,
       });
-      
+
       return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
       refreshUser();
-      
+
       // Show community invite after first game for Telegram users
       if (data?.gamesPlayed === 1) {
         setTimeout(() => setShowCommunityInvite(true), 2000);
@@ -95,48 +98,11 @@ export default function Home() {
     setCurrentScreen('levelSelect');
   }, []);
 
-  const handleSelectLevel = useCallback(async (level: LevelConfig, withCryptoTicket?: boolean) => {
-    if (withCryptoTicket) {
-      // Consume crypto ticket before starting game
-      try {
-        const response = await apiRequest('POST', '/api/user/crypto-tickets/use', { levelId: level.id });
-        if (!response.ok) {
-          const data = await response.json();
-          console.error('Failed to use crypto ticket:', data.error);
-          toast({
-            title: "Крипто-билет недоступен",
-            description: "Игра начнётся без крипто-режима",
-            variant: "destructive",
-          });
-          // Don't use ticket if consumption failed
-          setSelectedLevel(level);
-          setUseCryptoTicket(false);
-          setCurrentScreen('game');
-          return;
-        }
-        // Ticket consumed successfully
-        queryClient.invalidateQueries({ queryKey: ['/api/user/crypto-tickets/count'] });
-        setSelectedLevel(level);
-        setUseCryptoTicket(true);
-        setCurrentScreen('game');
-      } catch (error) {
-        console.error('Error using crypto ticket:', error);
-        toast({
-          title: "Ошибка активации билета",
-          description: "Игра начнётся без крипто-режима",
-          variant: "destructive",
-        });
-        // Proceed without ticket on error
-        setSelectedLevel(level);
-        setUseCryptoTicket(false);
-        setCurrentScreen('game');
-      }
-    } else {
-      setSelectedLevel(level);
-      setUseCryptoTicket(false);
-      setCurrentScreen('game');
-    }
-  }, [toast]);
+  const handleSelectLevel = useCallback(async (level: LevelConfig, useCryptoTicket?: boolean) => {
+    setSelectedLevel(level);
+    setUseCryptoTicket(!!useCryptoTicket);
+    setCurrentScreen('game');
+  }, []);
 
   const handleViewLeaderboard = useCallback(() => {
     setCurrentScreen('leaderboard');
@@ -159,7 +125,7 @@ export default function Home() {
   }, []);
 
   const handleBeadsBox = useCallback(() => {
-    setShowBeadsBox(true);
+    setShowBeadsBoxModal(true);
   }, []);
 
   const handleCharacterCreated = useCallback(() => {
@@ -167,7 +133,12 @@ export default function Home() {
   }, [refetchCharacter]);
 
   if (isUserLoading || isCharacterLoading) {
-    return <LoadingScreen />;
+    return <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p className="text-lg font-medium text-foreground">Загрузка...</p>
+      </div>
+    </div>;
   }
 
   if (user && characterExists && !characterExists.exists) {
@@ -185,7 +156,7 @@ export default function Home() {
             cryptoTickets={cryptoTicketsData?.count ?? 0}
           />
         );
-      
+
       case 'game':
         return (
           <GameScreen
@@ -197,7 +168,7 @@ export default function Home() {
             useCryptoTicket={useCryptoTicket}
           />
         );
-      
+
       case 'leaderboard':
         return (
           <Leaderboard
@@ -210,22 +181,22 @@ export default function Home() {
             onFilterChange={setLeaderboardFilter}
           />
         );
-      
+
       case 'shop':
         return (
           <BoostShop onBack={handleMainMenu} />
         );
-      
+
       case 'accessoryShop':
         return (
           <AccessoryShop onBack={handleMainMenu} />
         );
-      
+
       case 'customize':
         return (
           <CharacterCustomize onBack={handleMainMenu} />
         );
-      
+
       default:
         return (
           <MainMenu
@@ -245,12 +216,12 @@ export default function Home() {
   return (
     <>
       {renderScreen()}
-      <CommunityInviteDialog 
-        open={showCommunityInvite} 
-        onOpenChange={setShowCommunityInvite} 
+      <CommunityInviteDialog
+        open={showCommunityInvite}
+        onOpenChange={setShowCommunityInvite}
       />
-      {showBeadsBox && (
-        <BeadsBox onClose={() => setShowBeadsBox(false)} />
+      {showBeadsBoxModal && (
+        <BeadsBox onClose={() => setShowBeadsBoxModal(false)} />
       )}
     </>
   );

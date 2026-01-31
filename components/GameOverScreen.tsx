@@ -47,16 +47,22 @@ export function GameOverScreen({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [hasAutoShown, setHasAutoShown] = useState(false);
   const [showVictoryDialog, setShowVictoryDialog] = useState(false);
-  const { score, won, maxCombo, cryptoCollected, shotsTotal, shotsHit, timeLeft, extraLivesBought } = gameState;
+  const { score, combo, cryptoCollected } = gameState;
+  const timeLeft = 0; // timeLeft not available in current GameState schema
+  const shotsTotal = 0; // shotsTotal not available in current GameState schema
+  const shotsHit = 0; // shotsHit not available in current GameState schema
+  const maxCombo = combo; // Using current combo as maxCombo since maxCombo not available in current GameState schema
+  const won = true; // won not available in current GameState schema
+  const extraLivesBought = 0; // extraLivesBought not available in current GameState schema
   const accuracy = shotsTotal > 0 ? Math.round((shotsHit / shotsTotal) * 100) : 0;
   
   const economy = getEconomyConfig();
   const SATS_PER_BTC = 100_000_000;
   const WEI_PER_ETH = 1_000_000_000_000_000_000; // 10^18
   
-  const earnedBtcSats = Math.round(cryptoCollected.btc * economy.cryptoRewards.btcPerBall * SATS_PER_BTC);
-  const earnedEthWei = Math.round(cryptoCollected.eth * economy.cryptoRewards.ethPerBall * WEI_PER_ETH);
-  const earnedUsdt = cryptoCollected.usdt * economy.cryptoRewards.usdtPerBall;
+  const earnedBtcSats = Math.round(cryptoCollected.btc * economy.baseBtcReward * SATS_PER_BTC);
+  const earnedEthWei = Math.round(cryptoCollected.eth * economy.baseEthReward * WEI_PER_ETH);
+  const earnedUsdt = cryptoCollected.usdt * economy.baseUsdtReward;
   
   const previousBtcSats = Math.max(0, (user?.btcBalanceSats || 0) - earnedBtcSats);
   const previousEthWei = Math.max(0, (user?.ethBalanceWei || 0) - earnedEthWei);

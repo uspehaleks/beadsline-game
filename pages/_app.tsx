@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import App from './App';
-import '../client/src/index.css';
+import '../styles/globals.css'; // Импорт глобальных стилей
+import { fredoka, inter } from '../lib/fonts'; // Import local fonts
 
 // Обертка для SSR
 export default function WrappedApp(props: any) {
@@ -15,6 +16,10 @@ export default function WrappedApp(props: any) {
     return <div />;
   }
 
-  // Отображаем оригинальное приложение на клиенте
-  return <App {...props} />;
+  // Отображаем оригинальное приложение на клиенте с подключенными шрифтами
+  return (
+    <div className={`${fredoka.variable} ${inter.variable}`}>
+      <App {...props} />
+    </div>
+  );
 }

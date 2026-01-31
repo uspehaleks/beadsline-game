@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Возвращаем список лиг
     // В реальном приложении здесь будет логика получения лиг из базы данных
-    const leagues = []; // по умолчанию пустой массив
+    const leagues: Array<any> = []; // по умолчанию пустой массив
 
     res.status(200).json(leagues);
   } catch (error) {
