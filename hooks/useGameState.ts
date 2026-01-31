@@ -476,8 +476,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 const chainCombo = pending.combo;
                 const newCombo = chainCombo + 1;
                 const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo, defaultEconomyConfigRef.current);
-                
-                const processedBalls = removeBalls(); // removeBalls doesn't accept arguments in current implementation
+
+                const processedBalls = removeBalls(currentState.balls, ballIndicesToRemove); // Pass balls array and indices to remove
                 // Only arm portal retreat if very early in game (< 10 balls spawned)
                 const isEarlyGame = totalSpawnedRef.current < 10;
                 activateRollback(); // activateRollback doesn't accept arguments in current implementation
