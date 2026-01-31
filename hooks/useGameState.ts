@@ -385,7 +385,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             
             if (ballsDoMatch) {
               // Boundary balls match - check for 3+ chain that includes both
-              const matches = findMatchingBalls(leftIdx); // Pass leftIdx to findMatchingBalls
+              const matches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
               sendDebugLog(`[MATCH] found:${matches.length} both:${matches.includes(leftIdx) && matches.includes(rightIdx)}`);
 
               if (matches.length >= 3 && matches.includes(leftIdx) && matches.includes(rightIdx)) {
@@ -395,7 +395,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             } else {
               // Boundary balls DON'T match - check each side independently for 3+ chains
               // Check LEFT side: leftBall and its left neighbors
-              const leftMatches = findMatchingBalls(leftIdx); // Pass leftIdx to findMatchingBalls
+              const leftMatches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
               sendDebugLog(`[LEFT] matches:${leftMatches.length} hasLeft:${leftMatches.includes(leftIdx)}`);
               if (leftMatches.length >= 3 && leftMatches.includes(leftIdx)) {
                 foundMatch = true;
@@ -404,7 +404,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
               // Check RIGHT side: rightBall and its right neighbors (only if left didn't match)
               if (!foundMatch) {
-                const rightMatches = findMatchingBalls(rightIdx); // Pass rightIdx to findMatchingBalls
+                const rightMatches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
                 sendDebugLog(`[RIGHT] matches:${rightMatches.length} hasRight:${rightMatches.includes(rightIdx)}`);
                 if (rightMatches.length >= 3 && rightMatches.includes(rightIdx)) {
                   foundMatch = true;
@@ -414,14 +414,14 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             }
           } else if (leftIdx >= 0 && rightIdx < 0) {
             sendDebugLog(`[EDGE] Only left exists, checking`);
-            const matches = findMatchingBalls(leftIdx); // Pass leftIdx to findMatchingBalls
+            const matches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
             if (matches.length >= 3 && matches.includes(leftIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
             }
           } else if (rightIdx >= 0 && leftIdx < 0) {
             sendDebugLog(`[EDGE] Only right exists, checking`);
-            const matches = findMatchingBalls(rightIdx); // Pass rightIdx to findMatchingBalls
+            const matches = findMatchingBalls(newBalls); // Pass newBalls array to findMatchingBalls
             if (matches.length >= 3 && matches.includes(rightIdx)) {
               foundMatch = true;
               matchesToProcess = matches;
