@@ -1,8 +1,8 @@
 // server/storage/index.ts
-import { DatabaseStorage } from "./DatabaseStorage.js";
+import { DatabaseStorage } from "../storage";
 
 export const storage = new DatabaseStorage();
 
-export { IStorage } from "./IStorage.js";
+export { IStorage } from "../storage";
 export { storage };
-export { logDiagnostic } from "../storage.js";
+export { logDiagnostic } from "../storage";
