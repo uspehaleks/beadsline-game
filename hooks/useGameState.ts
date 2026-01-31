@@ -931,8 +931,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           const maxIdx = matches[matches.length - 1];
           const leftBall = minIdx > 0 ? newBalls[minIdx - 1] : null;
           const rightBall = maxIdx < newBalls.length - 1 ? newBalls[maxIdx + 1] : null;
-          
-          newBalls = removeBalls(); // removeBalls doesn't accept arguments in current implementation
+
+          newBalls = removeBalls(newBalls, matches); // Pass balls array and indices to remove
           // Only arm portal retreat if very early in game (< 10 balls spawned)
           const isEarlyGame = totalSpawnedRef.current < 10;
           activateRollback(); // activateRollback doesn't accept arguments in current implementation
@@ -991,8 +991,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             const newMaxIdx = chainMatches[chainMatches.length - 1];
             currentLeftBall = newMinIdx > 0 ? newBalls[newMinIdx - 1] : null;
             currentRightBall = newMaxIdx < newBalls.length - 1 ? newBalls[newMaxIdx + 1] : null;
-            
-            newBalls = removeBalls(); // removeBalls doesn't accept arguments in current implementation
+
+            newBalls = removeBalls(newBalls, chainMatches); // Pass balls array and indices to remove
             // Keep same early game state for chain reactions
             activateRollback(); // activateRollback doesn't accept arguments in current implementation
             
