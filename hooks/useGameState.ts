@@ -1149,6 +1149,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
     
     setGameState(prev => {
       let currentPath = pathRef.current;
+      const dims = dimensionsRef.current; // Get dimensions from ref
       if (currentPath.length === 0) {
         console.warn("Path not initialized in resumeGame, regenerating...");
         currentPath = generatePathForLevel(level.path, dims.width, dims.height); // generatePathForLevel now accepts dimensions
