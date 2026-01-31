@@ -834,8 +834,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           if (hitIndices.length > 0) {
             const { newBalls: laserBalls, removedBalls } = applyLaserEffect(); // applyLaserEffect doesn't accept arguments in current implementation
             const updatedBalls = updateBallPositions(prev.balls, prev.levelConfig); // Передаем шары и конфигурацию уровня
-            
-            const { points, cryptoCollected, usdtFundCollected } = calculatePoints(); // calculatePoints doesn't accept arguments in current implementation
+
+            const combo = 1; // Define combo for this context
+            const { points, cryptoCollected, usdtFundCollected } = calculatePoints(removedBalls, combo, defaultEconomyConfigRef.current); // Pass required arguments to calculatePoints
 
             hapticFeedback('heavy');
             playComboSound(removedBalls.length);
@@ -885,7 +886,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
           newBalls = bombedBalls;
           
           if (removedBalls.length > 0) {
-            const { points, cryptoCollected, usdtFundCollected } = calculatePoints(); // calculatePoints doesn't accept arguments in current implementation
+            const combo = 2; // Define combo for this context
+            const { points, cryptoCollected, usdtFundCollected } = calculatePoints(removedBalls, combo, defaultEconomyConfigRef.current); // Pass required arguments to calculatePoints
 
             hapticFeedback('heavy');
             playComboSound(2);
@@ -922,7 +924,8 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
         if (matches.length >= 3) {
           const matchedBalls = matches.map((i: any) => newBalls[i]);
-          const { points, cryptoCollected, usdtFundCollected } = calculatePoints(); // calculatePoints doesn't accept arguments in current implementation
+          const combo = 1; // Define combo for this context
+          const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, combo, defaultEconomyConfigRef.current); // Pass required arguments to calculatePoints
           
           const minIdx = matches[0];
           const maxIdx = matches[matches.length - 1];
@@ -976,7 +979,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             sendDebugLog(`[CHAIN-REACT] combo:${currentCombo} removing:${chainMatches.length} balls`);
             
             const chainMatchedBalls = chainMatches.map((i: any) => newBalls[i]);
-            const chainResult = calculatePoints(); // calculatePoints doesn't accept arguments in current implementation
+            const chainResult = calculatePoints(chainMatchedBalls, currentCombo, defaultEconomyConfigRef.current); // Pass required arguments to calculatePoints
             totalPoints += chainResult.points;
             totalCryptoCollected.btc += chainResult.cryptoCollected.btc;
             totalCryptoCollected.eth += chainResult.cryptoCollected.eth;
