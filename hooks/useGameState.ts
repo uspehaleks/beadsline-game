@@ -563,6 +563,9 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
             isSpecial: false,
             speedMultiplier: 1,
             effects: [],
+            radius: 10, // Add required radius property
+            onPath: true, // Add required onPath property
+            velocity: { x: 0, y: 0 }, // Add required velocity property
           };
 
           newBalls = [forcedBall];
