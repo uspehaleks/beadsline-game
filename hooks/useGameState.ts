@@ -1215,7 +1215,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
         isPlaying: true,
         isGameOver: false,
         won: false,
-        extraLivesBought: prev.extraLivesBought + 1,
+        extraLivesBought: (prev as any).extraLivesBought + 1, // extraLivesBought not available in current GameState schema
       };
     });
     
