@@ -156,8 +156,28 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
   useEffect(() => {
     onUseBonusLifeRef.current = onUseBonusLife;
   }, [onUseBonusLife]);
+
+  // Define default configs as refs to make them accessible throughout the hook
+  const defaultEconomyConfigRef = useRef({
+    points: { normal: 5, btc: 500, eth: 300, usdt: 200 },
+    combo: { multiplier: 1.5, maxChain: 10 },
+    crypto: { spawnChance: 0.08 },
+    cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
+    dailyLimits: { btcMaxSatsPerDay: 300, ethMaxWeiPerDay: 3000000000000000, usdtMaxPerDay: 3.0 },
+    pools: { btcBalanceSats: 100000, ethBalanceWei: 1000000000000000, usdtBalance: 100 },
+    perGameLimits: { btcMaxBeadsPerGame: 15, ethMaxBeadsPerGame: 15, usdtMaxBeadsPerGame: 15 },
+    cryptoAvailable: { btc: false, eth: false, usdt: false }
+  });
+
+  const defaultGameplayConfigRef = useRef({
+    balls: { initialCount: 5, targetCount: 50, maxTotalBalls: 60 },
+    spawn: { period: 1800, resumeThreshold: 35 },
+    speed: { base: 0.010, max: 0.016, accelerationStart: 0.8 },
+    colors: { count: 5 }
+  });
+
   const chainReactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   onGameEndRef.current = onGameEnd;
   pathRef.current = path;
   dimensionsRef.current = { width: canvasWidth, height: canvasHeight };
@@ -197,32 +217,13 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
 
     // Используем локальные конфигурации вместо API-вызовов
     try {
-      // Локальные конфигурации по умолчанию
-      const defaultEconomyConfig = {
-        points: { normal: 5, btc: 500, eth: 300, usdt: 200 },
-        combo: { multiplier: 1.5, maxChain: 10 },
-        crypto: { spawnChance: 0.08 },
-        cryptoRewards: { btcPerBall: 0.00000005, ethPerBall: 0.0000001, usdtPerBall: 0.01 },
-        dailyLimits: { btcMaxSatsPerDay: 300, ethMaxWeiPerDay: 3000000000000000, usdtMaxPerDay: 3.0 },
-        pools: { btcBalanceSats: 100000, ethBalanceWei: 1000000000000000, usdtBalance: 100 },
-        perGameLimits: { btcMaxBeadsPerGame: 15, ethMaxBeadsPerGame: 15, usdtMaxBeadsPerGame: 15 },
-        cryptoAvailable: { btc: false, eth: false, usdt: false }
-      };
-
-      const defaultGameplayConfig = {
-        balls: { initialCount: 5, targetCount: 50, maxTotalBalls: 60 },
-        spawn: { period: 1800, resumeThreshold: 35 },
-        speed: { base: 0.010, max: 0.016, accelerationStart: 0.8 },
-        colors: { count: 5 }
-      };
-
       // Устанавливаем локальные конфигурации
-      setEconomyConfig(defaultEconomyConfig);
+      setEconomyConfig(defaultEconomyConfigRef.current);
       setAvailableCrypto(); // setAvailableCrypto doesn't accept arguments in current implementation
       setUsdtFundEnabled(); // setUsdtFundEnabled doesn't accept arguments in current implementation
 
       // Устанавливаем gameplay конфигурацию с учетом настроек уровня
-      let gameplayData = { ...defaultGameplayConfig };
+      let gameplayData = { ...defaultGameplayConfigRef.current };
 
       // Override with level-specific spawn period if available
       if (level?.spawnPeriod) {
@@ -474,7 +475,7 @@ export function useGameState({ canvasWidth, canvasHeight, onGameEnd, level, bonu
                 const matchedBalls = ballIndicesToRemove.map(i => currentState.balls[i]);
                 const chainCombo = pending.combo;
                 const newCombo = chainCombo + 1;
-                const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo, getEconomyConfig());
+                const { points, cryptoCollected, usdtFundCollected } = calculatePoints(matchedBalls, newCombo, defaultEconomyConfigRef.current);
                 
                 const processedBalls = removeBalls(); // removeBalls doesn't accept arguments in current implementation
                 // Only arm portal retreat if very early in game (< 10 balls spawned)
